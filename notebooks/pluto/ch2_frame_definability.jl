@@ -20,7 +20,7 @@ We cover:
 # ╔═╡ 2a2b3c4d-0002-0002-0002-000000000002
 begin
 	using Pkg
-	Pkg.activate(joinpath(@__DIR__, "..", ".."))
+	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 end
 

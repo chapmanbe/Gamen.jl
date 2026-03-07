@@ -13,10 +13,12 @@ Requires Julia >= 1.10.
 Follow standard Julia package layout:
 
 - `src/` — package source code
+- `ext/` — package extensions (e.g., `GamenMakieExt` for visualization)
 - `test/` — tests using the `Test` stdlib
 - `docs/` — documentation built with Documenter.jl
 - `notebooks/pluto/` — Pluto notebook demos
 - `notebooks/jupyter/` — Jupyter notebook demos
+- `notebooks/Project.toml` — separate environment for notebooks (includes CairoMakie, GraphMakie, Graphs)
 
 ## Coding Conventions
 
@@ -34,6 +36,9 @@ Follow standard Julia package layout:
 
 - Use the `Test` stdlib with `@testset` and `@test`.
 - CI via GitHub Actions using the standard `julia-runtest` workflow.
+- **Known slow test:** The `Decidability (Theorem 5.17)` testset in Chapter 5 takes ~80 seconds due to exhaustive model enumeration. This is expected.
+- All 399 tests pass.
+- **WARNING:** Never increase `max_worlds` beyond 4 in `is_decidable_within`, `is_derivable_from`, or `is_consistent`. The frame enumeration is O(2^(n²)) — setting `max_worlds=16` will attempt to enumerate 2^256 frames and consume all available memory.
 
 ## Documentation
 
@@ -51,7 +56,8 @@ Follow standard Julia package layout:
 - Write Pluto notebooks first in `notebooks/pluto/`, one per chapter.
 - Generate Jupyter notebooks using: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/<file>.jl`
 - Pluto cell IDs use the pattern `NaNbNcNd-XXXX-XXXX-XXXX-XXXXXXXXXXXX`.
-- Both formats activate the project with `Pkg.activate(joinpath(@__DIR__, "..", ".."))`.
+- Both formats activate the notebooks environment with `Pkg.activate(joinpath(@__DIR__, ".."))`.
+- Visualization (`visualize_model`) requires `using CairoMakie, GraphMakie, Graphs` — loaded via the `GamenMakieExt` package extension.
 
 ## Chapter Implementation Workflow
 

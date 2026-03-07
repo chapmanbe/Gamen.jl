@@ -45,7 +45,15 @@ export lindenbaum_extend
 export CanonicalModel, canonical_model
 export determines, truth_lemma_holds
 
-# Visualization
+# Filtrations and decidability (Chapter 5)
+export is_closed_under_subformulas, is_modally_closed
+export subformula_closure, modal_closure
+export world_equivalent, equivalence_classes, equivalence_class
+export Filtration, finest_filtration, coarsest_filtration, symmetric_filtration, transitive_filtration
+export filtration_lemma_holds
+export has_finite_model_property, is_decidable_within
+
+# Visualization (loaded via GamenMakieExt when CairoMakie, GraphMakie, Graphs are available)
 export visualize_model
 
 include("formulas.jl")
@@ -55,6 +63,23 @@ include("frame_properties.jl")
 include("fol.jl")
 include("axioms.jl")
 include("completeness.jl")
-include("visualize.jl")
+include("filtrations.jl")
+
+"""
+    visualize_model(model::KripkeModel; kwargs...)
+    visualize_model(frame::KripkeFrame; kwargs...)
+
+Render a Kripke model (or frame) as a directed graph.
+
+Requires CairoMakie, GraphMakie, and Graphs to be loaded:
+
+```julia
+using Gamen, CairoMakie, GraphMakie, Graphs
+visualize_model(model)
+```
+
+See the GamenMakieExt extension for full documentation.
+"""
+function visualize_model end
 
 end # module Gamen

@@ -398,46 +398,39 @@ function _frame_filter(system::ModalSystem)
     return frame -> all(check -> check(frame), checks)
 end
 
-"""Enumerate all possible frames on the given worlds."""
+"""Lazily enumerate all possible frames on the given worlds."""
 function _enumerate_frames(worlds::Vector{Symbol})
     n = length(worlds)
     n_edges = n * n
-    frames = KripkeFrame[]
-    for bits in 0:(2^n_edges - 1)
-        rel = Dict{Symbol,Set{Symbol}}()
-        for w in worlds
-            rel[w] = Set{Symbol}()
-        end
+    (begin
+        rel = Dict{Symbol,Set{Symbol}}(w => Set{Symbol}() for w in worlds)
         for (k, (i, j)) in enumerate(Iterators.product(1:n, 1:n))
             if (bits >> (k - 1)) & 1 == 1
                 push!(rel[worlds[i]], worlds[j])
             end
         end
-        push!(frames, KripkeFrame(Set{Symbol}(worlds), rel))
-    end
-    frames
+        KripkeFrame(Set{Symbol}(worlds), rel)
+    end for bits in 0:(BigInt(2)^n_edges - 1))
 end
 
-"""Enumerate all valuations for the given worlds and variables."""
+"""Lazily enumerate all valuations for the given worlds and variables."""
 function _enumerate_valuations(worlds::Vector{Symbol}, vars::Vector{Symbol})
     n = length(worlds)
     n_vals = length(vars)
     if n_vals == 0
-        return [Dict{Symbol,Set{Symbol}}()]
+        return (Dict{Symbol,Set{Symbol}}() for _ in 1:1)
     end
-    valuations = Dict{Symbol,Set{Symbol}}[]
-    total = (1 << n) ^ n_vals
-    for i in 0:(total - 1)
+    total = (BigInt(1) << n) ^ n_vals
+    (begin
         val = Dict{Symbol,Set{Symbol}}()
         remainder = i
         for v in vars
-            bits = remainder & ((1 << n) - 1)
+            bits = remainder & ((BigInt(1) << n) - 1)
             remainder >>= n
             val[v] = Set{Symbol}(worlds[j] for j in 1:n if (bits >> (j - 1)) & 1 == 1)
         end
-        push!(valuations, val)
-    end
-    valuations
+        val
+    end for i in BigInt(0):(total - 1))
 end
 
 """Enumerate all complete Σ-consistent sets over a closed language."""

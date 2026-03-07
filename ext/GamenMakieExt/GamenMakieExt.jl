@@ -1,57 +1,11 @@
-"""
-Visualization of Kripke models using CairoMakie and GraphMakie.
+module GamenMakieExt
 
-Provides `visualize_model` for rendering Kripke frames and models as
-publication-quality directed graphs, matching the style of Boxes and Diamonds.
-"""
-
+using Gamen
 using CairoMakie
 using GraphMakie
 import Graphs: SimpleDiGraph, add_edge!, edges, src, dst, has_edge
 
-"""
-    visualize_model(model::KripkeModel; kwargs...)
-    visualize_model(frame::KripkeFrame; kwargs...)
-
-Render a Kripke model (or frame) as a directed graph.
-
-Worlds are shown as labeled nodes. Edges represent the accessibility relation.
-When a `KripkeModel` is given, each node is annotated with the propositional
-variables true (or negated) at that world.
-
-# Keyword Arguments
-- `positions::Dict{Symbol,Tuple{Float64,Float64}}`: manual (x,y) positions for worlds.
-  If omitted, an automatic spring layout is used.
-- `show_valuations::Bool=true`: annotate nodes with which atoms are true/false.
-  Only applies to `KripkeModel` (ignored for frames).
-- `atom_order::Vector{Symbol}=Symbol[]`: order in which to display atoms in labels.
-  If empty, atoms are sorted alphabetically.
-- `title::String=""`: optional title displayed above the figure.
-- `size::Tuple{Int,Int}=(500,400)`: figure size in pixels.
-- `node_size::Real=30`: radius of world nodes.
-- `node_color::Any=:white`: fill color for nodes.
-- `edge_color::Any=:gray40`: color for edges/arrows.
-- `arrow_size::Real=20`: size of arrowheads.
-- `curve_distance::Real=0.2`: curvature for bidirectional edges.
-
-# Returns
-A `Makie.Figure` object that displays inline in Pluto and Jupyter notebooks.
-
-# Examples
-```julia
-frame = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w1 => :w3])
-model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
-
-# Automatic layout
-visualize_model(model)
-
-# Manual layout matching Figure 1.1 of Boxes and Diamonds
-visualize_model(model,
-    positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 1.0), :w3 => (2.0, -1.0)),
-    title = "Figure 1.1")
-```
-"""
-function visualize_model(model::KripkeModel;
+function Gamen.visualize_model(model::KripkeModel;
         positions::Dict{Symbol,Tuple{Float64,Float64}} = Dict{Symbol,Tuple{Float64,Float64}}(),
         show_valuations::Bool = true,
         atom_order::Vector{Symbol} = Symbol[],
@@ -154,16 +108,11 @@ function visualize_model(model::KripkeModel;
     fig
 end
 
-function visualize_model(frame::KripkeFrame; kwargs...)
+function Gamen.visualize_model(frame::KripkeFrame; kwargs...)
     model = KripkeModel(frame, Dict{Symbol,Set{Symbol}}())
-    visualize_model(model; show_valuations=false, kwargs...)
+    Gamen.visualize_model(model; show_valuations=false, kwargs...)
 end
 
-"""
-    _format_world_name(w::Symbol)
-
-Format a world name for display. Converts :w1 to "w₁", :w2 to "w₂", etc.
-"""
 function _format_world_name(w::Symbol)
     s = string(w)
     m = match(r"^w(\d+)$", s)
@@ -175,11 +124,6 @@ function _format_world_name(w::Symbol)
     s
 end
 
-"""
-    _format_valuation(model::KripkeModel, world::Symbol, atoms::Vector{Symbol})
-
-Format the valuation at a world as a string like "p, ¬q".
-"""
 function _format_valuation(model::KripkeModel, world::Symbol, atoms::Vector{Symbol})
     parts = String[]
     for a in atoms
@@ -193,12 +137,6 @@ function _format_valuation(model::KripkeModel, world::Symbol, atoms::Vector{Symb
     join(parts, ", ")
 end
 
-"""
-    _compute_edge_curves(g, edge_list, xs, ys, curve_distance)
-
-Compute tangent vectors and tfactors for edge rendering.
-Returns empty vectors if no special curving is needed.
-"""
 function _compute_edge_curves(g, edge_list, xs, ys, curve_distance)
     needs_curving = any(edge_list) do e
         s, d = src(e), dst(e)
@@ -215,7 +153,6 @@ function _compute_edge_curves(g, edge_list, xs, ys, curve_distance)
     for (idx, e) in enumerate(edge_list)
         s, d = src(e), dst(e)
         if s == d
-            # Self-loop: curve upward from node
             cx = sum(xs) / length(xs)
             cy = sum(ys) / length(ys)
             dx = xs[s] - cx
@@ -228,7 +165,6 @@ function _compute_edge_curves(g, edge_list, xs, ys, curve_distance)
             tangents[idx] = (t1, t2)
             tfactor[idx] = 0.5f0
         elseif has_edge(g, d, s)
-            # Bidirectional: offset perpendicular to edge direction
             ddx = xs[d] - xs[s]
             ddy = ys[d] - ys[s]
             len = sqrt(ddx^2 + ddy^2)
@@ -237,7 +173,6 @@ function _compute_edge_curves(g, edge_list, xs, ys, curve_distance)
             tangents[idx] = (Point2f(ddx + px, ddy + py), Point2f(-ddx + px, -ddy + py))
             tfactor[idx] = 0.5f0
         else
-            # Straight edge
             ddx = xs[d] - xs[s]
             ddy = ys[d] - ys[s]
             tangents[idx] = (Point2f(ddx, ddy), Point2f(-ddx, -ddy))
@@ -247,3 +182,5 @@ function _compute_edge_curves(g, edge_list, xs, ys, curve_distance)
 
     tangents, tfactor
 end
+
+end # module GamenMakieExt
