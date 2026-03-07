@@ -1142,4 +1142,192 @@ using Test
             @test st.args == [w]
         end
     end
+
+    # ── Chapter 5: Filtrations and Decidability ──
+
+    @testset "Chapter 5: Filtrations and Decidability" begin
+        p = Atom(:p)
+        q = Atom(:q)
+
+        @testset "Closed under subformulas (Definition 5.1)" begin
+            # subformulas of □p → p = {(□p → p), □p, p}
+            Γ = subformula_closure(Implies(Box(p), p))
+            @test is_closed_under_subformulas(Γ)
+
+            # Remove a subformula — no longer closed
+            Γ_broken = setdiff(Γ, Set{Formula}([p]))
+            @test !is_closed_under_subformulas(Γ_broken)
+        end
+
+        @testset "Modally closed (Definition 5.1)" begin
+            Γ = subformula_closure(Box(p))
+            @test is_closed_under_subformulas(Γ)
+            @test !is_modally_closed(Γ)  # doesn't contain □□p, ◇p, etc.
+
+            # A modally closed set must contain □A and ◇A for every A in it.
+            # This means it is necessarily infinite (e.g., p requires □p, ◇p,
+            # which require □□p, ◇□p, □◇p, ◇◇p, etc.) — no finite set qualifies
+            # unless it is empty or contains only ⊥.
+            # We can verify a hand-constructed finite example fails:
+            Γ_not_closed = Set{Formula}([p, Box(p), Diamond(p)])
+            # □p ∈ Γ requires □□p ∈ Γ, which is missing → not modally closed
+            @test !is_modally_closed(Γ_not_closed)
+        end
+
+        @testset "Equivalence relation (Definition 5.2, Proposition 5.3)" begin
+            # Simple model: Figure 1.1
+            frame = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w1 => :w3])
+            model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
+
+            Γ = subformula_closure(p)  # Γ = {p}
+            # w1 and w2 satisfy p, w3 doesn't
+            @test world_equivalent(model, Γ, :w1, :w2)
+            @test !world_equivalent(model, Γ, :w1, :w3)
+
+            classes = equivalence_classes(model, Γ)
+            @test length(classes) == 2  # {w1,w2} and {w3}
+
+            # With Γ = subformulas(□p), all three worlds are distinct
+            Γ2 = subformula_closure(Box(p))
+            classes2 = equivalence_classes(model, Γ2)
+            @test length(classes2) == 3  # each world in its own class
+
+            # Reflexivity: every world is equivalent to itself
+            for w in [:w1, :w2, :w3]
+                @test world_equivalent(model, Γ, w, w)
+            end
+
+            # Symmetry
+            @test world_equivalent(model, Γ, :w1, :w2) ==
+                  world_equivalent(model, Γ, :w2, :w1)
+        end
+
+        @testset "Finest filtration (Definition 5.7)" begin
+            frame = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w1 => :w3])
+            model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
+
+            Γ = subformula_closure(Implies(Box(p), p))
+            filt = finest_filtration(model, Γ)
+
+            @test filt isa Filtration
+            @test length(filt.classes) == 3  # all 3 worlds distinct for this Γ
+            @test filtration_lemma_holds(filt)
+        end
+
+        @testset "Coarsest filtration (Definition 5.9)" begin
+            frame = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w1 => :w3])
+            model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
+
+            Γ = subformula_closure(Implies(Box(p), p))
+            filt = coarsest_filtration(model, Γ)
+
+            @test filt isa Filtration
+            @test filtration_lemma_holds(filt)
+        end
+
+        @testset "Filtration reduces worlds" begin
+            # Build a model where some worlds agree on all subformulas
+            # 4 worlds, but only p matters: w1,w2 have p; w3,w4 don't
+            frame = KripkeFrame([:w1, :w2, :w3, :w4],
+                [:w1 => :w2, :w1 => :w3, :w2 => :w4])
+            model = KripkeModel(frame, [:p => [:w1, :w2]])
+
+            Γ = subformula_closure(p)  # Γ = {p}
+            filt = finest_filtration(model, Γ)
+
+            # Should collapse to 2 classes: {w1,w2} and {w3,w4}
+            @test length(filt.classes) == 2
+            @test filtration_lemma_holds(filt)
+        end
+
+        @testset "Proposition 5.12: filtration size bound" begin
+            frame = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w1 => :w3])
+            model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
+
+            φ = Implies(Box(p), p)
+            Γ = subformula_closure(φ)
+            n = length(Γ)
+
+            filt = finest_filtration(model, Γ)
+            @test length(filt.classes) <= 2^n
+        end
+
+        @testset "Filtration Lemma for various formulas" begin
+            frame = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w1 => :w3, :w2 => :w3])
+            model = KripkeModel(frame, [:p => [:w1, :w3], :q => [:w2]])
+
+            for φ in [Box(p), Diamond(q), Implies(Box(p), Diamond(q)),
+                       And(p, Box(q)), Or(Diamond(p), Box(q))]
+                Γ = subformula_closure(φ)
+                filt_fine = finest_filtration(model, Γ)
+                filt_coarse = coarsest_filtration(model, Γ)
+                @test filtration_lemma_holds(filt_fine)
+                @test filtration_lemma_holds(filt_coarse)
+            end
+        end
+
+        @testset "Reflexive model → reflexive finest filtration" begin
+            # Reflexive frame
+            frame = KripkeFrame([:w1, :w2],
+                [:w1 => :w1, :w1 => :w2, :w2 => :w2])
+            model = KripkeModel(frame, [:p => [:w1]])
+
+            Γ = subformula_closure(Box(p))
+            filt = finest_filtration(model, Γ)
+
+            @test is_reflexive(filt.model.frame)
+            @test filtration_lemma_holds(filt)
+        end
+
+        @testset "Symmetric filtration of symmetric model is symmetric (Theorem 5.18.1)" begin
+            # Symmetric frame
+            frame = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w2 => :w1, :w2 => :w3, :w3 => :w2])
+            model = KripkeModel(frame, [:p => [:w1, :w2]])
+
+            Γ = subformula_closure(Implies(Box(p), p))
+            filt = symmetric_filtration(model, Γ)
+
+            @test is_symmetric(filt.model.frame)
+            @test filtration_lemma_holds(filt)
+        end
+
+        @testset "Transitive filtration of transitive model is transitive (Theorem 5.18.2)" begin
+            # Transitive frame
+            frame = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w2 => :w3, :w1 => :w3])
+            model = KripkeModel(frame, [:p => [:w1, :w3]])
+
+            Γ = subformula_closure(Box(p))
+            filt = transitive_filtration(model, Γ)
+
+            @test is_transitive(filt.model.frame)
+            @test filtration_lemma_holds(filt)
+        end
+
+        @testset "Finite model property (Proposition 5.14)" begin
+            # K has FMP — any non-valid formula has a finite countermodel
+            @test has_finite_model_property(SYSTEM_K, Implies(Box(p), p))
+            @test has_finite_model_property(SYSTEM_K, Box(Implies(p, q)))
+        end
+
+        @testset "Decidability (Theorem 5.17)" begin
+            result = is_decidable_within(SYSTEM_K, Implies(Box(p), p))
+            @test result.valid == false  # □p → p is not K-valid
+            @test result.subformula_count == 3
+
+            result2 = is_decidable_within(SYSTEM_K,
+                Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
+            @test result2.valid == true  # Schema K is valid
+        end
+
+        @testset "Display" begin
+            frame = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            model = KripkeModel(frame, [:p => [:w1]])
+            Γ = subformula_closure(Box(p))
+            filt = finest_filtration(model, Γ)
+            @test contains(string(filt), "Filtration")
+        end
+    end
 end
