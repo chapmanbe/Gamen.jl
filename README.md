@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" height="120" alt="Gamen.jl Celtic knot logo">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="logo2.svg" height="120" alt="Gamen.jl runic logo">
+  <img src="logo.svg" height="120" alt="Gamen.jl logo">
 </p>
 
 <h1 align="center">Gamen.jl</h1>
@@ -18,21 +18,33 @@
 
 The name comes from Old English *gamen* (game, sport, joy), the ancestor of the modern word "game."
 
-Gamen.jl is a Julia package for working with [modal logic](https://en.wikipedia.org/wiki/Modal_logic), following the presentation in [**Boxes and Diamonds: An Open Introduction to Modal Logic**](https://bd.openlogicproject.org) by Richard Zach (Open Logic Project). It provides type-safe formula construction, Kripke semantics, model checking, and frame definability analysis.
+Gamen.jl is a Julia package for working with [modal logic](https://en.wikipedia.org/wiki/Modal_logic), following the presentation in [**Boxes and Diamonds: An Open Introduction to Modal Logic**](https://bd.openlogicproject.org) by Richard Zach (Open Logic Project). It provides type-safe formula construction, Kripke semantics, model checking, frame definability, proof systems, completeness, and filtrations.
 
 ## Features
 
-- **Formula construction** -- a full type hierarchy for propositional and modal formulas (`Atom`, `Not`, `And`, `Or`, `Implies`, `Iff`, `Box`, `Diamond`)
-- **Kripke semantics** -- frames, models, accessibility relations, and the satisfaction relation M, w &#8873; A
-- **Model checking** -- determine truth of formulas at worlds, in models, and across classes of models
-- **Frame definability** -- test frame properties (reflexive, symmetric, transitive, serial, euclidean) and verify correspondence with modal schemas (K, T, D, B, 4, 5)
-- **Entailment** -- check whether premises entail a conclusion across all worlds
+- **Formula construction** — a full type hierarchy for propositional and modal formulas (`Atom`, `Not`, `And`, `Or`, `Implies`, `Iff`, `Box`, `Diamond`)
+- **Kripke semantics** — frames, models, accessibility relations, and the satisfaction relation M, w &#8873; A
+- **Model checking** — determine truth of formulas at worlds, in models, and across classes of models
+- **Frame definability** — test frame properties (reflexive, symmetric, transitive, serial, euclidean) and verify correspondence with modal schemas (T, D, B, 4, 5)
+- **Standard translation** — translate modal formulas into first-order logic
+- **Axiomatic derivations** — substitution, tautology checking, axiom schemas, Hilbert-style proof checker
+- **Modal systems** — K, KT, KD, KB, K4, K5, S4, S5
+- **Completeness** — canonical model construction, Truth Lemma, Lindenbaum's Lemma
+- **Filtrations** — finest, coarsest, symmetric, and transitive filtrations; finite model property; decidability
+- **Visualization** — render Kripke models as directed graphs (optional, via CairoMakie)
 
 ## Installation
 
 ```julia
 using Pkg
 Pkg.add("Gamen")
+```
+
+Visualization support requires loading CairoMakie, GraphMakie, and Graphs:
+
+```julia
+using Gamen, CairoMakie, GraphMakie, Graphs
+visualize_model(model)
 ```
 
 ## Quick Start
@@ -52,15 +64,12 @@ model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
 # Model checking (Definition 1.7, B&D)
 satisfies(model, :w1, Diamond(q))   # true  -- w2 is accessible and q holds there
 satisfies(model, :w1, Box(q))       # false -- w3 is accessible but q fails there
-satisfies(model, :w3, Box(Bottom()))  # true  -- vacuously, w3 has no successors
+satisfies(model, :w3, Box(Bottom())) # true  -- vacuously, w3 has no successors
 ```
 
 ## Frame Definability (Chapter 2)
 
-Test structural properties of frames and their correspondence with modal schemas:
-
 ```julia
-# Build a reflexive, transitive frame (a preorder)
 s4_frame = KripkeFrame([:w1, :w2, :w3],
     [:w1 => :w1, :w2 => :w2, :w3 => :w3,
      :w1 => :w2, :w2 => :w3, :w1 => :w3])
@@ -70,61 +79,111 @@ is_transitive(s4_frame)  # true
 
 # Schema T (□p → p) is valid on reflexive frames (Proposition 2.5, B&D)
 is_valid_on_frame(s4_frame, Implies(Box(p), p))  # true
-
-# Schema 4 (□p → □□p) is valid on transitive frames (Proposition 2.11, B&D)
-is_valid_on_frame(s4_frame, Implies(Box(p), Box(Box(p))))  # true
 ```
 
-| Schema | Formula | Frame Property | B&D Reference |
-|:-------|:--------|:---------------|:--------------|
-| **K** | `□(p→q) → (□p→□q)` | All frames | Proposition 1.19 |
-| **T** | `□p → p` | Reflexive | [Proposition 2.5](https://bd.openlogicproject.org) |
-| **D** | `□p → ◇p` | Serial | [Proposition 2.7](https://bd.openlogicproject.org) |
-| **B** | `p → □◇p` | Symmetric | [Proposition 2.9](https://bd.openlogicproject.org) |
-| **4** | `□p → □□p` | Transitive | [Proposition 2.11](https://bd.openlogicproject.org) |
-| **5** | `◇p → □◇p` | Euclidean | [Proposition 2.13](https://bd.openlogicproject.org) |
+| Schema | Formula | Frame Property |
+|:-------|:--------|:---------------|
+| **T** | `□p → p` | Reflexive |
+| **D** | `□p → ◇p` | Serial |
+| **B** | `p → □◇p` | Symmetric |
+| **4** | `□p → □□p` | Transitive |
+| **5** | `◇p → □◇p` | Euclidean |
 
-## Textbook
+## Axiomatic Derivations (Chapter 3)
 
-This package implements concepts from:
+```julia
+# Check if a formula is derivable in a modal system
+is_derivable_from(SYSTEM_KT, Formula[], Implies(Box(p), p))  # true
+is_derivable_from(SYSTEM_K,  Formula[], Implies(Box(p), p))  # false
 
-> Richard Zach, *[Boxes and Diamonds: An Open Introduction to Modal Logic](https://bd.openlogicproject.org)*, Open Logic Project, 2019+.
+# Verify a Hilbert-style derivation
+proof = [
+    ProofStep(Tautology(), Implies(p, p)),
+    ProofStep(Necessitation(1), Box(Implies(p, p))),
+]
+is_valid_derivation(SYSTEM_K, proof)  # true
+```
 
-Coverage so far:
+## Completeness (Chapter 4)
 
-- **Chapter 1: Syntax and Semantics** -- formulas, Kripke models, satisfaction, truth in a model, validity, entailment
-- **Chapter 2: Frame Definability** -- frame properties, frame validity, schema-property correspondence
-- **Chapters 3+** -- coming soon (proof systems, completeness, applied modal logics)
+```julia
+# Build the canonical model for K over a finite language
+cm = canonical_model(SYSTEM_K, [p, Box(p)])
+
+# Verify the Truth Lemma: M^K, Δ ⊩ A iff A ∈ Δ
+truth_lemma_holds(cm)  # true
+```
+
+## Filtrations and Decidability (Chapter 5)
+
+```julia
+# Build a filtration — collapses worlds that agree on all formulas in Γ
+Γ = subformula_closure(Implies(Box(p), p))
+filt = finest_filtration(model, Γ)   # fewest edges
+filt = coarsest_filtration(model, Γ) # most edges
+
+# Filtration Lemma: truth is preserved
+filtration_lemma_holds(filt)  # true
+
+# Check validity within a bounded search (decidability)
+is_decidable_within(SYSTEM_K, Implies(Box(p), p)).valid  # false -- not K-valid
+```
+
+## Textbook Coverage
+
+| Chapter | Topic | Status |
+|:--------|:------|:-------|
+| 1 | Syntax and Semantics | ✓ Complete |
+| 2 | Frame Definability | ✓ Complete |
+| 3 | Axiomatic Derivations | ✓ Complete |
+| 4 | Completeness and Canonical Models | ✓ Complete |
+| 5 | Filtrations and Decidability | ✓ Complete |
+| Part IV | Applied Modal Logics | Coming soon |
 
 ## Project Structure
 
 ```
 src/
-  Gamen.jl            # Module definition
-  formulas.jl          # Formula type hierarchy
-  kripke.jl            # Kripke frames and models
-  semantics.jl         # Satisfaction, truth, validity, entailment
-  frame_properties.jl  # Frame properties and frame validity
+  Gamen.jl              # Module definition and exports
+  formulas.jl           # Formula type hierarchy
+  kripke.jl             # Kripke frames and models
+  semantics.jl          # Satisfaction, truth, validity, entailment
+  frame_properties.jl   # Frame properties and frame validity (Ch2)
+  fol.jl                # First-order logic and standard translation (Ch2)
+  axioms.jl             # Axiom schemas, modal systems, derivations (Ch3)
+  completeness.jl       # Canonical models, Truth Lemma (Ch4)
+  filtrations.jl        # Filtrations, FMP, decidability (Ch5)
+ext/
+  GamenMakieExt/        # Optional visualization (CairoMakie + GraphMakie)
 test/
-  runtests.jl          # Test suite
-docs/                  # Documenter.jl documentation
+  runtests.jl           # Test suite (399 tests)
+docs/                   # Documenter.jl documentation
 notebooks/
-  pluto/               # Interactive Pluto notebooks per chapter
+  Project.toml          # Notebook environment (includes visualization deps)
+  pluto/                # Interactive Pluto notebooks, one per chapter
+  jupyter/              # Jupyter notebook versions
 ```
 
 ## Notebooks
 
-Interactive notebooks are provided for each chapter:
+Interactive notebooks are available for each chapter:
 
-- `notebooks/pluto/ch1_syntax_and_semantics.jl` -- formulas, models, and model checking
-- `notebooks/pluto/ch2_frame_definability.jl` -- frame properties and correspondence results
+| Notebook | Topic |
+|:---------|:------|
+| `ch1_syntax_and_semantics` | Formulas, models, model checking |
+| `ch2_frame_definability` | Frame properties and correspondence |
+| `ch3_axiomatic_derivations` | Proof systems and derivations |
+| `ch4_completeness` | Canonical models and completeness |
+| `ch5_filtrations` | Filtrations, FMP, and decidability |
 
-Open them with [Pluto.jl](https://github.com/fonsp/Pluto.jl):
+Open with [Pluto.jl](https://github.com/fonsp/Pluto.jl):
 
 ```julia
 using Pluto
-Pluto.run(notebook="notebooks/pluto/ch1_syntax_and_semantics.jl")
+Pluto.run(notebook="notebooks/pluto/ch5_filtrations.jl")
 ```
+
+Or use the Jupyter versions in `notebooks/jupyter/`.
 
 ## License
 
