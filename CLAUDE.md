@@ -40,15 +40,37 @@ Follow standard Julia package layout:
 - Built with [Documenter.jl](https://documenter.juliadocs.org/) and deployed to GitHub Pages.
 - Docstrings on all public types and functions.
 
+## Documentation Conventions
+
+- Use Unicode characters (⟨, □, ◇, ⊥, ⊤, ↔, etc.) instead of LaTeX in docs — LaTeX renders as raw text on GitHub.
+- Docstrings reference B&D definition numbers (e.g., "Definition 1.7, B&D").
+- Avoid `Set` display in doctests — use equality checks or `length()` since iteration order is non-deterministic.
+
 ## Notebooks
 
-Demonstrations should be implemented in parallel as both Pluto and Jupyter notebooks, covering:
+- Write Pluto notebooks first in `notebooks/pluto/`, one per chapter.
+- Generate Jupyter notebooks using: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/<file>.jl`
+- Pluto cell IDs use the pattern `NaNbNcNd-XXXX-XXXX-XXXX-XXXXXXXXXXXX`.
+- Both formats activate the project with `Pkg.activate(joinpath(@__DIR__, "..", ".."))`.
 
-- Basic usage and formula construction
-- Building and querying Kripke models
-- Examples for each logic variant (deontic, epistemic, temporal)
-- Interactive exploration of modal reasoning
+## Chapter Implementation Workflow
+
+When implementing a new B&D chapter:
+
+1. Read relevant PDF pages from `notes/bd-screen.pdf`
+2. Create `src/<chapter_name>.jl` with implementations and docstrings
+3. Add exports to `src/Gamen.jl`
+4. Add tests to `test/runtests.jl` (organized by chapter testset)
+5. Update `docs/src/book_reference.md` with definition → implementation mapping
+6. Update `docs/src/api.md` with new docstring references
+7. Update `docs/src/tutorial.md` with examples
+8. Run doctests: `julia --project=docs docs/make.jl`
+9. Run tests: `julia --project -e 'using Test, Gamen; include("test/runtests.jl")'`
+10. Create Pluto notebook: `notebooks/pluto/chN_<name>.jl`
+11. Generate Jupyter notebook: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/chN_<name>.jl`
+12. Commit implementation first, then commit notebooks separately
 
 ## Resources
 
 - [Boxes and Diamonds](https://bd.openlogicproject.org) — Open access introduction to modal logic from the Open Logic Project
+- Local PDF: `notes/bd-screen.pdf`
