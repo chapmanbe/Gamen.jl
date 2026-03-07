@@ -12,7 +12,6 @@ makedocs(
     ],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
-        assets = ["assets/logo.svg", "assets/logo2.svg"],
     ),
     remotes = nothing,
     doctest = true,
@@ -20,6 +19,6 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/USERNAME/Gamen.jl.git",
+    repo = "github.com/chapmanbe/Gamen.jl.git",
     devbranch = "main",
 )

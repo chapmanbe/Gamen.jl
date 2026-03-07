@@ -24,6 +24,13 @@ begin
 	using Gamen
 end
 
+# ╔═╡ 2a2b3c4d-0030-0030-0030-000000000030
+md"""
+### Unicode Modal Operators
+
+Gamen.jl exports `□` and `◇` as Unicode aliases for `Box` and `Diamond`. Type `\square<tab>` and `\diamond<tab>` in the Julia REPL. Throughout this notebook, we use these Unicode operators to write formulas that mirror the mathematical notation.
+"""
+
 # ╔═╡ 2a2b3c4d-0003-0003-0003-000000000003
 md"""
 ## 2.1 Validity on a Frame
@@ -47,12 +54,13 @@ begin
 	frame = KripkeFrame([:w1, :w2], [:w1 => :w2])
 
 	# □⊤ is valid on any frame — ⊤ is true everywhere, so □⊤ is too
-	is_valid_on_frame(frame, Box(Top()))
+	# Using Unicode: □ === Box, ◇ === Diamond (type \square<tab> / \diamond<tab>)
+	is_valid_on_frame(frame, □(Top()))
 end
 
 # ╔═╡ 2a2b3c4d-0005-0005-0005-000000000005
 # But □p → p is NOT valid on this frame — it's not reflexive
-is_valid_on_frame(frame, Implies(Box(p), p))
+is_valid_on_frame(frame, Implies(□(p), p))
 
 # ╔═╡ 2a2b3c4d-0006-0006-0006-000000000006
 md"""
@@ -137,7 +145,8 @@ structure. It says that $\square$ distributes over implication.
 
 # ╔═╡ 2a2b3c4d-0012-0012-0012-000000000012
 begin
-	schema_k = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))
+	# □(p → q) → (□p → □q), using Unicode □
+	schema_k = Implies(□(Implies(p, q)), Implies(□(p), □(q)))
 
 	frame1 = KripkeFrame([:w1, :w2], [:w1 => :w2])
 	frame2 = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w2 => :w3])
@@ -158,7 +167,7 @@ Conversely, if $\square p \to p$ is valid, the frame must be reflexive.
 
 # ╔═╡ 2a2b3c4d-0014-0014-0014-000000000014
 begin
-	schema_t = Implies(Box(p), p)
+	schema_t = Implies(□(p), p)
 
 	reflexive_frame = KripkeFrame([:w1, :w2],
 		[:w1 => :w1, :w1 => :w2, :w2 => :w2])
@@ -179,7 +188,7 @@ vacuously true while $\diamond p$ is false.
 
 # ╔═╡ 2a2b3c4d-0016-0016-0016-000000000016
 begin
-	schema_d = Implies(Box(p), Diamond(p))
+	schema_d = Implies(□(p), ◇(p))
 
 	serial_frame = KripkeFrame([:w1, :w2], [:w1 => :w2, :w2 => :w1])
 	non_serial_frame = KripkeFrame([:w1, :w2], [:w1 => :w2])
@@ -198,7 +207,7 @@ it's necessarily possible (every accessible world can see back to where $p$ hold
 
 # ╔═╡ 2a2b3c4d-0018-0018-0018-000000000018
 begin
-	schema_b = Implies(p, Box(Diamond(p)))
+	schema_b = Implies(p, □(◇(p)))
 
 	symmetric_frame = KripkeFrame([:w1, :w2],
 		[:w1 => :w2, :w2 => :w1, :w1 => :w1, :w2 => :w2])
@@ -219,7 +228,7 @@ by going further.
 
 # ╔═╡ 2a2b3c4d-0020-0020-0020-000000000020
 begin
-	schema_4 = Implies(Box(p), Box(Box(p)))
+	schema_4 = Implies(□(p), □(□(p)))
 
 	transitive_frame = KripkeFrame([:w1, :w2, :w3],
 		[:w1 => :w2, :w2 => :w3, :w1 => :w3])
@@ -241,7 +250,7 @@ what's possible.
 
 # ╔═╡ 2a2b3c4d-0022-0022-0022-000000000022
 begin
-	schema_5 = Implies(Diamond(p), Box(Diamond(p)))
+	schema_5 = Implies(◇(p), □(◇(p)))
 
 	euclidean_frame = KripkeFrame([:w1, :w2, :w3],
 		[:w1 => :w2, :w1 => :w3, :w2 => :w2, :w2 => :w3, :w3 => :w2, :w3 => :w3])
@@ -316,6 +325,7 @@ Try these exercises:
 # ╔═╡ Cell order:
 # ╟─2a2b3c4d-0001-0001-0001-000000000001
 # ╠═2a2b3c4d-0002-0002-0002-000000000002
+# ╟─2a2b3c4d-0030-0030-0030-000000000030
 # ╟─2a2b3c4d-0003-0003-0003-000000000003
 # ╠═2a2b3c4d-0004-0004-0004-000000000004
 # ╠═2a2b3c4d-0005-0005-0005-000000000005

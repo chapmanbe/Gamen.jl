@@ -13,6 +13,8 @@ Implies
 Iff
 Box
 Diamond
+□
+◇
 Top
 is_modal_free
 atoms

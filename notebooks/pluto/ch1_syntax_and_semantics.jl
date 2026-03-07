@@ -1,8 +1,15 @@
 ### A Pluto.jl notebook ###
-# v0.20.4
+# v0.20.10
 
 using Markdown
 using InteractiveUtils
+
+# ╔═╡ 1a2b3c4d-0002-0002-0002-000000000002
+begin
+	using Pkg
+	Pkg.activate(joinpath(@__DIR__, "..", ".."))
+	using Gamen
+end
 
 # ╔═╡ 1a2b3c4d-0001-0001-0001-000000000001
 md"""
@@ -19,13 +26,6 @@ We cover:
 - Truth in a model (Definition 1.9)
 - Validity and entailment
 """
-
-# ╔═╡ 1a2b3c4d-0002-0002-0002-000000000002
-begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, "..", ".."))
-	using Gamen
-end
 
 # ╔═╡ 1a2b3c4d-0003-0003-0003-000000000003
 md"""
@@ -93,15 +93,42 @@ end
 
 # ╔═╡ 1a2b3c4d-0009-0009-0009-000000000009
 begin
-	# Modal operators
+	# Modal operators — verbose syntax
 	box_p = Box(p)        # □p: "necessarily p"
 	diamond_q = Diamond(q) # ◇q: "possibly q"
 
-	# Nested formulas
-	box_p_implies_p = Implies(Box(p), p)  # □p → p
-	k_schema = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))  # □(p → q) → (□p → □q)
+	# Unicode syntax — type \square<tab> and \diamond<tab> in the Julia REPL
+	box_p_unicode = □(p)        # identical to Box(p)
+	diamond_q_unicode = ◇(q)    # identical to Diamond(q)
 
-	(box_p, diamond_q, box_p_implies_p, k_schema)
+	# They construct the exact same objects
+	@assert □(p) === Box(p)
+	@assert ◇(q) === Diamond(q)
+
+	# Nested formulas (both syntaxes work)
+	box_p_implies_p = Implies(□(p), p)  # □p → p
+	k_schema = Implies(□(Implies(p, q)), Implies(□(p), □(q)))  # □(p → q) → (□p → □q)
+
+	(box_p, diamond_q, box_p_unicode, diamond_q_unicode, box_p_implies_p, k_schema)
+end
+
+# ╔═╡ 1a2b3c4d-0030-0030-0030-000000000030
+md"""
+### Unicode Syntax for Modal Operators
+
+Gamen.jl exports `□` and `◇` as aliases for `Box` and `Diamond`. In the Julia REPL, type `\square<tab>` for □ and `\diamond<tab>` for ◇. They are full type aliases — `□(p)` constructs a `Box`, and `◇(q) isa Diamond` is `true`.
+
+This lets you write formulas that closely mirror the mathematical notation:
+"""
+
+# ╔═╡ 1a2b3c4d-0031-0031-0031-000000000031
+begin
+	# Compare: verbose vs Unicode
+	verbose_formula = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))
+	unicode_formula = Implies(□(Implies(p, q)), Implies(□(p), □(q)))
+
+	# They are identical
+	verbose_formula == unicode_formula, □ === Box, ◇ === Diamond
 end
 
 # ╔═╡ 1a2b3c4d-0010-0010-0010-000000000010
@@ -274,6 +301,8 @@ Try building your own models and checking formulas! Some ideas from the book:
 # ╠═1a2b3c4d-0007-0007-0007-000000000007
 # ╠═1a2b3c4d-0008-0008-0008-000000000008
 # ╠═1a2b3c4d-0009-0009-0009-000000000009
+# ╟─1a2b3c4d-0030-0030-0030-000000000030
+# ╠═1a2b3c4d-0031-0031-0031-000000000031
 # ╟─1a2b3c4d-0010-0010-0010-000000000010
 # ╠═1a2b3c4d-0011-0011-0011-000000000011
 # ╟─1a2b3c4d-0012-0012-0012-000000000012

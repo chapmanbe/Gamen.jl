@@ -92,6 +92,21 @@ struct Diamond <: Formula
     operand::Formula
 end
 
+# Unicode aliases for modal operators
+"""
+    □(operand::Formula)
+
+Unicode alias for [`Box`](@ref). Type `\\square<tab>` in the Julia REPL.
+"""
+const □ = Box
+
+"""
+    ◇(operand::Formula)
+
+Unicode alias for [`Diamond`](@ref). Type `\\diamond<tab>` in the Julia REPL.
+"""
+const ◇ = Diamond
+
 # Abbreviations (Definition 1.3)
 
 """

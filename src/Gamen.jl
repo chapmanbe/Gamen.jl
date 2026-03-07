@@ -2,7 +2,7 @@ module Gamen
 
 # Formula types
 export Formula, Bottom, Atom, Not, And, Or, Implies, Iff
-export Box, Diamond
+export Box, Diamond, □, ◇
 export Top, is_modal_free
 
 # Kripke structures
