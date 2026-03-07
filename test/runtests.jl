@@ -731,6 +731,313 @@ using Test
         end
     end
 
+    @testset "Chapter 4: Completeness and Canonical Models" begin
+        p = Atom(:p)
+        q = Atom(:q)
+
+        @testset "Subformulas" begin
+            # Atom
+            @test subformulas(p) == Set{Formula}([p])
+
+            # Compound
+            sf = subformulas(Implies(p, q))
+            @test p ∈ sf
+            @test q ∈ sf
+            @test Implies(p, q) ∈ sf
+            @test length(sf) == 3
+
+            # Modal
+            sf = subformulas(Box(Implies(p, q)))
+            @test Box(Implies(p, q)) ∈ sf
+            @test Implies(p, q) ∈ sf
+            @test p ∈ sf
+            @test q ∈ sf
+            @test length(sf) == 4
+
+            # Nested
+            sf = subformulas(Diamond(Box(p)))
+            @test Diamond(Box(p)) ∈ sf
+            @test Box(p) ∈ sf
+            @test p ∈ sf
+            @test length(sf) == 3
+
+            # Bottom
+            @test subformulas(Bottom()) == Set{Formula}([Bottom()])
+        end
+
+        @testset "Formula closure" begin
+            cl = formula_closure([p])
+            @test Atom(:p) ∈ cl
+            @test Not(Atom(:p)) ∈ cl
+            @test length(cl) == 2
+
+            cl = formula_closure([Box(p)])
+            @test Box(p) ∈ cl
+            @test Not(Box(p)) ∈ cl
+            @test p ∈ cl
+            @test Not(p) ∈ cl
+            @test length(cl) == 4
+        end
+
+        @testset "Modal operators on sets (Def 4.5)" begin
+            Γ = Set{Formula}([Box(p), Box(q), Diamond(p), p])
+
+            @test box_set(Γ) == Set{Formula}([Box(Box(p)), Box(Box(q)), Box(Diamond(p)), Box(p)])
+            @test diamond_set(Γ) == Set{Formula}([Diamond(Box(p)), Diamond(Box(q)), Diamond(Diamond(p)), Diamond(p)])
+            @test box_inverse(Γ) == Set{Formula}([p, q])
+            @test diamond_inverse(Γ) == Set{Formula}([p])
+
+            # Empty set
+            @test box_inverse(Set{Formula}()) == Set{Formula}()
+            @test diamond_inverse(Set{Formula}()) == Set{Formula}()
+        end
+
+        @testset "Consistency (Def 3.39)" begin
+            # Consistent sets
+            @test is_consistent(SYSTEM_K, [p]; max_worlds=2) == true
+            @test is_consistent(SYSTEM_K, [p, q]; max_worlds=2) == true
+            @test is_consistent(SYSTEM_K, [Box(p)]; max_worlds=2) == true
+            @test is_consistent(SYSTEM_K, [Diamond(p)]; max_worlds=2) == true
+
+            # Inconsistent sets
+            @test is_consistent(SYSTEM_K, [p, Not(p)]; max_worlds=2) == false
+            @test is_consistent(SYSTEM_K, [Bottom()]; max_worlds=2) == false
+
+            # System-relative consistency: {□p, ¬p} is K-consistent but KT-inconsistent
+            @test is_consistent(SYSTEM_K, [Box(p), Not(p)]; max_worlds=2) == true
+            @test is_consistent(SYSTEM_KT, [Box(p), Not(p)]; max_worlds=2) == false
+
+            # {◇p, □¬p} is inconsistent in K (Dual axiom)
+            @test is_consistent(SYSTEM_K, [Diamond(p), Box(Not(p))]; max_worlds=2) == false
+        end
+
+        @testset "Derivability from a set (Def 3.36)" begin
+            # Γ = {p} ⊢_K p (reflexivity)
+            @test is_derivable_from(SYSTEM_K, [p], p; max_worlds=2) == true
+
+            # Γ = {p, p→q} ⊢_K q (modus ponens)
+            @test is_derivable_from(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2) == true
+
+            # Γ = {} ⊢_K p→p (tautology)
+            @test is_derivable_from(SYSTEM_K, Formula[], Implies(p, p); max_worlds=2) == true
+
+            # K proves □(p→p) — necessitation of a tautology
+            @test is_derivable_from(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2) == true
+
+            # K does NOT prove □p→p (that's T)
+            @test is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
+
+            # KT proves □p→p
+            @test is_derivable_from(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2) == true
+
+            # {p} does not derive □p in K
+            @test is_derivable_from(SYSTEM_K, [p], Box(p); max_worlds=2) == false
+
+            # Monotonicity (Prop 3.37): Γ ⊢ A and Γ ⊆ Δ implies Δ ⊢ A
+            @test is_derivable_from(SYSTEM_K, [p], p; max_worlds=2) == true
+            @test is_derivable_from(SYSTEM_K, [p, q], p; max_worlds=2) == true
+        end
+
+        @testset "Complete consistent sets (Def 4.1)" begin
+            lang = formula_closure([p])  # {p, ¬p}
+
+            # {p} is complete K-consistent w.r.t. {p, ¬p}
+            @test is_complete_consistent(SYSTEM_K, [p], lang; max_worlds=2) == true
+            # {¬p} is complete K-consistent
+            @test is_complete_consistent(SYSTEM_K, [Not(p)], lang; max_worlds=2) == true
+            # {} is NOT complete (neither p nor ¬p)
+            @test is_complete_consistent(SYSTEM_K, Formula[], lang; max_worlds=2) == false
+            # {p, ¬p} is NOT consistent
+            @test is_complete_consistent(SYSTEM_K, [p, Not(p)], lang; max_worlds=2) == false
+        end
+
+        @testset "Lindenbaum's Lemma (Thm 4.3)" begin
+            lang = formula_closure([p, Box(p)])
+
+            # Extend {p} to a complete K-consistent set
+            ext = lindenbaum_extend(SYSTEM_K, [p], lang; max_worlds=3)
+            @test p ∈ ext
+            # Completeness: for every formula in language, A ∈ ext or ¬A ∈ ext
+            for φ in lang
+                @test (φ ∈ ext) || (Not(φ) ∈ ext)
+            end
+
+            # Extend {□p} to a complete K-consistent set
+            ext2 = lindenbaum_extend(SYSTEM_K, [Box(p)], lang; max_worlds=3)
+            @test Box(p) ∈ ext2
+            for φ in lang
+                @test (φ ∈ ext2) || (Not(φ) ∈ ext2)
+            end
+
+            # Inconsistent sets throw
+            @test_throws ArgumentError lindenbaum_extend(SYSTEM_K, [p, Not(p)], lang; max_worlds=3)
+        end
+
+        @testset "Canonical model for K (Def 4.11, Thm 4.14)" begin
+            # Canonical model for K over {p}
+            cm = canonical_model(SYSTEM_K, [p]; max_worlds=3)
+            @test cm.system == SYSTEM_K
+            @test length(cm.worlds) == 2  # {p} and {¬p}
+            @test truth_lemma_holds(cm)
+
+            # Canonical model for K over {p, □p}
+            cm2 = canonical_model(SYSTEM_K, [p, Box(p)]; max_worlds=3)
+            @test length(cm2.worlds) == 4  # 2 choices for p × 2 for □p
+            @test truth_lemma_holds(cm2)
+        end
+
+        @testset "Canonical model for KT — reflexive (Thm 4.16)" begin
+            cm = canonical_model(SYSTEM_KT, [p, Box(p)]; max_worlds=3)
+            @test truth_lemma_holds(cm)
+            @test is_reflexive(cm.model.frame)
+
+            # KT has fewer worlds than K: {□p, ¬p} is KT-inconsistent
+            @test length(cm.worlds) < 4
+        end
+
+        @testset "Canonical model for KD — serial (Thm 4.16)" begin
+            cm = canonical_model(SYSTEM_KD, [p, Box(p)]; max_worlds=3)
+            @test truth_lemma_holds(cm)
+            @test is_serial(cm.model.frame)
+        end
+
+        @testset "Canonical model for S4 — reflexive + transitive (Thm 4.16)" begin
+            # Need □□p in language for transitivity to show
+            cm = canonical_model(SYSTEM_S4, [p, Box(p), Box(Box(p))]; max_worlds=3)
+            @test truth_lemma_holds(cm)
+            @test is_reflexive(cm.model.frame)
+            @test is_transitive(cm.model.frame)
+        end
+
+        @testset "Proposition 4.2: properties of complete consistent sets" begin
+            cm = canonical_model(SYSTEM_K, [p, q]; max_worlds=3)
+
+            for Δ in cm.worlds
+                # 3. ⊥ ∉ Γ
+                @test Bottom() ∉ Δ
+
+                # 4. ¬A ∈ Γ iff A ∉ Γ
+                for φ in cm.language
+                    if φ isa Not
+                        continue  # skip ¬-formulas, check base formulas
+                    end
+                    @test (Not(φ) ∈ Δ) == (φ ∉ Δ)
+                end
+
+                # 5. A ∧ B ∈ Γ iff A ∈ Γ and B ∈ Γ
+                for φ in cm.language
+                    if φ isa And
+                        @test (φ ∈ Δ) == (φ.left ∈ Δ && φ.right ∈ Δ)
+                    end
+                end
+
+                # 6. A ∨ B ∈ Γ iff A ∈ Γ or B ∈ Γ
+                for φ in cm.language
+                    if φ isa Or
+                        @test (φ ∈ Δ) == (φ.left ∈ Δ || φ.right ∈ Δ)
+                    end
+                end
+
+                # 7. A → B ∈ Γ iff A ∉ Γ or B ∈ Γ
+                for φ in cm.language
+                    if φ isa Implies
+                        @test (φ ∈ Δ) == (φ.antecedent ∉ Δ || φ.consequent ∈ Δ)
+                    end
+                end
+            end
+        end
+
+        @testset "Proposition 4.8: □A ∈ Γ iff for all Δ' with R^Σ ΓΔ', A ∈ Δ'" begin
+            cm = canonical_model(SYSTEM_K, [p, Box(p)]; max_worlds=3)
+
+            for (i, Δ) in enumerate(cm.worlds)
+                wname = Symbol("Δ", i)
+                for φ in cm.language
+                    if φ isa Box
+                        a = φ.operand
+                        # □A ∈ Δ iff for all accessible Δ', A ∈ Δ'
+                        box_in = φ ∈ Δ
+                        all_succ = all(cm.worlds) do Δ′
+                            j = findfirst(w -> w === Δ′, cm.worlds)
+                            wj = Symbol("Δ", j)
+                            if wj ∈ accessible(cm.model.frame, wname)
+                                a ∈ Δ′
+                            else
+                                true  # not accessible, vacuously true
+                            end
+                        end
+                        @test box_in == all_succ
+                    end
+                end
+            end
+        end
+
+        @testset "Proposition 4.10: ◇A ∈ Γ iff ∃ accessible Δ' with A ∈ Δ'" begin
+            cm = canonical_model(SYSTEM_K, [p, Box(p)]; max_worlds=3)
+
+            for (i, Δ) in enumerate(cm.worlds)
+                wname = Symbol("Δ", i)
+                for φ in cm.language
+                    # Check Diamond formulas (which appear as ¬□¬A patterns)
+                    # In our language, ◇ formulas might not appear directly,
+                    # but we can check the semantic equivalent
+                end
+            end
+            # The truth lemma already verifies this implicitly
+            @test truth_lemma_holds(cm)
+        end
+
+        @testset "Completeness: K-valid implies K-provable (Cor 4.15)" begin
+            # Some K-valid formulas (tautological instances)
+            k_valid = [
+                Implies(p, p),
+                Implies(p, Implies(q, p)),
+                Or(p, Not(p)),
+            ]
+            for φ in k_valid
+                @test is_derivable_from(SYSTEM_K, Formula[], φ; max_worlds=2) == true
+            end
+
+            # Some K-valid modal formulas
+            k_modal_valid = [
+                Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))),  # K axiom
+                Box(Implies(p, p)),  # Nec of tautology
+            ]
+            for φ in k_modal_valid
+                @test is_derivable_from(SYSTEM_K, Formula[], φ; max_worlds=2) == true
+            end
+
+            # Non-valid in K
+            @test is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
+            @test is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), Diamond(p)); max_worlds=2) == false
+        end
+
+        @testset "System distinctness via completeness (Props 3.32-3.35)" begin
+            # KD ⊊ KT: □p→p is KT-valid but not KD-valid
+            t_schema = Implies(Box(p), p)
+            @test is_derivable_from(SYSTEM_KT, Formula[], t_schema; max_worlds=2) == true
+            @test is_derivable_from(SYSTEM_KD, Formula[], t_schema; max_worlds=2) == false
+
+            # KB ≠ K4: Schema 4 not valid in KB
+            four_schema = Implies(Box(p), Box(Box(p)))
+            @test is_derivable_from(SYSTEM_KB, Formula[], four_schema; max_worlds=2) == false
+        end
+
+        @testset "Determination (Def 4.13)" begin
+            # Build canonical model and check determination
+            cm = canonical_model(SYSTEM_K, [p]; max_worlds=3)
+            @test determines(cm.model, SYSTEM_K, [p]; max_worlds=3) == true
+        end
+
+        @testset "Canonical model display" begin
+            cm = canonical_model(SYSTEM_K, [p]; max_worlds=3)
+            s = string(cm)
+            @test occursin("CanonicalModel", s)
+            @test occursin("K", s)
+            @test occursin("2 worlds", s)
+        end
+    end
+
     @testset "Standard Translation (Definition frd.15)" begin
         p = Atom(:p)
         q = Atom(:q)

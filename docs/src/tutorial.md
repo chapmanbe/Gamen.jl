@@ -219,3 +219,115 @@ julia> dual(And(p, q))
 julia> dual(Box(p))
 ◇¬p
 ```
+
+## Completeness and Canonical Models
+
+Chapter 4 proves the *completeness* theorem: every valid formula is
+provable. The key construction is the *canonical model*, whose worlds
+are the complete Σ-consistent sets of formulas.
+
+### Consistency and Derivability
+
+A set of formulas is Σ-consistent if no contradiction can be derived
+from it (Definition 3.39). Derivability from a set Γ ⊢_Σ A means A
+follows from finitely many premises in Γ (Definition 3.36):
+
+```jldoctest tutorial
+julia> is_consistent(SYSTEM_K, [p, Box(p)])
+true
+
+julia> is_consistent(SYSTEM_K, [p, Not(p)])
+false
+
+julia> is_consistent(SYSTEM_KT, [Box(p), Not(p)])
+false
+```
+
+Derivability checks whether a formula follows from premises:
+
+```jldoctest tutorial
+julia> is_derivable_from(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2)
+true
+
+julia> is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2)
+false
+
+julia> is_derivable_from(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2)
+true
+```
+
+### Subformulas and Closure
+
+The [`subformulas`](@ref) function collects all subformulas, and
+[`formula_closure`](@ref) extends a set to include negations:
+
+```jldoctest tutorial
+julia> length(subformulas(Box(Implies(p, q))))
+4
+
+julia> Box(Implies(p, q)) ∈ subformulas(Box(Implies(p, q)))
+true
+
+julia> formula_closure([p])
+2-element Vector{Formula}:
+ p
+ ¬p
+```
+
+### Modal Operators on Sets
+
+Definition 4.5 defines □Γ, ◇Γ, □⁻¹Γ, and ◇⁻¹Γ:
+
+```jldoctest tutorial
+julia> Γ = Set{Formula}([Box(p), Box(q), Diamond(p)]);
+
+julia> box_inverse(Γ) == Set{Formula}([p, q])
+true
+
+julia> diamond_inverse(Γ) == Set{Formula}([p])
+true
+```
+
+### Building Canonical Models
+
+The canonical model M^Σ for a system Σ over a finite language has as
+worlds all complete Σ-consistent sets (Definition 4.11):
+
+```jldoctest tutorial
+julia> cm = canonical_model(SYSTEM_K, [p, Box(p)]; max_worlds=3);
+
+julia> length(cm.worlds)
+4
+
+julia> truth_lemma_holds(cm)
+true
+```
+
+The canonical model for **KT** is reflexive, and for **S4** (with enough
+modal depth in the language) is reflexive and transitive (Theorem 4.16):
+
+```jldoctest tutorial
+julia> cm_kt = canonical_model(SYSTEM_KT, [p, Box(p)]; max_worlds=3);
+
+julia> is_reflexive(cm_kt.model.frame)
+true
+
+julia> cm_s4 = canonical_model(SYSTEM_S4, [p, Box(p), Box(Box(p))]; max_worlds=3);
+
+julia> is_reflexive(cm_s4.model.frame) && is_transitive(cm_s4.model.frame)
+true
+```
+
+### Lindenbaum's Lemma
+
+Lindenbaum's Lemma (Theorem 4.3) guarantees that every consistent set
+can be extended to a complete consistent set:
+
+```jldoctest tutorial
+julia> lang = formula_closure([p, Box(p)]);
+
+julia> ext = lindenbaum_extend(SYSTEM_K, [Box(p)], lang; max_worlds=3);
+
+julia> Box(p) ∈ ext
+true
+```

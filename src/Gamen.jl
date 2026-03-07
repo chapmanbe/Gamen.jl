@@ -36,11 +36,21 @@ export ProofStep, Derivation, conclusion
 export is_valid_derivation
 export dual
 
+# Completeness and canonical models (Chapter 4)
+export subformulas, formula_closure
+export is_derivable_from, is_consistent
+export is_complete_consistent
+export box_set, diamond_set, box_inverse, diamond_inverse
+export lindenbaum_extend
+export CanonicalModel, canonical_model
+export determines, truth_lemma_holds
+
 include("formulas.jl")
 include("kripke.jl")
 include("semantics.jl")
 include("frame_properties.jl")
 include("fol.jl")
 include("axioms.jl")
+include("completeness.jl")
 
 end # module Gamen

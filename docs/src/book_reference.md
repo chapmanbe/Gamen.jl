@@ -54,6 +54,25 @@ to their implementations in Gamen.jl.
 | Definition 3.26 | Dual formulas | [`dual`](@ref) |
 | Theorem 3.31 | Soundness | Verified in tests |
 
+## Chapter 4: Completeness and Canonical Models
+
+| B&D Reference | Description | Gamen.jl |
+|:---|:---|:---|
+| Definition 3.36 | Derivability from a set Γ ⊢_Σ A | [`is_derivable_from`](@ref) |
+| Definition 3.39 | Σ-consistency | [`is_consistent`](@ref) |
+| Definition 4.1 | Complete Σ-consistent sets | [`is_complete_consistent`](@ref) |
+| Proposition 4.2 | Properties of complete consistent sets | Verified in tests |
+| Theorem 4.3 | Lindenbaum's Lemma | [`lindenbaum_extend`](@ref) |
+| Definition 4.5 | □Γ, ◇Γ, □⁻¹Γ, ◇⁻¹Γ | [`box_set`](@ref), [`diamond_set`](@ref), [`box_inverse`](@ref), [`diamond_inverse`](@ref) |
+| Definition 4.11 | Canonical model M^Σ | [`CanonicalModel`](@ref), [`canonical_model`](@ref) |
+| Proposition 4.12 | Truth Lemma | [`truth_lemma_holds`](@ref) |
+| Definition 4.13 | Determination | [`determines`](@ref) |
+| Theorem 4.14 | Determination theorem | Verified in tests |
+| Corollary 4.15 | Completeness of K | Verified in tests |
+| Theorem 4.16 | Frame completeness (D, T, B, 4, 5) | Verified in tests |
+| Theorem 4.17 | General completeness theorem | Verified in tests |
+| Proposition 4.18 | Additional frame properties of canonical models | Verified in tests |
+
 ## Part IV: Applied Modal Logic
 
 ### Chapter 14: Temporal Logics

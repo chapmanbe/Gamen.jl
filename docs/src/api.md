@@ -130,3 +130,44 @@ is_valid_derivation
 ```@docs
 dual
 ```
+
+## Completeness and Canonical Models
+
+### Subformulas and Closure
+
+```@docs
+subformulas
+formula_closure
+```
+
+### Derivability and Consistency
+
+```@docs
+is_derivable_from
+is_consistent
+is_complete_consistent
+```
+
+### Modal Operators on Sets
+
+```@docs
+box_set
+diamond_set
+box_inverse
+diamond_inverse
+```
+
+### Lindenbaum's Lemma
+
+```@docs
+lindenbaum_extend
+```
+
+### Canonical Models
+
+```@docs
+CanonicalModel
+canonical_model
+truth_lemma_holds
+determines
+```
