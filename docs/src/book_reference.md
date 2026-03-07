@@ -11,7 +11,7 @@ to their implementations in Gamen.jl.
 | Definition 1.1 | Language of modal logic | [`Bottom`](@ref), [`Atom`](@ref), [`Box`](@ref), [`Diamond`](@ref) |
 | Definition 1.2 | Formulas (inductive) | [`Formula`](@ref) type hierarchy |
 | Definition 1.3 | Abbreviations (⊤, ↔) | [`Top`](@ref), [`Iff`](@ref) |
-| Definition 1.6 | Model ``M = \langle W,R,V \rangle`` | [`KripkeFrame`](@ref), [`KripkeModel`](@ref) |
+| Definition 1.6 | Model M = ⟨W, R, V⟩ | [`KripkeFrame`](@ref), [`KripkeModel`](@ref) |
 | Definition 1.7 | Truth at a world | [`satisfies`](@ref) |
 | Definition 1.9 | Truth in a model | [`is_true_in`](@ref) |
 | Definition 1.11 | Validity in a class | [`is_valid`](@ref) |
@@ -22,7 +22,7 @@ to their implementations in Gamen.jl.
 
 | B&D Reference | Description | Gamen.jl |
 |:---|:---|:---|
-| Definition frd.3 | Frame ``\mathfrak{F} = \langle W, R \rangle`` | [`KripkeFrame`](@ref) |
+| Definition frd.3 | Frame F = ⟨W, R⟩ | [`KripkeFrame`](@ref) |
 | Definition frd.4 | Validity on a frame | [`is_valid_on_frame`](@ref) |
 | Definition frd.5 | Frame definability | Verified in tests (Corollary frd.8) |
 | Table frd.1 | 5 core frame properties | [`is_serial`](@ref), [`is_reflexive`](@ref), [`is_symmetric`](@ref), [`is_transitive`](@ref), [`is_euclidean`](@ref) |

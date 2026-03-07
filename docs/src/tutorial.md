@@ -6,8 +6,8 @@ This tutorial walks through the basics of Gamen.jl, following Chapter 1 of
 ## Building Formulas
 
 The language of basic modal logic (Definition 1.1) includes propositional
-variables, logical connectives, and the modal operators ``\square`` (Box) and
-``\diamond`` (Diamond).
+variables, logical connectives, and the modal operators □ (Box) and
+◇ (Diamond).
 
 ```jldoctest tutorial
 julia> using Gamen
@@ -33,7 +33,7 @@ p1
 
 ### Special Constants
 
-Falsity (``\bot``) and truth (``\top``) are available:
+Falsity (⊥) and truth (⊤) are available:
 
 ```jldoctest tutorial
 julia> Bottom()
@@ -45,7 +45,7 @@ julia> Top()
 
 ## Creating Kripke Models
 
-A model ``M = \langle W, R, V \rangle`` consists of worlds, an accessibility
+A model M = ⟨W, R, V⟩ consists of worlds, an accessibility
 relation, and a valuation (Definition 1.6).
 
 Here we build the model from Figure 1.1 in the book:
@@ -57,12 +57,12 @@ julia> model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]]);
 ```
 
 The valuation follows the book's convention: each atom maps to the set of
-worlds where it is true. So ``V(p) = \{w_1, w_2\}`` and ``V(q) = \{w_2\}``.
+worlds where it is true. So V(p) = {w₁, w₂} and V(q) = {w₂}.
 
 ## Model Checking
 
 The function [`satisfies`](@ref) implements the satisfaction relation
-``M, w \Vdash A`` (Definition 1.7):
+M, w ⊩ A (Definition 1.7):
 
 ```jldoctest tutorial
 julia> satisfies(model, :w1, p)
@@ -86,8 +86,7 @@ julia> satisfies(model, :w3, Box(q))
 true
 ```
 
-Note that ``\square q`` is vacuously true at ``w_3`` because ``w_3`` has no
-accessible worlds.
+Note that □q is vacuously true at w₃ because w₃ has no accessible worlds.
 
 ## Truth in a Model
 
@@ -117,8 +116,7 @@ true
 
 ## The Duality of □ and ◇
 
-Proposition 1.8 establishes that ``\square A \leftrightarrow \lnot\diamond\lnot A``
-and ``\diamond A \leftrightarrow \lnot\square\lnot A``. We can verify this:
+Proposition 1.8 establishes that □A ↔ ¬◇¬A and ◇A ↔ ¬□¬A. We can verify this:
 
 ```jldoctest tutorial
 julia> w = :w1;
@@ -136,8 +134,8 @@ The *standard translation* (Definition frd.15) maps modal formulas into
 first-order logic, making the correspondence between modal and first-order
 reasoning explicit.
 
-The translation uses a unary predicate ``P_p`` for each propositional variable
-``p``, and a binary predicate ``Q`` for the accessibility relation:
+The translation uses a unary predicate P_p for each propositional variable
+p, and a binary predicate Q for the accessibility relation:
 
 ```jldoctest tutorial
 julia> standard_translation(Box(p))
@@ -172,9 +170,8 @@ julia> substitute(Implies(p, q), Dict(:p => Box(p), :q => Diamond(q)))
 
 ### Axiom Schemas and Modal Systems
 
-The system **K** includes the K axiom ``\square(A \to B) \to (\square A \to
-\square B)`` and the Dual axiom ``\diamond A \leftrightarrow \lnot\square\lnot A``.
-Additional schemas define stronger systems:
+The system **K** includes the K axiom □(A → B) → (□A → □B) and the Dual
+axiom ◇A ↔ ¬□¬A. Additional schemas define stronger systems:
 
 ```jldoctest tutorial
 julia> is_instance(Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))), SchemaK())
@@ -189,7 +186,7 @@ S5
 
 ### Building and Checking Proofs
 
-Here is a proof that ``\square A \to \square(B \to A)`` (Proposition 3.12):
+Here is a proof that □A → □(B → A) (Proposition 3.12):
 
 ```jldoctest tutorial
 julia> proof = Derivation([
@@ -213,8 +210,7 @@ julia> conclusion(proof)
 
 ### Dual Formulas
 
-The dual of a formula swaps ``\bot \leftrightarrow \top``,
-``\land \leftrightarrow \lor``, and ``\square \leftrightarrow \diamond``:
+The dual of a formula swaps ⊥ ↔ ⊤, ∧ ↔ ∨, and □ ↔ ◇:
 
 ```jldoctest tutorial
 julia> dual(And(p, q))
