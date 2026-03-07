@@ -129,3 +129,23 @@ true
 julia> satisfies(model, w, Diamond(p)) == satisfies(model, w, Not(Box(Not(p))))
 true
 ```
+
+## Standard Translation
+
+The *standard translation* (Definition frd.15) maps modal formulas into
+first-order logic, making the correspondence between modal and first-order
+reasoning explicit.
+
+The translation uses a unary predicate ``P_p`` for each propositional variable
+``p``, and a binary predicate ``Q`` for the accessibility relation:
+
+```jldoctest tutorial
+julia> standard_translation(Box(p))
+∀y₁ (Q(x, y₁) → P_p(y₁))
+
+julia> standard_translation(Diamond(p))
+∃y₁ (Q(x, y₁) ∧ P_p(y₁))
+
+julia> standard_translation(Implies(Box(p), p))
+(∀y₁ (Q(x, y₁) → P_p(y₁)) → P_p(x))
+```
