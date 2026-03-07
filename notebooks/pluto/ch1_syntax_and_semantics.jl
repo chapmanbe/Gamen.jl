@@ -9,6 +9,7 @@ begin
 	using Pkg
 	Pkg.activate(joinpath(@__DIR__, "..", ".."))
 	using Gamen
+	using CairoMakie
 end
 
 # ╔═╡ 1a2b3c4d-0001-0001-0001-000000000001
@@ -156,7 +157,7 @@ A *model* $M = \langle W, R, V \rangle$ consists of (Definition 1.6):
 
 ### Figure 1.1 from Boxes and Diamonds
 
-The book's first example model has three worlds with arrows from $w_1$ to $w_2$ and $w_1$ to $w_3$:
+The book's first example model (Figure 1.1) has three worlds:
 - $W = \{w_1, w_2, w_3\}$
 - $R = \{\langle w_1, w_2 \rangle, \langle w_1, w_3 \rangle\}$
 - $V(p) = \{w_1, w_2\}$, $V(q) = \{w_2\}$
@@ -167,6 +168,11 @@ begin
 	frame = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w1 => :w3])
 	model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
 end
+
+# ╔═╡ 1a2b3c4d-0040-0040-0040-000000000040
+visualize_model(model,
+	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 1.0), :w3 => (2.0, -1.0)),
+	title = "Figure 1.1: A simple model")
 
 # ╔═╡ 1a2b3c4d-0014-0014-0014-000000000014
 md"""
@@ -307,6 +313,7 @@ Try building your own models and checking formulas! Some ideas from the book:
 # ╠═1a2b3c4d-0011-0011-0011-000000000011
 # ╟─1a2b3c4d-0012-0012-0012-000000000012
 # ╠═1a2b3c4d-0013-0013-0013-000000000013
+# ╠═1a2b3c4d-0040-0040-0040-000000000040
 # ╟─1a2b3c4d-0014-0014-0014-000000000014
 # ╟─1a2b3c4d-0015-0015-0015-000000000015
 # ╠═1a2b3c4d-0016-0016-0016-000000000016

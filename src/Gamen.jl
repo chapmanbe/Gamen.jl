@@ -45,6 +45,9 @@ export lindenbaum_extend
 export CanonicalModel, canonical_model
 export determines, truth_lemma_holds
 
+# Visualization
+export visualize_model
+
 include("formulas.jl")
 include("kripke.jl")
 include("semantics.jl")
@@ -52,5 +55,6 @@ include("frame_properties.jl")
 include("fol.jl")
 include("axioms.jl")
 include("completeness.jl")
+include("visualize.jl")
 
 end # module Gamen
