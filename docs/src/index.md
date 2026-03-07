@@ -2,7 +2,7 @@
 
 ```@raw html
 <div style="text-align: center;">
-  <img src="assets/logo2.svg" width="240" alt="Gamen.jl logo" style="margin-bottom: 1em;">
+  <img src="assets/logo.svg" width="240" alt="Gamen.jl logo" style="margin-bottom: 1em;">
 </div>
 ```
 
