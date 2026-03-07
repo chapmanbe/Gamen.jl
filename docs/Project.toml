@@ -1,0 +1,6 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Gamen = "d58aead4-12fe-4bc4-9bd9-a7dede724567"
+
+[compat]
+Documenter = "1"

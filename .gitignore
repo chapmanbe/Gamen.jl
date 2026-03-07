@@ -1,0 +1,14 @@
+# Julia
+Manifest.toml
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+
+# Documentation build
+docs/build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
