@@ -149,3 +149,77 @@ julia> standard_translation(Diamond(p))
 julia> standard_translation(Implies(Box(p), p))
 (∀y₁ (Q(x, y₁) → P_p(y₁)) → P_p(x))
 ```
+
+## Axiomatic Derivations
+
+Chapter 3 introduces Hilbert-style proof systems for modal logic. A
+*derivation* is a sequence of formulas where each step is justified as a
+tautological instance, an axiom schema instance, or follows by modus ponens
+or necessitation.
+
+### Tautologies and Substitution
+
+```jldoctest tutorial
+julia> is_tautology(Implies(p, Implies(q, p)))
+true
+
+julia> is_tautological_instance(Implies(Box(p), Implies(Diamond(q), Box(p))))
+true
+
+julia> substitute(Implies(p, q), Dict(:p => Box(p), :q => Diamond(q)))
+(□p → ◇q)
+```
+
+### Axiom Schemas and Modal Systems
+
+The system **K** includes the K axiom ``\square(A \to B) \to (\square A \to
+\square B)`` and the Dual axiom ``\diamond A \leftrightarrow \lnot\square\lnot A``.
+Additional schemas define stronger systems:
+
+```jldoctest tutorial
+julia> is_instance(Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))), SchemaK())
+true
+
+julia> is_instance(Implies(Box(p), p), SchemaT())
+true
+
+julia> SYSTEM_S5
+S5
+```
+
+### Building and Checking Proofs
+
+Here is a proof that ``\square A \to \square(B \to A)`` (Proposition 3.12):
+
+```jldoctest tutorial
+julia> proof = Derivation([
+           ProofStep(Implies(p, Implies(q, p)), Tautology()),
+           ProofStep(Box(Implies(p, Implies(q, p))), Necessitation(1)),
+           ProofStep(
+               Implies(Box(Implies(p, Implies(q, p))),
+                       Implies(Box(p), Box(Implies(q, p)))),
+               AxiomInst(SchemaK())),
+           ProofStep(
+               Implies(Box(p), Box(Implies(q, p))),
+               ModusPonens(2, 3)),
+       ]);
+
+julia> is_valid_derivation(SYSTEM_K, proof)
+true
+
+julia> conclusion(proof)
+(□p → □(q → p))
+```
+
+### Dual Formulas
+
+The dual of a formula swaps ``\bot \leftrightarrow \top``,
+``\land \leftrightarrow \lor``, and ``\square \leftrightarrow \diamond``:
+
+```jldoctest tutorial
+julia> dual(And(p, q))
+(¬p ∨ ¬q)
+
+julia> dual(Box(p))
+◇¬p
+```

@@ -72,3 +72,61 @@ FOForall
 FOExists
 standard_translation
 ```
+
+## Axiomatic Derivations
+
+### Substitution and Tautologies
+
+```@docs
+substitute
+is_tautology
+is_tautological_instance
+```
+
+### Axiom Schemas
+
+```@docs
+AxiomSchema
+SchemaK
+SchemaDual
+SchemaT
+SchemaD
+SchemaB
+Schema4
+Schema5
+is_instance
+```
+
+### Modal Systems
+
+```@docs
+ModalSystem
+SYSTEM_K
+SYSTEM_KT
+SYSTEM_KD
+SYSTEM_KB
+SYSTEM_K4
+SYSTEM_K5
+SYSTEM_S4
+SYSTEM_S5
+```
+
+### Derivations
+
+```@docs
+Justification
+Tautology
+AxiomInst
+ModusPonens
+Necessitation
+ProofStep
+Derivation
+conclusion
+is_valid_derivation
+```
+
+### Dual Formulas
+
+```@docs
+dual
+```

@@ -37,6 +37,23 @@ to their implementations in Gamen.jl.
 | Definition frd.15 | Standard translation STₓ(φ) | [`standard_translation`](@ref) |
 | Proposition frd.16 | Agreement of satisfaction and ST | Verified in tests |
 
+## Chapter 3: Axiomatic Derivations
+
+| B&D Reference | Description | Gamen.jl |
+|:---|:---|:---|
+| Definition 3.1 | Modus ponens | [`ModusPonens`](@ref) |
+| Definition 3.2 | Necessitation | [`Necessitation`](@ref) |
+| Definition 3.3 | Derivation | [`Derivation`](@ref), [`is_valid_derivation`](@ref) |
+| Definition 3.5 | Normal modal logic (K, Dual) | [`SchemaK`](@ref), [`SchemaDual`](@ref) |
+| Definition 3.9 | Modal system KA₁...Aₙ | [`ModalSystem`](@ref), [`SYSTEM_K`](@ref) |
+| Definition 3.10 | Derivability in a system | [`is_valid_derivation`](@ref) |
+| Proposition 3.12 | □A → □(B → A) K-provable | Verified in tests |
+| Proposition 3.13 | □(A ∧ B) → (□A ∧ □B) K-provable | Verified in tests |
+| Table 3.1 | Axiom schemas T, D, B, 4, 5 | [`SchemaT`](@ref), [`SchemaD`](@ref), [`SchemaB`](@ref), [`Schema4`](@ref), [`Schema5`](@ref) |
+| Section 3.8 | Named systems (S4, S5, etc.) | [`SYSTEM_S4`](@ref), [`SYSTEM_S5`](@ref) |
+| Definition 3.26 | Dual formulas | [`dual`](@ref) |
+| Theorem 3.31 | Soundness | Verified in tests |
+
 ## Part IV: Applied Modal Logic
 
 ### Chapter 14: Temporal Logics

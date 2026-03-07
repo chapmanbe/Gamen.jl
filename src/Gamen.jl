@@ -24,10 +24,23 @@ export FOFormula, FOBottom, FOTop, FOVar, FOPredicate
 export FONot, FOAnd, FOOr, FOImplies, FOIff, FOForall, FOExists
 export standard_translation
 
+# Axiomatic derivations (Chapter 3)
+export substitute
+export is_tautology, is_tautological_instance
+export AxiomSchema, SchemaK, SchemaDual, SchemaT, SchemaD, SchemaB, Schema4, Schema5
+export is_instance
+export ModalSystem, SYSTEM_K, SYSTEM_KT, SYSTEM_KD, SYSTEM_KB
+export SYSTEM_K4, SYSTEM_K5, SYSTEM_S4, SYSTEM_S5
+export Justification, Tautology, AxiomInst, ModusPonens, Necessitation
+export ProofStep, Derivation, conclusion
+export is_valid_derivation
+export dual
+
 include("formulas.jl")
 include("kripke.jl")
 include("semantics.jl")
 include("frame_properties.jl")
 include("fol.jl")
+include("axioms.jl")
 
 end # module Gamen

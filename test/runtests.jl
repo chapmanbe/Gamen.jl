@@ -471,6 +471,266 @@ using Test
         end
     end
 
+    @testset "Chapter 3: Axiomatic Derivations" begin
+        p = Atom(:p)
+        q = Atom(:q)
+        r = Atom(:r)
+
+        @testset "Formula equality and hashing" begin
+            @test Atom(:p) == Atom(:p)
+            @test Atom(:p) != Atom(:q)
+            @test Box(p) == Box(Atom(:p))
+            @test Box(p) != Diamond(p)
+            @test And(p, q) == And(Atom(:p), Atom(:q))
+            @test And(p, q) != And(q, p)
+            @test Implies(p, q) == Implies(Atom(:p), Atom(:q))
+            @test Implies(p, q) != Implies(q, p)
+            @test Bottom() == Bottom()
+            @test Iff(p, q) == Iff(p, q)
+            @test Iff(p, q) != Iff(q, p)
+
+            # Hashing: equal formulas have equal hashes
+            @test hash(Box(p)) == hash(Box(Atom(:p)))
+            @test hash(And(p, q)) == hash(And(Atom(:p), Atom(:q)))
+
+            # Formulas as dictionary keys
+            d = Dict{Formula, Int}()
+            d[Box(p)] = 1
+            @test d[Box(Atom(:p))] == 1
+        end
+
+        @testset "Substitution" begin
+            σ = Dict(:p => Box(q), :q => Diamond(r))
+            @test substitute(p, σ) == Box(q)
+            @test substitute(q, σ) == Diamond(r)
+            @test substitute(r, σ) == r
+            @test substitute(Bottom(), σ) == Bottom()
+            @test substitute(And(p, q), σ) == And(Box(q), Diamond(r))
+            @test substitute(Or(p, q), σ) == Or(Box(q), Diamond(r))
+            @test substitute(Implies(p, q), σ) == Implies(Box(q), Diamond(r))
+            @test substitute(Iff(p, q), σ) == Iff(Box(q), Diamond(r))
+            @test substitute(Not(p), σ) == Not(Box(q))
+            @test substitute(Box(p), σ) == Box(Box(q))
+            @test substitute(Diamond(p), σ) == Diamond(Box(q))
+        end
+
+        @testset "Propositional tautology" begin
+            # Tautologies
+            @test is_tautology(Or(p, Not(p))) == true
+            @test is_tautology(Implies(p, p)) == true
+            @test is_tautology(Implies(p, Implies(q, p))) == true
+            @test is_tautology(Not(And(p, Not(p)))) == true
+            @test is_tautology(Top()) == true
+
+            # Non-tautologies
+            @test is_tautology(p) == false
+            @test is_tautology(Implies(p, q)) == false
+            @test is_tautology(Bottom()) == false
+
+            # Modal formulas throw
+            @test_throws ArgumentError is_tautology(Box(p))
+        end
+
+        @testset "Tautological instance" begin
+            # Modal-free tautological instances
+            @test is_tautological_instance(Implies(p, p)) == true
+            @test is_tautological_instance(Or(p, Not(p))) == true
+
+            # Instances with modal subformulas
+            @test is_tautological_instance(Implies(Box(p), Box(p))) == true
+            @test is_tautological_instance(
+                Implies(Box(p), Implies(Diamond(q), Box(p)))) == true
+            @test is_tautological_instance(Or(Box(p), Not(Box(p)))) == true
+
+            # Non-instances
+            @test is_tautological_instance(Implies(Box(p), Diamond(q))) == false
+            @test is_tautological_instance(p) == false
+        end
+
+        @testset "Axiom schema instances" begin
+            # Schema K: □(A→B) → (□A→□B)
+            k1 = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))
+            @test is_instance(k1, SchemaK()) == true
+
+            k2 = Implies(
+                Box(Implies(And(p, q), Diamond(r))),
+                Implies(Box(And(p, q)), Box(Diamond(r))))
+            @test is_instance(k2, SchemaK()) == true
+
+            @test is_instance(Implies(p, q), SchemaK()) == false
+
+            # Schema Dual: ◇A ↔ ¬□¬A
+            @test is_instance(Iff(Diamond(p), Not(Box(Not(p)))), SchemaDual()) == true
+            @test is_instance(
+                Iff(Diamond(And(p, q)), Not(Box(Not(And(p, q))))),
+                SchemaDual()) == true
+            @test is_instance(Iff(Diamond(p), Not(Box(Not(q)))), SchemaDual()) == false
+
+            # Schema T: □A → A
+            @test is_instance(Implies(Box(p), p), SchemaT()) == true
+            @test is_instance(
+                Implies(Box(And(p, q)), And(p, q)), SchemaT()) == true
+            @test is_instance(Implies(Box(p), q), SchemaT()) == false
+
+            # Schema D: □A → ◇A
+            @test is_instance(Implies(Box(p), Diamond(p)), SchemaD()) == true
+            @test is_instance(Implies(Box(p), Diamond(q)), SchemaD()) == false
+
+            # Schema B: A → □◇A
+            @test is_instance(Implies(p, Box(Diamond(p))), SchemaB()) == true
+            @test is_instance(Implies(p, Box(Diamond(q))), SchemaB()) == false
+
+            # Schema 4: □A → □□A
+            @test is_instance(Implies(Box(p), Box(Box(p))), Schema4()) == true
+            @test is_instance(Implies(Box(p), Box(Box(q))), Schema4()) == false
+
+            # Schema 5: ◇A → □◇A
+            @test is_instance(Implies(Diamond(p), Box(Diamond(p))), Schema5()) == true
+            @test is_instance(Implies(Diamond(p), Box(Diamond(q))), Schema5()) == false
+        end
+
+        @testset "Modal systems" begin
+            @test string(SYSTEM_K) == "K"
+            @test string(SYSTEM_S5) == "S5"
+            @test SchemaK() in SYSTEM_K.schemas
+            @test SchemaT() in SYSTEM_KT.schemas
+            @test !(SchemaT() in SYSTEM_K.schemas)
+            @test Schema4() in SYSTEM_S4.schemas
+            @test Schema5() in SYSTEM_S5.schemas
+        end
+
+        @testset "Proof: □A → □(B → A) (Proposition 3.12)" begin
+            a = p; b = q
+            proof = Derivation([
+                ProofStep(Implies(a, Implies(b, a)), Tautology()),
+                ProofStep(Box(Implies(a, Implies(b, a))), Necessitation(1)),
+                ProofStep(
+                    Implies(Box(Implies(a, Implies(b, a))),
+                            Implies(Box(a), Box(Implies(b, a)))),
+                    AxiomInst(SchemaK())),
+                ProofStep(
+                    Implies(Box(a), Box(Implies(b, a))),
+                    ModusPonens(2, 3)),
+            ])
+            @test is_valid_derivation(SYSTEM_K, proof) == true
+            @test conclusion(proof) == Implies(Box(p), Box(Implies(q, p)))
+        end
+
+        @testset "Proof: □(A∧B) → (□A ∧ □B) (Proposition 3.13)" begin
+            a = p; b = q
+            ab = And(a, b)
+            proof = Derivation([
+                # □(A∧B) → □A
+                ProofStep(Implies(ab, a), Tautology()),
+                ProofStep(Box(Implies(ab, a)), Necessitation(1)),
+                ProofStep(
+                    Implies(Box(Implies(ab, a)), Implies(Box(ab), Box(a))),
+                    AxiomInst(SchemaK())),
+                ProofStep(Implies(Box(ab), Box(a)), ModusPonens(2, 3)),
+                # □(A∧B) → □B
+                ProofStep(Implies(ab, b), Tautology()),
+                ProofStep(Box(Implies(ab, b)), Necessitation(5)),
+                ProofStep(
+                    Implies(Box(Implies(ab, b)), Implies(Box(ab), Box(b))),
+                    AxiomInst(SchemaK())),
+                ProofStep(Implies(Box(ab), Box(b)), ModusPonens(6, 7)),
+                # Combine via (p→q)→((p→r)→(p→(q∧r)))
+                ProofStep(
+                    Implies(
+                        Implies(Box(ab), Box(a)),
+                        Implies(
+                            Implies(Box(ab), Box(b)),
+                            Implies(Box(ab), And(Box(a), Box(b))))),
+                    Tautology()),
+                ProofStep(
+                    Implies(
+                        Implies(Box(ab), Box(b)),
+                        Implies(Box(ab), And(Box(a), Box(b)))),
+                    ModusPonens(4, 9)),
+                ProofStep(
+                    Implies(Box(ab), And(Box(a), Box(b))),
+                    ModusPonens(8, 10)),
+            ])
+            @test is_valid_derivation(SYSTEM_K, proof) == true
+            @test conclusion(proof) == Implies(Box(And(p, q)), And(Box(p), Box(q)))
+        end
+
+        @testset "Invalid derivations" begin
+            # Wrong MP reference
+            bad1 = Derivation([
+                ProofStep(Implies(p, p), Tautology()),
+                ProofStep(p, ModusPonens(1, 1)),
+            ])
+            @test is_valid_derivation(SYSTEM_K, bad1) == false
+
+            # Axiom not in system
+            bad2 = Derivation([
+                ProofStep(Implies(Box(p), p), AxiomInst(SchemaT())),
+            ])
+            @test is_valid_derivation(SYSTEM_K, bad2) == false
+
+            # Same axiom valid in KT
+            good = Derivation([
+                ProofStep(Implies(Box(p), p), AxiomInst(SchemaT())),
+            ])
+            @test is_valid_derivation(SYSTEM_KT, good) == true
+
+            # Necessitation with wrong formula
+            bad3 = Derivation([
+                ProofStep(Implies(p, p), Tautology()),
+                ProofStep(Box(p), Necessitation(1)),  # □p ≠ □(p→p)
+            ])
+            @test is_valid_derivation(SYSTEM_K, bad3) == false
+
+            # Forward reference
+            bad4 = Derivation([
+                ProofStep(Box(p), Necessitation(2)),
+                ProofStep(p, Tautology()),
+            ])
+            @test is_valid_derivation(SYSTEM_K, bad4) == false
+        end
+
+        @testset "Dual formulas (Definition 3.26)" begin
+            @test dual(Bottom()) == Not(Bottom())
+            @test dual(p) == Not(p)
+            @test dual(Not(p)) == Not(Not(p))
+            @test dual(And(p, q)) == Or(Not(p), Not(q))
+            @test dual(Or(p, q)) == And(Not(p), Not(q))
+            @test dual(Box(p)) == Diamond(Not(p))
+            @test dual(Diamond(p)) == Box(Not(p))
+
+            # Nested: ~□(p∧q) = ◇~(p∧q) = ◇(~p ∨ ~q) = ◇(¬p ∨ ¬q)
+            @test dual(Box(And(p, q))) == Diamond(Or(Not(p), Not(q)))
+        end
+
+        @testset "Soundness: K-provable → valid on all frames (Thm 3.31)" begin
+            # □p → □(q → p) is K-provable; check validity on several frames
+            thm = Implies(Box(p), Box(Implies(q, p)))
+            frame1 = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            frame2 = KripkeFrame([:w1], [:w1 => :w1])
+            frame3 = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w2 => :w3])
+            @test is_valid_on_frame(frame1, thm) == true
+            @test is_valid_on_frame(frame2, thm) == true
+            @test is_valid_on_frame(frame3, thm) == true
+
+            # □(p∧q) → (□p ∧ □q) is K-provable
+            thm2 = Implies(Box(And(p, q)), And(Box(p), Box(q)))
+            @test is_valid_on_frame(frame1, thm2) == true
+            @test is_valid_on_frame(frame2, thm2) == true
+            @test is_valid_on_frame(frame3, thm2) == true
+        end
+
+        @testset "Derivation display" begin
+            proof = Derivation([
+                ProofStep(Implies(p, p), Tautology()),
+                ProofStep(Box(Implies(p, p)), Necessitation(1)),
+            ])
+            s = string(proof)
+            @test occursin("Taut", s)
+            @test occursin("Nec 1", s)
+        end
+    end
+
     @testset "Standard Translation (Definition frd.15)" begin
         p = Atom(:p)
         q = Atom(:q)

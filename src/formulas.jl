@@ -141,3 +141,25 @@ is_modal_free(f::Implies) = is_modal_free(f.antecedent) && is_modal_free(f.conse
 is_modal_free(f::Iff) = is_modal_free(f.left) && is_modal_free(f.right)
 is_modal_free(::Box) = false
 is_modal_free(::Diamond) = false
+
+# Structural equality — needed for axiom schema matching (Chapter 3)
+Base.:(==)(::Formula, ::Formula) = false   # different types are never equal
+Base.:(==)(::Bottom, ::Bottom) = true
+Base.:(==)(a::Atom, b::Atom) = a.name == b.name
+Base.:(==)(a::Not, b::Not) = a.operand == b.operand
+Base.:(==)(a::And, b::And) = a.left == b.left && a.right == b.right
+Base.:(==)(a::Or, b::Or) = a.left == b.left && a.right == b.right
+Base.:(==)(a::Implies, b::Implies) = a.antecedent == b.antecedent && a.consequent == b.consequent
+Base.:(==)(a::Iff, b::Iff) = a.left == b.left && a.right == b.right
+Base.:(==)(a::Box, b::Box) = a.operand == b.operand
+Base.:(==)(a::Diamond, b::Diamond) = a.operand == b.operand
+
+Base.hash(::Bottom, h::UInt) = hash(:Bottom, h)
+Base.hash(f::Atom, h::UInt) = hash((:Atom, f.name), h)
+Base.hash(f::Not, h::UInt) = hash((:Not, f.operand), h)
+Base.hash(f::And, h::UInt) = hash((:And, f.left, f.right), h)
+Base.hash(f::Or, h::UInt) = hash((:Or, f.left, f.right), h)
+Base.hash(f::Implies, h::UInt) = hash((:Implies, f.antecedent, f.consequent), h)
+Base.hash(f::Iff, h::UInt) = hash((:Iff, f.left, f.right), h)
+Base.hash(f::Box, h::UInt) = hash((:Box, f.operand), h)
+Base.hash(f::Diamond, h::UInt) = hash((:Diamond, f.operand), h)
