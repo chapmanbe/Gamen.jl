@@ -185,6 +185,16 @@ Pluto.run(notebook="notebooks/pluto/ch5_filtrations.jl")
 
 Or use the Jupyter versions in `notebooks/jupyter/`.
 
+## Acknowledgment
+
+This package implements concepts from:
+
+> Richard Zach, *[Boxes and Diamonds: An Open Introduction to Modal Logic](https://bd.openlogicproject.org)*, Open Logic Project, Fall 2025. Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+
+The mathematical definitions, theorems, and proof structures follow B&D closely. The Julia implementation (code, docstrings, tests, and notebooks) is original work.
+
 ## License
 
-MIT
+The Gamen.jl source code is released under the [MIT License](LICENSE).
+
+The textbook *Boxes and Diamonds* on which this package is based is © Richard Zach / Open Logic Project, licensed under CC BY 4.0.
