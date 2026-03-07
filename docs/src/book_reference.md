@@ -20,7 +20,16 @@ to their implementations in Gamen.jl.
 
 ## Chapter 2: Frame Definability
 
-*Coming soon.*
+| B&D Reference | Description | Gamen.jl |
+|:---|:---|:---|
+| Definition 2.1 | Validity on a frame | [`is_valid_on_frame`](@ref) |
+| Definition 2.3 | Frame properties | [`is_reflexive`](@ref), [`is_symmetric`](@ref), [`is_transitive`](@ref), [`is_serial`](@ref), [`is_euclidean`](@ref) |
+| Proposition 1.19 | Schema K valid on all frames | Verified in tests |
+| Proposition 2.5 | Schema T ↔ reflexivity | Verified in tests |
+| Proposition 2.7 | Schema D ↔ seriality | Verified in tests |
+| Proposition 2.9 | Schema B ↔ symmetry | Verified in tests |
+| Proposition 2.11 | Schema 4 ↔ transitivity | Verified in tests |
+| Proposition 2.13 | Schema 5 ↔ euclideanness | Verified in tests |
 
 ## Part IV: Applied Modal Logic
 

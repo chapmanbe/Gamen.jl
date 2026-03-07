@@ -12,6 +12,7 @@ makedocs(
     ],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
+        assets = ["assets/logo.svg", "assets/logo2.svg"],
     ),
     remotes = nothing,
     doctest = true,

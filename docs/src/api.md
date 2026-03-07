@@ -15,6 +15,7 @@ Box
 Diamond
 Top
 is_modal_free
+atoms
 ```
 
 ## Kripke Structures
@@ -32,4 +33,15 @@ satisfies
 is_true_in
 is_valid
 entails
+```
+
+## Frame Properties
+
+```@docs
+is_reflexive
+is_symmetric
+is_transitive
+is_serial
+is_euclidean
+is_valid_on_frame
 ```

@@ -114,4 +114,150 @@ using Test
         # p, q entails p ∧ q
         @test entails(model, [p, q], And(p, q)) == true
     end
+
+    @testset "Chapter 2: Frame Definability" begin
+        p = Atom(:p)
+        q = Atom(:q)
+
+        @testset "atoms (helper)" begin
+            @test atoms(Bottom()) == Set{Symbol}()
+            @test atoms(p) == Set([:p])
+            @test atoms(And(p, Or(q, Not(p)))) == Set([:p, :q])
+            @test atoms(Box(Diamond(p))) == Set([:p])
+        end
+
+        @testset "Frame property predicates (Def 2.3)" begin
+            # Reflexive frame
+            reflexive = KripkeFrame([:w1, :w2], [:w1 => :w1, :w1 => :w2, :w2 => :w2])
+            @test is_reflexive(reflexive) == true
+            @test is_serial(reflexive) == true
+
+            # Non-reflexive frame (w2 does not access itself)
+            non_reflexive = KripkeFrame([:w1, :w2], [:w1 => :w1, :w1 => :w2])
+            @test is_reflexive(non_reflexive) == false
+
+            # Symmetric frame
+            symmetric = KripkeFrame([:w1, :w2], [:w1 => :w2, :w2 => :w1])
+            @test is_symmetric(symmetric) == true
+
+            # Non-symmetric frame
+            non_symmetric = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            @test is_symmetric(non_symmetric) == false
+
+            # Transitive frame
+            transitive = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w2 => :w3, :w1 => :w3])
+            @test is_transitive(transitive) == true
+
+            # Non-transitive frame (w1→w2, w2→w3, but no w1→w3)
+            non_transitive = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w2 => :w3])
+            @test is_transitive(non_transitive) == false
+
+            # Serial frame (every world has a successor)
+            serial = KripkeFrame([:w1, :w2], [:w1 => :w2, :w2 => :w1])
+            @test is_serial(serial) == true
+
+            # Non-serial frame (w3 has no successors)
+            non_serial = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2])
+            @test is_serial(non_serial) == false
+
+            # Euclidean frame
+            euclidean = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w1 => :w3, :w2 => :w2, :w2 => :w3, :w3 => :w2, :w3 => :w3])
+            @test is_euclidean(euclidean) == true
+
+            # Non-euclidean (w1→w2, w1→w3, but w2 does not access w3)
+            non_euclidean = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w1 => :w3])
+            @test is_euclidean(non_euclidean) == false
+        end
+
+        @testset "Frame validity (Def 2.1)" begin
+            # □⊤ is valid on any frame (tautology under box)
+            any_frame = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            @test is_valid_on_frame(any_frame, Box(Top())) == true
+
+            # ⊥ is not valid on any frame
+            @test is_valid_on_frame(any_frame, Bottom()) == false
+        end
+
+        @testset "Schema T: □p → p corresponds to reflexivity (Prop 2.5)" begin
+            schema_t = Implies(Box(p), p)
+
+            # Valid on reflexive frames
+            reflexive = KripkeFrame([:w1, :w2],
+                [:w1 => :w1, :w1 => :w2, :w2 => :w2])
+            @test is_valid_on_frame(reflexive, schema_t) == true
+
+            # Not valid on non-reflexive frames
+            non_reflexive = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            @test is_valid_on_frame(non_reflexive, schema_t) == false
+        end
+
+        @testset "Schema D: □p → ◇p corresponds to seriality (Prop 2.7)" begin
+            schema_d = Implies(Box(p), Diamond(p))
+
+            # Valid on serial frames
+            serial = KripkeFrame([:w1, :w2], [:w1 => :w2, :w2 => :w1])
+            @test is_valid_on_frame(serial, schema_d) == true
+
+            # Not valid on non-serial frames
+            non_serial = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            @test is_valid_on_frame(non_serial, schema_d) == false
+        end
+
+        @testset "Schema B: p → □◇p corresponds to symmetry (Prop 2.9)" begin
+            schema_b = Implies(p, Box(Diamond(p)))
+
+            # Valid on symmetric frames
+            symmetric = KripkeFrame([:w1, :w2],
+                [:w1 => :w2, :w2 => :w1, :w1 => :w1, :w2 => :w2])
+            @test is_valid_on_frame(symmetric, schema_b) == true
+
+            # Not valid on non-symmetric frames
+            non_symmetric = KripkeFrame([:w1, :w2], [:w1 => :w2, :w2 => :w2])
+            @test is_valid_on_frame(non_symmetric, schema_b) == false
+        end
+
+        @testset "Schema 4: □p → □□p corresponds to transitivity (Prop 2.11)" begin
+            schema_4 = Implies(Box(p), Box(Box(p)))
+
+            # Valid on transitive frames
+            transitive = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w2 => :w3, :w1 => :w3])
+            @test is_valid_on_frame(transitive, schema_4) == true
+
+            # Not valid on non-transitive frames
+            non_transitive = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w2 => :w3])
+            @test is_valid_on_frame(non_transitive, schema_4) == false
+        end
+
+        @testset "Schema 5: ◇p → □◇p corresponds to euclideanness (Prop 2.13)" begin
+            schema_5 = Implies(Diamond(p), Box(Diamond(p)))
+
+            # Valid on euclidean frames
+            euclidean = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w1 => :w3, :w2 => :w2, :w2 => :w3, :w3 => :w2, :w3 => :w3])
+            @test is_valid_on_frame(euclidean, schema_5) == true
+
+            # Not valid on non-euclidean frames
+            non_euclidean = KripkeFrame([:w1, :w2, :w3],
+                [:w1 => :w2, :w1 => :w3])
+            @test is_valid_on_frame(non_euclidean, schema_5) == false
+        end
+
+        @testset "Schema K: □(p→q) → (□p→□q) valid on all frames (Prop 1.19)" begin
+            schema_k = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))
+
+            frame1 = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            frame2 = KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w2 => :w3])
+            frame3 = KripkeFrame([:w1], [:w1 => :w1])
+
+            @test is_valid_on_frame(frame1, schema_k) == true
+            @test is_valid_on_frame(frame2, schema_k) == true
+            @test is_valid_on_frame(frame3, schema_k) == true
+        end
+    end
 end
