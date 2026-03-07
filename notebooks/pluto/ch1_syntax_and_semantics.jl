@@ -9,7 +9,6 @@ begin
 	using Pkg
 	Pkg.activate(joinpath(@__DIR__, "..", ".."))
 	using Gamen
-	using CairoMakie
 end
 
 # ╔═╡ 1a2b3c4d-0001-0001-0001-000000000001
