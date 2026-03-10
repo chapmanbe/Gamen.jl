@@ -53,6 +53,17 @@ export Filtration, finest_filtration, coarsest_filtration, symmetric_filtration,
 export filtration_lemma_holds
 export has_finite_model_property, is_decidable_within
 
+# Tableaux (Chapter 6)
+export Prefix, extend, parent_prefix
+export Sign, TrueSign, FalseSign, T_SIGN, F_SIGN
+export PrefixedFormula, pf_true, pf_false
+export TableauBranch, is_closed, used_prefixes, fresh_prefix
+export Tableau, build_tableau
+export TableauSystem
+export TABLEAU_K, TABLEAU_KT, TABLEAU_KD, TABLEAU_KB
+export TABLEAU_K4, TABLEAU_S4, TABLEAU_S5
+export tableau_proves, tableau_consistent
+
 # Visualization (loaded via GamenMakieExt when CairoMakie, GraphMakie, Graphs are available)
 export visualize_model
 
@@ -64,6 +75,7 @@ include("fol.jl")
 include("axioms.jl")
 include("completeness.jl")
 include("filtrations.jl")
+include("tableaux.jl")
 
 """
     visualize_model(model::KripkeModel; kwargs...)

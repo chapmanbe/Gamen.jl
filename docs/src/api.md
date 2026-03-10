@@ -171,3 +171,85 @@ canonical_model
 truth_lemma_holds
 determines
 ```
+
+
+## Chapter 5: Filtrations and Decidability
+
+### Closure Properties
+
+```@docs
+is_closed_under_subformulas
+is_modally_closed
+subformula_closure
+modal_closure
+```
+
+### Equivalence Classes
+
+```@docs
+world_equivalent
+equivalence_classes
+equivalence_class
+```
+
+### Filtrations
+
+```@docs
+Filtration
+finest_filtration
+coarsest_filtration
+symmetric_filtration
+transitive_filtration
+filtration_lemma_holds
+```
+
+### Finite Model Property and Decidability
+
+```@docs
+has_finite_model_property
+is_decidable_within
+```
+
+## Chapter 6: Modal Tableaux
+
+### Prefixes and Signed Formulas
+
+```@docs
+Prefix
+extend
+parent_prefix
+PrefixedFormula
+pf_true
+pf_false
+```
+
+### Tableau Branches
+
+```@docs
+TableauBranch
+is_closed
+used_prefixes
+fresh_prefix
+```
+
+### Tableau Construction
+
+```@docs
+Tableau
+build_tableau
+tableau_proves
+tableau_consistent
+```
+
+### Tableau Systems
+
+```@docs
+TableauSystem
+TABLEAU_K
+TABLEAU_KT
+TABLEAU_KD
+TABLEAU_KB
+TABLEAU_K4
+TABLEAU_S4
+TABLEAU_S5
+```

@@ -1,3 +1,5 @@
+# Gamen.jl — Claude Code Instructions
+
 ## Project Description
 
 Gamen.jl — a Julia package for modal logic and game-theoretic reasoning. The name comes from Old English *gamen* (game, sport, joy), the ancestor of the modern word "game."
@@ -26,11 +28,36 @@ Follow standard Julia package layout:
 - Types use `PascalCase`, functions and variables use `snake_case`.
 - Develop as a distributable Julia package (proper `Project.toml`, UUID, etc.).
 
+## Architectural Principles
+
+These principles exist to ensure the package generalizes beyond the specific examples in B&D. Always apply them — do not optimize for the current example at the expense of generality.
+
+- **Parametric frame conditions**: Frame conditions (reflexivity, transitivity, symmetry, seriality, Euclideanness, etc.) must be represented as first-class constraints on the accessibility relation, never hardcoded into proof procedures or model checkers.
+- **Separation of concerns** (following Fitting's tableau decomposition):
+  - **Syntax** — formula representation (type hierarchy)
+  - **Semantics** — Kripke frame + valuation, always parametric
+  - **Frame conditions** — axioms as constraints passed as data, not baked into logic
+  - **Proof procedure** — tableau/sequent rules that call into frame conditions
+- **Generality over examples**: Implementations must work for an arbitrary modal logic, not only the one currently illustrated in B&D. When implementing from a specific example, ask: *would this still work if the frame conditions changed?* If not, refactor before proceeding.
+- **Logic variants as configurations**: Deontic, epistemic, and temporal logics should be expressible as configurations of the base system (specific frame conditions + operator aliases), not as parallel reimplementations.
+
 ## Core Abstractions
 
 - **Formulas**: A type hierarchy rooted in an abstract `Formula` type, with concrete types for propositions, negation, conjunction, disjunction, implication, and modal operators (Box, Diamond, and logic-specific variants).
 - **Kripke Structures**: Frames (worlds + accessibility relation) and models (frame + valuation function).
 - **Operations**: Model checking (truth of a formula at a world), satisfiability checking, and validity checking.
+
+## ⚠️ Performance Constraints
+
+Frame enumeration in `is_decidable_within`, `is_derivable_from`, and `is_consistent` is **O(2^(n²))**. **Never increase `max_worlds` beyond 4.**
+
+| max_worlds | Frames enumerated |
+|------------|-------------------|
+| 4          | 2^16 = 65,536 ✓  |
+| 5          | 2^25 = 33 million ⚠️ |
+| 16         | 2^256 = will exhaust all memory 💀 |
+
+This is a fundamental complexity bound, not a bug to be fixed. Do not attempt to optimize around it by increasing the limit.
 
 ## Testing
 
@@ -38,7 +65,6 @@ Follow standard Julia package layout:
 - CI via GitHub Actions using the standard `julia-runtest` workflow.
 - **Known slow test:** The `Decidability (Theorem 5.17)` testset in Chapter 5 takes ~80 seconds due to exhaustive model enumeration. This is expected.
 - All 399 tests pass.
-- **WARNING:** Never increase `max_worlds` beyond 4 in `is_decidable_within`, `is_derivable_from`, or `is_consistent`. The frame enumeration is O(2^(n²)) — setting `max_worlds=16` will attempt to enumerate 2^256 frames and consume all available memory.
 
 ## Documentation
 
@@ -50,6 +76,11 @@ Follow standard Julia package layout:
 - Use Unicode characters (⟨, □, ◇, ⊥, ⊤, ↔, etc.) instead of LaTeX in docs — LaTeX renders as raw text on GitHub.
 - Docstrings reference B&D definition numbers (e.g., "Definition 1.7, B&D").
 - Avoid `Set` display in doctests — use equality checks or `length()` since iteration order is non-deterministic.
+
+## Visualization
+
+- `visualize_model` is only available via the `GamenMakieExt` package extension.
+- **Never call `visualize_model` in core `src/` code** — it must only appear in extension, notebook, or documentation contexts where `CairoMakie`, `GraphMakie`, and `Graphs` are explicitly loaded.
 
 ## Notebooks
 
@@ -76,7 +107,9 @@ When implementing a new B&D chapter:
 11. Generate Jupyter notebook: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/chN_<name>.jl`
 12. Commit implementation first, then commit notebooks separately
 
-## Resources
+## Key References
 
-- [Boxes and Diamonds](https://bd.openlogicproject.org) — Open access introduction to modal logic from the Open Logic Project
-- Local PDF: `notes/bd-screen.pdf`
+- **Box and Diamonds (B&D)**: Primary textbook driving implementation. Local PDF at `notes/bd-screen.pdf`. Online: [bd.openlogicproject.org](https://bd.openlogicproject.org)
+- **Fitting (1999)**: "Tableau Methods for Modal and Temporal Logics" (in *Handbook of Tableau Methods*) — canonical algorithmic reference for proof procedures; descriptions are close to pseudocode and generalize cleanly.
+- **Blackburn, de Rijke & Venema (2001)**: *Modal Logic* (Cambridge) — authoritative reference for frame conditions, their algebraic characterizations, and the relationship between axioms and frame properties.
+- **Gasquet et al. (2014)**: *Kripke's Worlds* (Birkhäuser) — explicitly about building modal logic tools; useful for generic architecture and the LoTREC prover design.

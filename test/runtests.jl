@@ -1330,4 +1330,118 @@ using Test
             @test contains(string(filt), "Filtration")
         end
     end
+
+    @testset "Chapter 6: Modal Tableaux" begin
+        p = Atom(:p); q = Atom(:q)
+
+        @testset "Prefix (Definition 6.1)" begin
+            σ = Prefix([1])
+            τ = Prefix([1, 2])
+            @test σ == Prefix(1)
+            @test extend(σ, 2) == τ
+            @test parent_prefix(τ) == σ
+            @test_throws ArgumentError Prefix(Int[])      # empty not allowed
+            @test_throws ArgumentError Prefix([-1])       # non-positive not allowed
+            @test string(Prefix([1,2,3])) == "1.2.3"
+        end
+
+        @testset "PrefixedFormula and branch closure (Definition 6.2)" begin
+            σ = Prefix([1])
+            pf1 = pf_true(σ, p)
+            pf2 = pf_false(σ, p)
+            pf3 = pf_true(σ, q)
+            b = TableauBranch([pf1, pf3])
+            @test !is_closed(b)
+            b2 = TableauBranch([pf1, pf2])
+            @test is_closed(b2)
+            # different prefix — not closed
+            σ2 = Prefix([1, 1])
+            b3 = TableauBranch([pf1, pf_false(σ2, p)])
+            @test !is_closed(b3)
+        end
+
+        @testset "K rules: Examples 6.1 and 6.2 (B&D)" begin
+            # Example 6.1: ⊢ (□p ∧ □q) → □(p ∧ q)
+            @test tableau_proves(TABLEAU_K, Formula[], Implies(And(Box(p), Box(q)), Box(And(p, q))))
+            # Example 6.2: ⊢ ◇(p ∨ q) → (◇p ∨ ◇q)
+            @test tableau_proves(TABLEAU_K, Formula[], Implies(Diamond(Or(p, q)), Or(Diamond(p), Diamond(q))))
+            # Schema K: □(p→q) → (□p→□q)
+            @test tableau_proves(TABLEAU_K, Formula[], Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
+            # K does not prove T: □p → p
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), p))
+            # K does not prove 4: □p → □□p
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), Box(Box(p))))
+        end
+
+        @testset "Soundness: non-theorems in K (Theorem 6.6)" begin
+            # □p ⊬_K ◇p (seriality not assumed)
+            @test !tableau_proves(TABLEAU_K, Formula[Box(p)], Diamond(p))
+            # ◇p ⊬_K □p
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Diamond(p), Box(p)))
+            # Dual: □p ↔ ¬◇¬p (valid in K)
+            @test tableau_proves(TABLEAU_K, Formula[], Implies(Not(Diamond(Not(p))), Box(p)))
+        end
+
+        @testset "KT rules: T axiom (Table 6.4)" begin
+            # T: □p → p holds in KT
+            @test tableau_proves(TABLEAU_KT, Formula[], Implies(Box(p), p))
+            # K axiom still holds
+            @test tableau_proves(TABLEAU_KT, Formula[], Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
+            # 4 axiom does not hold in KT
+            @test !tableau_proves(TABLEAU_KT, Formula[], Implies(Box(p), Box(Box(p))))
+        end
+
+        @testset "KD rules: D axiom (Table 6.4)" begin
+            # D: □p → ◇p holds in KD
+            @test tableau_proves(TABLEAU_KD, Formula[], Implies(Box(p), Diamond(p)))
+            # D does not hold in K
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), Diamond(p)))
+        end
+
+        @testset "KB rules: B axiom (Table 6.4)" begin
+            # B: □p → ◇□p holds in KB
+            @test tableau_proves(TABLEAU_KB, Formula[], Implies(Box(p), Diamond(Box(p))))
+            # B does not hold in K
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), Diamond(Box(p))))
+        end
+
+        @testset "K4 rules: 4 axiom (Table 6.4)" begin
+            # 4: □p → □□p holds in K4
+            @test tableau_proves(TABLEAU_K4, Formula[], Implies(Box(p), Box(Box(p))))
+            # 4 does not hold in K
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), Box(Box(p))))
+        end
+
+        @testset "S4 rules: T + 4 (Table 6.4)" begin
+            # S4 ⊢ T: □p → p
+            @test tableau_proves(TABLEAU_S4, Formula[], Implies(Box(p), p))
+            # S4 ⊢ 4: □p → □□p
+            @test tableau_proves(TABLEAU_S4, Formula[], Implies(Box(p), Box(Box(p))))
+            # S4 ⊬ 5: ◇p → □◇p
+            @test !tableau_proves(TABLEAU_S4, Formula[], Implies(Diamond(p), Box(Diamond(p))))
+        end
+
+        @testset "S5 rules: T + 4 + 5 (Table 6.4)" begin
+            # S5 ⊢ T: □p → p
+            @test tableau_proves(TABLEAU_S5, Formula[], Implies(Box(p), p))
+            # S5 ⊢ 4: □p → □□p
+            @test tableau_proves(TABLEAU_S5, Formula[], Implies(Box(p), Box(Box(p))))
+            # S5 ⊢ 5: ◇p → □◇p
+            @test tableau_proves(TABLEAU_S5, Formula[], Implies(Diamond(p), Box(Diamond(p))))
+            # S5 ⊢ B: □p → ◇□p (Example 6.9, B&D)
+            @test tableau_proves(TABLEAU_S5, Formula[], Implies(Box(p), Diamond(Box(p))))
+            # S5 ⊢ schema K
+            @test tableau_proves(TABLEAU_S5, Formula[], Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
+        end
+
+        @testset "tableau_consistent" begin
+            # {□p, ◇q} is satisfiable in K
+            @test tableau_consistent(TABLEAU_K, Formula[Box(p), Diamond(q)])
+            # {p, ¬p} is unsatisfiable
+            @test !tableau_consistent(TABLEAU_K, Formula[p, Not(p)])
+            # {□p, ¬p} unsatisfiable in KT (T axiom makes □p → p)
+            @test !tableau_consistent(TABLEAU_KT, Formula[Box(p), Not(p)])
+        end
+
+    end  # Chapter 6
 end

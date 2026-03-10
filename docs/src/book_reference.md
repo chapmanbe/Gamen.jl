@@ -73,6 +73,40 @@ to their implementations in Gamen.jl.
 | Theorem 4.17 | General completeness theorem | Verified in tests |
 | Proposition 4.18 | Additional frame properties of canonical models | Verified in tests |
 
+## Chapter 5: Filtrations and Decidability
+
+| B&D Reference | Description | Gamen.jl |
+|:---|:---|:---|
+| Definition 5.1 | Closed under subformulas, modally closed | [`is_closed_under_subformulas`](@ref), [`is_modally_closed`](@ref) |
+| Definition 5.1 | Subformula closure, modal closure | [`subformula_closure`](@ref), [`modal_closure`](@ref) |
+| Definition 5.2 | Γ-equivalence of worlds (u ≡_Γ v) | [`world_equivalent`](@ref) |
+| Proposition 5.3 | Equivalence classes [w]_Γ | [`equivalence_classes`](@ref), [`equivalence_class`](@ref) |
+| Definition 5.4 | Filtration M* = ⟨W*, R*, V*⟩ | [`Filtration`](@ref) |
+| Theorem 5.5 | Filtration Lemma | [`filtration_lemma_holds`](@ref) |
+| Definition 5.7 | Finest filtration | [`finest_filtration`](@ref) |
+| Definition 5.9 | Coarsest filtration | [`coarsest_filtration`](@ref) |
+| Proposition 5.12 | |W*| ≤ 2^|Γ| | Verified in tests |
+| Proposition 5.14 | Finite model property (K) | [`has_finite_model_property`](@ref) |
+| Theorem 5.17 | Decidability (K, S5) | [`is_decidable_within`](@ref) |
+| Theorem 5.18 | Filtrations preserving symmetry/transitivity | [`symmetric_filtration`](@ref), [`transitive_filtration`](@ref) |
+
+## Chapter 6: Modal Tableaux
+
+| B&D Reference | Description | Gamen.jl |
+|:---|:---|:---|
+| Definition 6.1 | Prefixes σ ∈ (ℤ⁺)* \ {λ} | [`Prefix`](@ref), [`extend`](@ref), [`parent_prefix`](@ref) |
+| Definition 6.1 | Prefixed signed formulas σ S A | [`PrefixedFormula`](@ref), [`pf_true`](@ref), [`pf_false`](@ref) |
+| Definition 6.2 | Closed branch (σ T A and σ F A) | [`TableauBranch`](@ref), [`is_closed`](@ref) |
+| Table 6.1 | Propositional rules (with prefixes) | [`apply_propositional_rule`](@ref) |
+| Table 6.2 | Modal rules for K (□T, □F, ◇T, ◇F) | [`apply_box_true_rule`](@ref), [`apply_box_false_rule`](@ref), [`apply_diamond_true_rule`](@ref), [`apply_diamond_false_rule`](@ref) |
+| Theorem 6.6 | Soundness of tableau method | Verified in tests |
+| Corollary 6.7 | Γ ⊢ A implies Γ ⊨ A | [`tableau_proves`](@ref) |
+| Table 6.3 | Additional rules (T□, T◇, D□, D◇, B□, B◇, 4□, 4◇, 4T□, 4T◇) | [`apply_T_box_rule`](@ref), [`apply_D_box_rule`](@ref), [`apply_B_box_rule`](@ref), [`apply_4_box_rule`](@ref), [`apply_4T_box_rule`](@ref) |
+| Table 6.4 | Tableau systems (K, KT, KD, KB, K4, S4, S5) | [`TABLEAU_K`](@ref), [`TABLEAU_KT`](@ref), [`TABLEAU_KD`](@ref), [`TABLEAU_KB`](@ref), [`TABLEAU_K4`](@ref), [`TABLEAU_S4`](@ref), [`TABLEAU_S5`](@ref) |
+| Corollary 6.15 | Soundness for extended systems | Verified in tests |
+| Definition 6.17 | Complete branch | Verified via [`build_tableau`](@ref) |
+| Proposition 6.18 | Every finite Γ has complete tableau | [`build_tableau`](@ref) |
+
 ## Part IV: Applied Modal Logic
 
 ### Chapter 14: Temporal Logics

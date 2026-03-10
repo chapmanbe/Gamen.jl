@@ -31,6 +31,7 @@ Gamen.jl is a Julia package for working with [modal logic](https://en.wikipedia.
 - **Modal systems** — K, KT, KD, KB, K4, K5, S4, S5
 - **Completeness** — canonical model construction, Truth Lemma, Lindenbaum's Lemma
 - **Filtrations** — finest, coarsest, symmetric, and transitive filtrations; finite model property; decidability
+- **Modal tableaux** — prefixed signed tableau system for K, KT, KD, KB, K4, S4, S5; soundness and completeness
 - **Visualization** — render Kripke models as directed graphs (optional, via CairoMakie)
 
 ## Installation
@@ -129,6 +130,33 @@ filtration_lemma_holds(filt)  # true
 is_decidable_within(SYSTEM_K, Implies(Box(p), p)).valid  # false -- not K-valid
 ```
 
+## Modal Tableaux (Chapter 6)
+
+```julia
+# Check derivability by tableau (prefixed signed formulas)
+tableau_proves(TABLEAU_K, Formula[], Implies(And(Box(p), Box(q)), Box(And(p, q))))  # true
+tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), p))   # false -- not K-valid
+tableau_proves(TABLEAU_KT, Formula[], Implies(Box(p), p))  # true  -- T axiom
+
+# Multiple modal systems
+tableau_proves(TABLEAU_K4, Formula[], Implies(Box(p), Box(Box(p))))  # true  -- 4 axiom
+tableau_proves(TABLEAU_S5, Formula[], Implies(Diamond(p), Box(Diamond(p))))  # true  -- 5 axiom
+
+# Consistency checking
+tableau_consistent(TABLEAU_K,  Formula[Box(p), Not(p)])   # true  -- satisfiable in K
+tableau_consistent(TABLEAU_KT, Formula[Box(p), Not(p)])   # false -- □p → p in KT
+```
+
+| System | Rules | Frame Property |
+|:-------|:------|:---------------|
+| `TABLEAU_K`  | K | (none) |
+| `TABLEAU_KT` | K + T□, T◇ | Reflexive |
+| `TABLEAU_KD` | K + D□, D◇ | Serial |
+| `TABLEAU_KB` | K + B□, B◇ | Symmetric |
+| `TABLEAU_K4` | K + 4□, 4◇ | Transitive |
+| `TABLEAU_S4` | K + T□, T◇, 4□, 4◇ | Reflexive + transitive |
+| `TABLEAU_S5` | K + T□, T◇, 4□, 4◇, 4T□, 4T◇ | Reflexive + transitive + euclidean |
+
 ## Textbook Coverage
 
 | Chapter | Topic | Status |
@@ -138,6 +166,7 @@ is_decidable_within(SYSTEM_K, Implies(Box(p), p)).valid  # false -- not K-valid
 | 3 | Axiomatic Derivations | ✓ Complete |
 | 4 | Completeness and Canonical Models | ✓ Complete |
 | 5 | Filtrations and Decidability | ✓ Complete |
+| 6 | Modal Tableaux | ✓ Complete |
 | Part IV | Applied Modal Logics | Coming soon |
 
 ## Project Structure
@@ -153,6 +182,7 @@ src/
   axioms.jl             # Axiom schemas, modal systems, derivations (Ch3)
   completeness.jl       # Canonical models, Truth Lemma (Ch4)
   filtrations.jl        # Filtrations, FMP, decidability (Ch5)
+  tableaux.jl           # Prefixed tableau proof system (Ch6)
 ext/
   GamenMakieExt/        # Optional visualization (CairoMakie + GraphMakie)
 test/
@@ -175,6 +205,7 @@ Interactive notebooks are available for each chapter:
 | `ch3_axiomatic_derivations` | Proof systems and derivations |
 | `ch4_completeness` | Canonical models and completeness |
 | `ch5_filtrations` | Filtrations, FMP, and decidability |
+| `ch6_tableaux` | Modal tableaux and proof search |
 
 Open with [Pluto.jl](https://github.com/fonsp/Pluto.jl):
 
