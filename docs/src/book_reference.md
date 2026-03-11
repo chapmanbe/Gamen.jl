@@ -97,11 +97,11 @@ to their implementations in Gamen.jl.
 | Definition 6.1 | Prefixes σ ∈ (ℤ⁺)* \ {λ} | [`Prefix`](@ref), [`extend`](@ref), [`parent_prefix`](@ref) |
 | Definition 6.1 | Prefixed signed formulas σ S A | [`PrefixedFormula`](@ref), [`pf_true`](@ref), [`pf_false`](@ref) |
 | Definition 6.2 | Closed branch (σ T A and σ F A) | [`TableauBranch`](@ref), [`is_closed`](@ref) |
-| Table 6.1 | Propositional rules (with prefixes) | [`apply_propositional_rule`](@ref) |
-| Table 6.2 | Modal rules for K (□T, □F, ◇T, ◇F) | [`apply_box_true_rule`](@ref), [`apply_box_false_rule`](@ref), [`apply_diamond_true_rule`](@ref), [`apply_diamond_false_rule`](@ref) |
+| Table 6.1 | Propositional rules (with prefixes) | Internal: `apply_propositional_rule` |
+| Table 6.2 | Modal rules for K (□T, □F, ◇T, ◇F) | Internal: `apply_box_true_rule`, `apply_box_false_rule`, `apply_diamond_true_rule`, `apply_diamond_false_rule` |
 | Theorem 6.6 | Soundness of tableau method | Verified in tests |
 | Corollary 6.7 | Γ ⊢ A implies Γ ⊨ A | [`tableau_proves`](@ref) |
-| Table 6.3 | Additional rules (T□, T◇, D□, D◇, B□, B◇, 4□, 4◇, 4T□, 4T◇) | [`apply_T_box_rule`](@ref), [`apply_D_box_rule`](@ref), [`apply_B_box_rule`](@ref), [`apply_4_box_rule`](@ref), [`apply_4T_box_rule`](@ref) |
+| Table 6.3 | Additional rules (T□, T◇, D□, D◇, B□, B◇, 4□, 4◇, 4T□, 4T◇) | Internal: `apply_T_box_rule`, `apply_D_box_rule`, `apply_B_box_rule`, `apply_4_box_rule`, `apply_4T_box_rule` |
 | Table 6.4 | Tableau systems (K, KT, KD, KB, K4, S4, S5) | [`TABLEAU_K`](@ref), [`TABLEAU_KT`](@ref), [`TABLEAU_KD`](@ref), [`TABLEAU_KB`](@ref), [`TABLEAU_K4`](@ref), [`TABLEAU_S4`](@ref), [`TABLEAU_S5`](@ref) |
 | Corollary 6.15 | Soundness for extended systems | Verified in tests |
 | Definition 6.17 | Complete branch | Verified via [`build_tableau`](@ref) |

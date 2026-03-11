@@ -91,7 +91,18 @@ Base.hash(pf::PrefixedFormula, h::UInt) =
     hash(pf.prefix, hash(typeof(pf.sign), hash(pf.formula, h)))
 
 # Convenience constructors
+"""
+    pf_true(σ::Prefix, A::Formula) -> PrefixedFormula
+
+Construct the prefixed signed formula `σ T A` ("A is true at world σ").
+"""
 pf_true(σ::Prefix, A::Formula)  = PrefixedFormula(σ, T_SIGN, A)
+
+"""
+    pf_false(σ::Prefix, A::Formula) -> PrefixedFormula
+
+Construct the prefixed signed formula `σ F A` ("A is false at world σ").
+"""
 pf_false(σ::Prefix, A::Formula) = PrefixedFormula(σ, F_SIGN, A)
 
 # ── Tableau branches ──
@@ -559,19 +570,67 @@ struct TableauSystem
     witness_rules::Vector{Function}
 end
 
+"""
+    TABLEAU_K
+
+Tableau system for the minimal normal modal logic K. No frame conditions;
+only propositional rules and the basic □/◇ modal rules (Table 6.2, B&D).
+"""
 const TABLEAU_K  = TableauSystem(:K,  Function[], Function[])
+
+"""
+    TABLEAU_KT
+
+Tableau system for KT (reflexive frames). Adds the T□ and T◇ rules
+corresponding to the T axiom □p → p (Table 6.3, B&D).
+"""
 const TABLEAU_KT = TableauSystem(:KT, Function[apply_T_box_rule, apply_T_diamond_rule],
                                        Function[])
+
+"""
+    TABLEAU_KD
+
+Tableau system for KD (serial frames). Adds the D□ and D◇ witness rules
+corresponding to the D axiom □p → ◇p (Table 6.3, B&D).
+"""
 const TABLEAU_KD = TableauSystem(:KD, Function[],
                                        Function[apply_D_box_rule, apply_D_diamond_rule])
+
+"""
+    TABLEAU_KB
+
+Tableau system for KB (symmetric frames). Adds T□/T◇ and B□/B◇ rules
+corresponding to the B axiom □p → ◇□p (Table 6.3, B&D).
+"""
 const TABLEAU_KB = TableauSystem(:KB, Function[apply_T_box_rule, apply_T_diamond_rule,
                                                apply_B_box_rule, apply_B_diamond_rule],
                                        Function[])
+
+"""
+    TABLEAU_K4
+
+Tableau system for K4 (transitive frames). Adds the 4□ and 4◇ rules
+corresponding to the 4 axiom □p → □□p (Table 6.3, B&D).
+"""
 const TABLEAU_K4 = TableauSystem(:K4, Function[apply_4_box_rule, apply_4_diamond_rule],
                                        Function[])
+
+"""
+    TABLEAU_S4
+
+Tableau system for S4 (reflexive + transitive frames). Combines T□/T◇
+and 4□/4◇ rules (Table 6.4, B&D).
+"""
 const TABLEAU_S4 = TableauSystem(:S4, Function[apply_T_box_rule, apply_T_diamond_rule,
                                                apply_4_box_rule, apply_4_diamond_rule],
                                        Function[])
+
+"""
+    TABLEAU_S5
+
+Tableau system for S5 (equivalence relation frames). Combines T□/T◇,
+B□/B◇, 4□/4◇, and 4T□/4T◇ rules (Table 6.4, B&D).
+"""
 const TABLEAU_S5 = TableauSystem(:S5, Function[apply_T_box_rule,  apply_T_diamond_rule,
                                                apply_B_box_rule,  apply_B_diamond_rule,
                                                apply_4_box_rule,  apply_4_diamond_rule,

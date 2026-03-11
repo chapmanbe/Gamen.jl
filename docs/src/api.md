@@ -95,6 +95,9 @@ SchemaB
 Schema4
 Schema5
 is_instance
+frame_predicate
+tableau_rules
+tableau_witness_rules
 ```
 
 ### Modal Systems
@@ -222,6 +225,10 @@ FutureBox
 Since
 Until
 TemporalModel
+𝐏
+𝐇
+𝐅
+𝐆
 ```
 
 ### Temporal Frame Properties
@@ -286,6 +293,7 @@ parent_prefix
 PrefixedFormula
 pf_true
 pf_false
+Sign
 ```
 
 ### Tableau Branches
@@ -318,4 +326,10 @@ TABLEAU_KB
 TABLEAU_K4
 TABLEAU_S4
 TABLEAU_S5
+```
+
+## Visualization
+
+```@docs
+visualize_model
 ```
