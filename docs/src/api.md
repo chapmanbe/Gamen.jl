@@ -239,6 +239,7 @@ Tableau
 build_tableau
 tableau_proves
 tableau_consistent
+extract_countermodel
 ```
 
 ### Tableau Systems

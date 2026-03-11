@@ -1443,5 +1443,43 @@ using Test
             @test !tableau_consistent(TABLEAU_KT, Formula[Box(p), Not(p)])
         end
 
+        @testset "Completeness (Theorem 6.19) and countermodel extraction (§6.9)" begin
+            # Theorem 6.19: if no closed tableau exists, Γ is satisfiable.
+            # extract_countermodel constructs the model M(Δ) from an open complete branch.
+
+            root = Prefix([1])
+            w1 = Symbol("1")
+
+            # □p → p is not K-valid (T axiom).
+            # The open branch {1 T □p, 1 F p} yields the countermodel:
+            # W={1}, R={}, V(p)={} — no successor to require p, yet p is false at 1.
+            f_T = Implies(Box(p), p)
+            tT = build_tableau([pf_false(root, f_T)], TABLEAU_K)
+            @test !is_closed(tT)
+            open_T = findfirst(b -> !is_closed(b), tT.branches)
+            @test open_T !== nothing
+            cm_T = extract_countermodel(tT.branches[open_T])
+            @test w1 ∈ cm_T.frame.worlds
+            @test !satisfies(cm_T, w1, f_T)
+
+            # p → q is not a propositional tautology.
+            # Open branch {1 T p, 1 F q} yields: W={1}, R={}, V(p)={1}, V(q)={}.
+            f_pq = Implies(p, q)
+            tpq = build_tableau([pf_false(root, f_pq)], TABLEAU_K)
+            @test !is_closed(tpq)
+            open_pq = findfirst(b -> !is_closed(b), tpq.branches)
+            @test open_pq !== nothing
+            cm_pq = extract_countermodel(tpq.branches[open_pq])
+            @test w1 ∈ cm_pq.frame.worlds
+            @test satisfies(cm_pq, w1, p)
+            @test !satisfies(cm_pq, w1, q)
+            @test !satisfies(cm_pq, w1, f_pq)
+
+            # Corollary 6.20 / 6.21: ⊨ A ↔ ⊢ A (completeness for K)
+            # Tautologies and K-valid formulas produce closed tableaux.
+            @test tableau_proves(TABLEAU_K, Formula[], Or(p, Not(p)))
+            @test tableau_proves(TABLEAU_K, Formula[], Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
+        end
+
     end  # Chapter 6
 end

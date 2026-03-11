@@ -106,6 +106,10 @@ to their implementations in Gamen.jl.
 | Corollary 6.15 | Soundness for extended systems | Verified in tests |
 | Definition 6.17 | Complete branch | Verified via [`build_tableau`](@ref) |
 | Proposition 6.18 | Every finite Γ has complete tableau | [`build_tableau`](@ref) |
+| Theorem 6.19 | Completeness: no closed tableau → satisfiable | Verified in tests |
+| Corollary 6.20 | Γ ⊨ A → Γ ⊢ A | Verified in tests |
+| Corollary 6.21 | ⊨ A → ⊢ A | Verified in tests |
+| §6.9 | Countermodel extraction from open complete branch | [`extract_countermodel`](@ref) |
 
 ## Part IV: Applied Modal Logic
 

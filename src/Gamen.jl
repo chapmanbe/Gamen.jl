@@ -63,6 +63,7 @@ export TableauSystem
 export TABLEAU_K, TABLEAU_KT, TABLEAU_KD, TABLEAU_KB
 export TABLEAU_K4, TABLEAU_S4, TABLEAU_S5
 export tableau_proves, tableau_consistent
+export extract_countermodel
 export tableau_rules, tableau_witness_rules
 
 # Visualization (loaded via GamenMakieExt when CairoMakie, GraphMakie, Graphs are available)

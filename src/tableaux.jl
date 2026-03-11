@@ -798,6 +798,78 @@ function build_tableau(assumptions::Vector{PrefixedFormula},
     Tableau(branches)
 end
 
+# ── Completeness and countermodel extraction (§6.8–6.9, B&D) ──
+
+"""
+    extract_countermodel(branch::TableauBranch) -> KripkeModel
+
+Construct the countermodel M(Δ) from an open complete branch Δ
+(Theorem 6.19, §6.9, B&D).
+
+The model is defined as:
+- Worlds: the set of all prefixes appearing on the branch
+- Accessibility: Rσσ' iff σ' = σ.n for some positive integer n
+  (i.e., σ' is a direct child of σ in the prefix tree)
+- Valuation: V(p) = {σ : σ T p ∈ Δ}
+
+By the completeness proof (Theorem 6.19), if the branch is open and
+complete, every σ T A ∈ Δ is true at σ in M(Δ), and every σ F A ∈ Δ
+is false at σ in M(Δ).
+"""
+function extract_countermodel(branch::TableauBranch)
+    # Worlds: all prefixes on the branch (as symbols for KripkeFrame)
+    prefix_list = collect(used_prefixes(branch))
+    worlds = [Symbol(string(σ)) for σ in prefix_list]
+    prefix_to_world = Dict(σ => Symbol(string(σ)) for σ in prefix_list)
+
+    # Accessibility: parent → child in prefix tree
+    relations = Pair{Symbol,Symbol}[]
+    for σ in prefix_list
+        for τ in prefix_list
+            if length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
+                push!(relations, prefix_to_world[σ] => prefix_to_world[τ])
+            end
+        end
+    end
+
+    # Valuation: collect all propositional atoms appearing on the branch
+    all_atoms = Symbol[]
+    for pf in branch.formulas
+        _collect_atoms!(all_atoms, pf.formula)
+    end
+    unique!(all_atoms)
+
+    val_pairs = Pair{Symbol,Vector{Symbol}}[]
+    for a in all_atoms
+        true_worlds = Symbol[]
+        for pf in branch.formulas
+            pf.sign isa TrueSign || continue
+            pf.formula == Atom(a) || continue
+            push!(true_worlds, prefix_to_world[pf.prefix])
+        end
+        push!(val_pairs, a => true_worlds)
+    end
+
+    frame = KripkeFrame(worlds, relations)
+    KripkeModel(frame, val_pairs)
+end
+
+function _collect_atoms!(out::Vector{Symbol}, f::Formula)
+    if f isa Atom
+        f.name isa Symbol && push!(out, f.name)
+    elseif f isa Not
+        _collect_atoms!(out, f.operand)
+    elseif f isa And || f isa Or || f isa Iff
+        _collect_atoms!(out, f.left)
+        _collect_atoms!(out, f.right)
+    elseif f isa Implies
+        _collect_atoms!(out, f.antecedent)
+        _collect_atoms!(out, f.consequent)
+    elseif f isa Box || f isa Diamond
+        _collect_atoms!(out, f.operand)
+    end
+end
+
 # ── High-level proof checking ──
 
 """
