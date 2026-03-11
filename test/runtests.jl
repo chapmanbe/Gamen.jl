@@ -1482,4 +1482,279 @@ using Test
         end
 
     end  # Chapter 6
+
+    # ──────────────────────────────────────────────────────────────────
+    @testset "Chapter 14: Temporal Logics" begin
+
+        @testset "Formula construction and display (Definition 14.2)" begin
+            p = Atom(:p)
+            q = Atom(:q)
+            @test string(FutureDiamond(p)) == "Fp"
+            @test string(FutureBox(p)) == "Gp"
+            @test string(PastDiamond(p)) == "Pp"
+            @test string(PastBox(p)) == "Hp"
+            @test string(Since(p, q)) == "(Spq)"
+            @test string(Until(p, q)) == "(Upq)"
+            @test 𝐅(p) == FutureDiamond(p)
+            @test 𝐆(p) == FutureBox(p)
+            @test 𝐏(p) == PastDiamond(p)
+            @test 𝐇(p) == PastBox(p)
+            @test is_modal_free(FutureDiamond(p)) == false
+            @test is_modal_free(Since(p, q)) == false
+        end
+
+        @testset "TemporalModel semantics (Definition 14.4)" begin
+            # Linear model: t1 ≺ t2 ≺ t3, p true at t1 and t2, q true at t3
+            # Relation: t1=>t2, t2=>t3
+            m = KripkeModel(
+                KripkeFrame([:t1, :t2, :t3], [:t1 => :t2, :t2 => :t3]),
+                [:p => [:t1, :t2], :q => [:t3]]
+            )
+            p = Atom(:p)
+            q = Atom(:q)
+
+            # FA at t: some future time satisfies A (only direct successors)
+            @test satisfies(m, :t1, FutureDiamond(p))   # t2 is successor of t1, p true at t2
+            @test !satisfies(m, :t1, FutureDiamond(q))  # q only at t3, not direct successor of t1
+            @test satisfies(m, :t2, FutureDiamond(q))   # t3 is direct successor of t2
+
+            # GA at t: all future times satisfy A
+            @test !satisfies(m, :t1, FutureBox(q))      # t2 doesn't satisfy q
+            @test satisfies(m, :t2, FutureBox(q))       # only future is t3, q true there
+            @test satisfies(m, :t3, FutureBox(p))       # no future, vacuously true
+
+            # PA at t: some past time satisfies A (t' ≺ t)
+            @test !satisfies(m, :t1, PastDiamond(p))    # t1 has no predecessors
+            @test satisfies(m, :t2, PastDiamond(p))     # t1 ≺ t2 and p at t1
+            @test satisfies(m, :t3, PastDiamond(p))     # t2 ≺ t3 and p at t2
+
+            # HA at t: all past times satisfy A
+            @test satisfies(m, :t1, PastBox(q))         # no past, vacuously true
+            @test !satisfies(m, :t2, PastBox(q))        # t1 ≺ t2 but q not at t1
+            @test !satisfies(m, :t3, PastBox(q))        # t2 ≺ t3, q not at t2 → false
+        end
+
+        @testset "Until and Since operators (Definition 14.5)" begin
+            # t1 ≺ t2 ≺ t3, p at t1 t2, q at t3
+            # Note: F/G/P/H/S/U use only DIRECT (one-step) successors/predecessors
+            m = KripkeFrame([:t1, :t2, :t3], [:t1 => :t2, :t2 => :t3])
+            # Add t1 → t3 directly so U can witness q at t3 from t1
+            m_direct = KripkeModel(
+                KripkeFrame([:t1, :t2, :t3], [:t1 => :t2, :t1 => :t3, :t2 => :t3]),
+                [:p => [:t1, :t2], :q => [:t3]]
+            )
+            p = Atom(:p)
+            q = Atom(:q)
+
+            # UBC at t: ∃t' ∈ successors(t) s.t. M,t' ⊩ B and ∀s: t ≺ s ≺ t' → M,s ⊩ C
+            # U(q)(p) at t1 in m_direct: t1 directly sees t3 (q true);
+            # s between t1 and t3: s with t1→s and t3∈successors(s) → t2 (t1→t2, t2→t3)
+            # p true at t2 → holds
+            @test satisfies(m_direct, :t1, Until(q, p))
+
+            # S(p)(q) at t3 in m_direct: ∃t' ≺ t3 with p at t', q holds between t' and t3
+            # t' = t2: p at t2, between t2 and t3: nothing strictly between → vacuously true
+            @test satisfies(m_direct, :t3, Since(p, q))
+
+            # U(q)(q) at t1 in m_direct: need q at successor and q between t1 and it
+            # Only t3 has q, but t2 is between (t1→t2, t2→t3) and q not at t2 → false
+            @test !satisfies(m_direct, :t1, Until(q, q))
+        end
+
+        @testset "Frame correspondence properties (Table 14.1)" begin
+            # Transitive frame: t1≺t2≺t3, not transitive since t1≺t3 missing
+            non_trans = KripkeFrame([:t1,:t2,:t3], [:t1=>:t2, :t2=>:t3])
+            trans = KripkeFrame([:t1,:t2,:t3], [:t1=>:t2, :t2=>:t3, :t1=>:t3])
+            @test !is_transitive_frame(non_trans)
+            @test is_transitive_frame(trans)
+
+            # Linear frame
+            linear = KripkeFrame([:t1,:t2,:t3], [:t1=>:t2, :t2=>:t3, :t1=>:t3])
+            non_linear = KripkeFrame([:t1,:t2,:t3], [:t1=>:t2, :t1=>:t3])
+            @test is_linear_frame(linear)
+            @test !is_linear_frame(non_linear)
+
+            # Dense frame: t1≺t2 but no intermediate point between them
+            non_dense = KripkeFrame([:t1,:t2], [:t1=>:t2])
+            # Dense: every t1≺t2 has t1≺t3≺t2. With t1→t2, t2→t2 (self-loop):
+            # t1≺t2: intermediate t2 itself (t1→t2 and t2→t2) ✓; t2≺t2: t2→t2 and t2→t2 ✓
+            dense = KripkeFrame([:t1,:t2], [:t1=>:t2, :t2=>:t2])
+            @test !is_dense_frame(non_dense)
+            @test is_dense_frame(dense)
+
+            # Unbounded past/future
+            bounded = KripkeFrame([:t1,:t2], [:t1=>:t2])
+            @test !is_unbounded_past(bounded)   # t1 has no predecessor
+            @test !is_unbounded_future(bounded) # t2 has no successor
+            # Two-point cyclic
+            cyclic = KripkeFrame([:t1,:t2], [:t1=>:t2, :t2=>:t1])
+            @test is_unbounded_past(cyclic)
+            @test is_unbounded_future(cyclic)
+        end
+
+    end  # Chapter 14
+
+    # ──────────────────────────────────────────────────────────────────
+    @testset "Chapter 15: Epistemic Logics" begin
+
+        @testset "Formula construction (Definition 15.2)" begin
+            p = Atom(:p)
+            q = Atom(:q)
+            @test string(Knowledge(:a, p)) == "K[a]p"
+            @test string(Announce(p, q)) == "[p]q"
+            @test Knowledge(:a, p) == Knowledge(:a, p)
+            @test Knowledge(:a, p) != Knowledge(:b, p)
+            @test is_modal_free(Knowledge(:a, p)) == false
+            @test is_modal_free(Announce(p, q)) == false
+        end
+
+        @testset "EpistemicFrame construction and accessible (Definition 15.4)" begin
+            frame = EpistemicFrame(
+                [:w1, :w2, :w3],
+                [:a => [:w1 => :w2, :w2 => :w2],
+                 :b => [:w1 => :w1, :w1 => :w3, :w3 => :w3]]
+            )
+            @test :w1 in frame.worlds
+            @test :w2 in accessible(frame, :a, :w1)
+            @test !(:w3 in accessible(frame, :a, :w1))
+            @test :w1 in accessible(frame, :b, :w1)
+            @test :w3 in accessible(frame, :b, :w1)
+            @test :a in agents(frame) && :b in agents(frame)
+        end
+
+        @testset "Epistemic truth conditions (Definition 15.5)" begin
+            # Figure 15.1 inspired model: 3 worlds
+            # Agent a: w1 accesses w2; agent b: w1 accesses w3
+            # p true at w1, w2; q true at w2
+            frame = EpistemicFrame(
+                [:w1, :w2, :w3],
+                [:a => [:w1 => :w2, :w2 => :w2, :w3 => :w3],
+                 :b => [:w1 => :w3, :w2 => :w2, :w3 => :w3]]
+            )
+            model = EpistemicModel(frame, [:p => [:w1, :w2], :q => [:w2]])
+            p = Atom(:p); q = Atom(:q)
+
+            # K[a]p at w1: all a-successors of w1 satisfy p — w2 does → true
+            @test satisfies(model, :w1, Knowledge(:a, p))
+            # K[b]p at w1: all b-successors of w1 satisfy p — w3 doesn't → false
+            @test !satisfies(model, :w1, Knowledge(:b, p))
+            # K[a]q at w1: w2 satisfies q → true
+            @test satisfies(model, :w1, Knowledge(:a, q))
+            # K[b]q at w1: w3 doesn't satisfy q → false
+            @test !satisfies(model, :w1, Knowledge(:b, q))
+        end
+
+        @testset "Group and common knowledge (Definition 15.3 and 15.6)" begin
+            frame = EpistemicFrame(
+                [:w1, :w2, :w3],
+                [:a => [:w1 => :w2, :w2 => :w2, :w3 => :w3],
+                 :b => [:w1 => :w2, :w2 => :w2, :w3 => :w3]]
+            )
+            # p true at w1 and w2 — all worlds reachable from w1 (via BFS: w1,w2) satisfy p
+            model = EpistemicModel(frame, [:p => [:w1, :w2]])
+            p = Atom(:p)
+
+            # Both agents know p at w1: K[a]p true (only a-successor is w2, p there)
+            @test group_knows(model, :w1, [:a, :b], p)
+            # Common knowledge: BFS from w1 visits w1 (p ✓) and w2 (p ✓)
+            @test common_knowledge(model, :w1, [:a, :b], p)
+            # p not true at w3 (and w3 sees w3 which has no p)
+            @test !group_knows(model, :w3, [:a, :b], p)
+        end
+
+        @testset "Veridicality: K[a]p → p (requires reflexive R_a)" begin
+            # Reflexive model: each world sees itself
+            frame = EpistemicFrame(
+                [:w1, :w2],
+                [:a => [:w1 => :w1, :w2 => :w2]]
+            )
+            model = EpistemicModel(frame, [:p => [:w1]])
+            p = Atom(:p)
+            # K[a]p → p is the T axiom for K_a
+            kap = Knowledge(:a, p)
+            # At w1: K[a]p → p. K[a]p at w1: all a-successors of w1 satisfy p.
+            # a-successors = {w1}, p true at w1 → K[a]p true → need p true → p true at w1 ✓
+            @test satisfies(model, :w1, Implies(kap, p))
+            # At w2: K[a]p false (w2 not in V(p)), so implication vacuously true
+            @test satisfies(model, :w2, Implies(kap, p))
+        end
+
+        @testset "Public announcement restrict_model (Definition 15.11)" begin
+            # Model with p at w1, w2 but not w3
+            frame = EpistemicFrame(
+                [:w1, :w2, :w3],
+                [:a => [:w1 => :w2, :w2 => :w2, :w3 => :w3],
+                 :b => [:w1 => :w1, :w1 => :w3, :w3 => :w3]]
+            )
+            model = EpistemicModel(frame, [:p => [:w1, :w2], :q => [:w2]])
+            p = Atom(:p); q = Atom(:q)
+
+            m_p = restrict_model(model, p)
+            # W' = {w1, w2} (w3 dropped since p not true there)
+            @test :w1 in m_p.frame.worlds
+            @test :w2 in m_p.frame.worlds
+            @test !(:w3 in m_p.frame.worlds)
+            # b's relation restricted: w1 no longer sees w3 (w3 dropped)
+            @test !(:w3 in accessible(m_p.frame, :b, :w1))
+        end
+
+        @testset "Public announcement semantics: [p]K[a]p" begin
+            # After announcing p, agent a knows p if R_a is reflexive within the p-worlds
+            frame = EpistemicFrame(
+                [:w1, :w2, :w3],
+                [:a => [:w1 => :w1, :w1 => :w2, :w2 => :w2, :w3 => :w3]]
+            )
+            model = EpistemicModel(frame, [:p => [:w1, :w2]])
+            p = Atom(:p)
+            # [p]K[a]p at w1: M,w1 ⊩ p (yes), so check M|p, w1 ⊩ K[a]p
+            # M|p: W' = {w1,w2}, a's relation: w1 sees w1 and w2 (both in W')
+            # K[a]p in M|p at w1: all successors of w1 in M|p satisfy p → w1,w2 satisfy p ✓
+            @test satisfies(model, :w1, Announce(p, Knowledge(:a, p)))
+            # At w3: p is false there, so [p]K[a]p is vacuously true
+            @test satisfies(model, :w3, Announce(p, Knowledge(:a, p)))
+        end
+
+        @testset "Bisimulation (Definition 15.7, Theorem 15.8)" begin
+            # Two single-agent models that are bisimilar (Figure 15.2 inspired)
+            # M1: w1, w2, w3 with w1 sees w2 and w3 (agent a)
+            frame1 = EpistemicFrame(
+                [:w1, :w2, :w3],
+                [:a => [:w1 => :w2, :w1 => :w3, :w2 => :w2, :w3 => :w3]]
+            )
+            m1 = EpistemicModel(frame1, [:p => [:w2, :w3]])
+
+            # M2: v1, v2 with v1 sees v2 (agent a), simpler model
+            frame2 = EpistemicFrame(
+                [:v1, :v2],
+                [:a => [:v1 => :v2, :v2 => :v2]]
+            )
+            m2 = EpistemicModel(frame2, [:p => [:v2]])
+
+            # Bisimulation: w1↔v1, w2↔v2, w3↔v2
+            bis = [:w1 => :v1, :w2 => :v2, :w3 => :v2]
+            @test is_bisimulation(m1, m2, bis)
+            @test bisimilar_worlds(m1, m2, :w1, :v1, bis)
+
+            # Theorem 15.8: bisimilar worlds satisfy same formulas
+            p = Atom(:p)
+            kap = Knowledge(:a, p)
+            # K[a]p at w1 in m1: successors w2,w3 both have p → true
+            @test satisfies(m1, :w1, kap)
+            # K[a]p at v1 in m2: successor v2 has p → true
+            @test satisfies(m2, :v1, kap)
+            # Both agree
+            @test satisfies(m1, :w1, kap) == satisfies(m2, :v1, kap)
+        end
+
+        @testset "EpistemicModel from KripkeModel" begin
+            frame = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            km = KripkeModel(frame, [:p => [:w2]])
+            em = EpistemicModel(km, :a)
+            p = Atom(:p)
+            @test :w2 in accessible(em.frame, :a, :w1)
+            @test satisfies(em, :w1, Knowledge(:a, p))
+        end
+
+    end  # Chapter 15
+
 end

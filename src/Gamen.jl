@@ -66,6 +66,22 @@ export tableau_proves, tableau_consistent
 export extract_countermodel
 export tableau_rules, tableau_witness_rules
 
+# Temporal logics (Chapter 14)
+export PastBox, PastDiamond, FutureBox, FutureDiamond, Since, Until
+export 𝐇, 𝐏, 𝐆, 𝐅
+export TemporalModel
+export is_transitive_frame, is_linear_frame, is_dense_frame
+export is_unbounded_past, is_unbounded_future
+
+# Epistemic logics (Chapter 15)
+export Knowledge, Announce
+export EpistemicFrame, EpistemicModel
+export agents
+export restrict_model
+export group_knows, common_knowledge
+export is_bisimulation, bisimilar_worlds
+export EPISTEMIC_K, EPISTEMIC_KT, EPISTEMIC_S4, EPISTEMIC_S5
+
 # Visualization (loaded via GamenMakieExt when CairoMakie, GraphMakie, Graphs are available)
 export visualize_model
 
@@ -78,6 +94,8 @@ include("axioms.jl")
 include("completeness.jl")
 include("filtrations.jl")
 include("tableaux.jl")
+include("temporal.jl")
+include("epistemic.jl")
 
 """
     visualize_model(model::KripkeModel; kwargs...)

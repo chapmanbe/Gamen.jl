@@ -210,6 +210,71 @@ has_finite_model_property
 is_decidable_within
 ```
 
+## Chapter 14: Temporal Logics
+
+### Temporal Formula Types
+
+```@docs
+PastDiamond
+PastBox
+FutureDiamond
+FutureBox
+Since
+Until
+TemporalModel
+```
+
+### Temporal Frame Properties
+
+```@docs
+is_transitive_frame
+is_linear_frame
+is_dense_frame
+is_unbounded_past
+is_unbounded_future
+```
+
+## Chapter 15: Epistemic Logics
+
+### Epistemic Formula Types
+
+```@docs
+Knowledge
+Announce
+```
+
+### Multi-Agent Models
+
+```@docs
+EpistemicFrame
+EpistemicModel
+agents
+restrict_model
+```
+
+### Group and Common Knowledge
+
+```@docs
+group_knows
+common_knowledge
+```
+
+### Bisimulation
+
+```@docs
+is_bisimulation
+bisimilar_worlds
+```
+
+### Epistemic Systems
+
+```@docs
+EPISTEMIC_K
+EPISTEMIC_KT
+EPISTEMIC_S4
+EPISTEMIC_S5
+```
+
 ## Chapter 6: Modal Tableaux
 
 ### Prefixes and Signed Formulas

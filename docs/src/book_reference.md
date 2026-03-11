@@ -115,8 +115,29 @@ to their implementations in Gamen.jl.
 
 ### Chapter 14: Temporal Logics
 
-*Coming soon.*
+| B&D Reference | Description | Gamen.jl |
+|:---|:---|:---|
+| Definition 14.2 | Temporal formula grammar (P, H, F, G) | [`PastDiamond`](@ref), [`PastBox`](@ref), [`FutureDiamond`](@ref), [`FutureBox`](@ref) |
+| Definition 14.2 | Since and Until binary operators | [`Since`](@ref), [`Until`](@ref) |
+| Definition 14.3 | Temporal model M = ⟨T, ≺, V⟩ | [`TemporalModel`](@ref) (alias for `KripkeModel`) |
+| Definition 14.4 | Truth for P, H, F, G operators | [`satisfies`](@ref) (methods for temporal types) |
+| Definition 14.5 | Truth for S (since) and U (until) | [`satisfies`](@ref) (methods for `Since`, `Until`) |
+| Table 14.1 | Frame correspondence properties | [`is_transitive_frame`](@ref), [`is_linear_frame`](@ref), [`is_dense_frame`](@ref), [`is_unbounded_past`](@ref), [`is_unbounded_future`](@ref) |
 
 ### Chapter 15: Epistemic Logics
 
-*Coming soon.*
+| B&D Reference | Description | Gamen.jl |
+|:---|:---|:---|
+| Definition 15.1 | Agent-indexed knowledge operator K_a | [`Knowledge`](@ref) |
+| Definition 15.2 | Epistemic formula grammar | [`Knowledge`](@ref) formula type |
+| Definition 15.3 | Group knowledge E_{G'} A = ⋀_{b∈G'} K_b A | [`group_knows`](@ref) |
+| Definition 15.3 | Common knowledge C_G A | [`common_knowledge`](@ref) |
+| Definition 15.4 | Multi-agent model M = ⟨W, R, V⟩, R = {R_a} | [`EpistemicFrame`](@ref), [`EpistemicModel`](@ref) |
+| Definition 15.5 | Truth: M,w ⊩ K_a B | [`satisfies`](@ref) (method for `Knowledge`) |
+| Definition 15.6 | Common knowledge via transitive closure R_{G'} | [`common_knowledge`](@ref) |
+| Table 15.1 | Four epistemic principles (Closure, Veridicality, Positive/Negative Introspection) | [`EPISTEMIC_K`](@ref), [`EPISTEMIC_KT`](@ref), [`EPISTEMIC_S4`](@ref), [`EPISTEMIC_S5`](@ref) |
+| Definition 15.7 | Bisimulation between multi-agent models | [`is_bisimulation`](@ref) |
+| Theorem 15.8 | Bisimilar worlds satisfy same formulas | [`bisimilar_worlds`](@ref) |
+| Definition 15.9 | Public announcement language [B]C | [`Announce`](@ref) |
+| Definition 15.10 | Extended epistemic formula grammar | [`Announce`](@ref) formula type |
+| Definition 15.11 | Truth for [B]C; restricted model M\|B | [`satisfies`](@ref) (method for `Announce`), [`restrict_model`](@ref) |
