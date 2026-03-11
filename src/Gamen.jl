@@ -28,7 +28,7 @@ export standard_translation
 export substitute
 export is_tautology, is_tautological_instance
 export AxiomSchema, SchemaK, SchemaDual, SchemaT, SchemaD, SchemaB, Schema4, Schema5
-export is_instance
+export is_instance, frame_predicate
 export ModalSystem, SYSTEM_K, SYSTEM_KT, SYSTEM_KD, SYSTEM_KB
 export SYSTEM_K4, SYSTEM_K5, SYSTEM_S4, SYSTEM_S5
 export Justification, Tautology, AxiomInst, ModusPonens, Necessitation
@@ -63,6 +63,7 @@ export TableauSystem
 export TABLEAU_K, TABLEAU_KT, TABLEAU_KD, TABLEAU_KB
 export TABLEAU_K4, TABLEAU_S4, TABLEAU_S5
 export tableau_proves, tableau_consistent
+export tableau_rules, tableau_witness_rules
 
 # Visualization (loaded via GamenMakieExt when CairoMakie, GraphMakie, Graphs are available)
 export visualize_model

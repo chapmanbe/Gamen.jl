@@ -266,17 +266,13 @@ end
 # ── Modal rules for K (Table 6.2) ──
 
 """
-    apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch,
-                        all_prefixes::Bool=false) -> RuleResult
+    apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
 
-□T rule for K: σ T □A → σ.n T A, for each used prefix σ.n on the branch.
+□T rule for K: σ T □A → σ.n T A, for each used child prefix σ.n on the branch.
 Only applies to `σ T □A`. Returns a `StackRule` with all applicable conclusions,
-or `NoRule()` if no used prefix σ.n exists yet (Table 6.2, B&D).
-
-When `all_prefixes=true` (for simplified S5), considers all used prefixes.
+or `NoRule()` if no used child prefix σ.n exists yet (Table 6.2, B&D).
 """
-function apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch,
-                              all_prefixes::Bool=false)
+function apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch)
     pf.sign isa TrueSign && pf.formula isa Box || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
@@ -286,10 +282,9 @@ function apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch,
     for τ in used
         τ == σ && continue  # reflexive case handled by T□
         is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
-        if all_prefixes || is_child
-            new_pf = pf_true(τ, A)
-            new_pf ∉ branch.formulas && push!(additions, new_pf)
-        end
+        is_child || continue
+        new_pf = pf_true(τ, A)
+        new_pf ∉ branch.formulas && push!(additions, new_pf)
     end
 
     isempty(additions) ? NoRule() : StackRule(additions)
@@ -310,50 +305,26 @@ function apply_box_false_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch,
-                            all_prefixes::Bool=false) -> RuleResult
+    apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
 
 ◇T rule for K: σ T ◇A → σ.n T A, for a new prefix σ.n not on the branch.
 Only applies to `σ T ◇A` (Table 6.2, B&D).
-
-When `all_prefixes=true` (simplified S5), additionally generates conclusions
-for all used prefixes (used-prefix mode), and falls back to new prefix only
-if all conclusions are already on the branch.
 """
-function apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch,
-                                  all_prefixes::Bool=false)
+function apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch)
     pf.sign isa TrueSign && pf.formula isa Diamond || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
-
-    if all_prefixes
-        # S5: fire for all used prefixes (universal accessibility)
-        # Only use existing prefixes — do NOT create new ones in this mode
-        used = used_prefixes(branch)
-        additions = PrefixedFormula[]
-        for τ in used
-            τ == σ && continue
-            new_pf = pf_true(τ, A)
-            new_pf ∉ branch.formulas && push!(additions, new_pf)
-        end
-        isempty(additions) ? NoRule() : StackRule(additions)
-    else
-        τ = fresh_prefix(branch, σ)
-        StackRule([pf_true(τ, A)])
-    end
+    τ = fresh_prefix(branch, σ)
+    StackRule([pf_true(τ, A)])
 end
 
 """
-    apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch,
-                             all_prefixes::Bool=false) -> RuleResult
+    apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
 
-◇F rule for K: σ F ◇A → σ.n F A, for each used prefix σ.n on the branch.
+◇F rule for K: σ F ◇A → σ.n F A, for each used child prefix σ.n on the branch.
 Only applies to `σ F ◇A` (Table 6.2, B&D).
-
-When `all_prefixes=true` (for simplified S5), considers all used prefixes.
 """
-function apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch,
-                                   all_prefixes::Bool=false)
+function apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch)
     pf.sign isa FalseSign && pf.formula isa Diamond || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
@@ -363,10 +334,9 @@ function apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch,
     for τ in used
         τ == σ && continue
         is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
-        if all_prefixes || is_child
-            new_pf = pf_false(τ, A)
-            new_pf ∉ branch.formulas && push!(additions, new_pf)
-        end
+        is_child || continue
+        new_pf = pf_false(τ, A)
+        new_pf ∉ branch.formulas && push!(additions, new_pf)
     end
 
     isempty(additions) ? NoRule() : StackRule(additions)
@@ -528,26 +498,85 @@ function apply_4T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
     new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
 end
 
+# ── Sahlqvist correspondence: axiom schema → tableau rules ──
+
+"""
+    tableau_rules(schema::AxiomSchema) -> Vector{Function}
+
+Return the used-prefix tableau rules corresponding to `schema` (BdRV Ch.3
+Sahlqvist correspondence, B&D Table 6.3). These rules fire on formulas
+whose prefix is already on the branch (no new world created).
+
+- SchemaT → T□, T◇   (reflexivity: σ T □A → σ T A)
+- SchemaB → B□, B◇   (symmetry:   σ.n T □A → σ T A)
+- Schema4 → 4□, 4◇   (transitivity: σ T □A → σ.n T □A)
+- Schema5 → 4T□, 4T◇ (euclideanness: σ.n T □A → σ T □A)
+- All others → []
+"""
+tableau_rules(::AxiomSchema)  = Function[]
+tableau_rules(::SchemaT)      = Function[apply_T_box_rule, apply_T_diamond_rule]
+tableau_rules(::SchemaB)      = Function[apply_B_box_rule, apply_B_diamond_rule]
+tableau_rules(::Schema4)      = Function[apply_4_box_rule, apply_4_diamond_rule]
+tableau_rules(::Schema5)      = Function[apply_4T_box_rule, apply_4T_diamond_rule]
+
+"""
+    tableau_witness_rules(schema::AxiomSchema) -> Vector{Function}
+
+Return the witness-creation (new-prefix) tableau rules corresponding to
+`schema` (B&D Table 6.3). These rules fire only when no used-prefix rule
+applies — they create a new world to satisfy a seriality requirement.
+
+- SchemaD → D□, D◇   (seriality: σ T □A → σ T ◇A)
+- All others → []
+"""
+tableau_witness_rules(::AxiomSchema)  = Function[]
+tableau_witness_rules(::SchemaD)      = Function[apply_D_box_rule, apply_D_diamond_rule]
+
 # ── Tableau system ──
 
 """
     TableauSystem
 
-Specifies which rules to use for a given modal system (Definition 6.2, Table 6.4, B&D).
+Specifies which rules to use for a given modal system (Definition 6.2,
+Table 6.4, B&D). A system is a configuration of frame-condition rules,
+following the Sahlqvist correspondence (BdRV Ch.3): each axiom schema
+contributes a set of tableau rules that encode its first-order frame
+condition.
 
-Supported systems: `:K`, `:KT`, `:KD`, `:KB`, `:K4`, `:S4`, `:S5`
+Fields:
+- `name`: display name (Symbol)
+- `used_prefix_rules`: rules that fire on existing prefixes (reflexivity,
+  symmetry, transitivity, euclideanness — T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇)
+- `witness_rules`: rules that create new prefixes to ensure a successor
+  exists (seriality — D□/D◇)
+
+To define a new system, supply the appropriate rule vectors. No changes
+to the tableau engine are required.
 """
 struct TableauSystem
     name::Symbol
+    used_prefix_rules::Vector{Function}
+    witness_rules::Vector{Function}
 end
 
-const TABLEAU_K  = TableauSystem(:K)
-const TABLEAU_KT = TableauSystem(:KT)
-const TABLEAU_KD = TableauSystem(:KD)
-const TABLEAU_KB = TableauSystem(:KB)
-const TABLEAU_K4 = TableauSystem(:K4)
-const TABLEAU_S4 = TableauSystem(:S4)
-const TABLEAU_S5 = TableauSystem(:S5)
+const TABLEAU_K  = TableauSystem(:K,  Function[], Function[])
+const TABLEAU_KT = TableauSystem(:KT, Function[apply_T_box_rule, apply_T_diamond_rule],
+                                       Function[])
+const TABLEAU_KD = TableauSystem(:KD, Function[],
+                                       Function[apply_D_box_rule, apply_D_diamond_rule])
+const TABLEAU_KB = TableauSystem(:KB, Function[apply_T_box_rule, apply_T_diamond_rule,
+                                               apply_B_box_rule, apply_B_diamond_rule],
+                                       Function[])
+const TABLEAU_K4 = TableauSystem(:K4, Function[apply_4_box_rule, apply_4_diamond_rule],
+                                       Function[])
+const TABLEAU_S4 = TableauSystem(:S4, Function[apply_T_box_rule, apply_T_diamond_rule,
+                                               apply_4_box_rule, apply_4_diamond_rule],
+                                       Function[])
+const TABLEAU_S5 = TableauSystem(:S5, Function[apply_T_box_rule,  apply_T_diamond_rule,
+                                               apply_B_box_rule,  apply_B_diamond_rule,
+                                               apply_4_box_rule,  apply_4_diamond_rule,
+                                               apply_4T_box_rule, apply_4T_diamond_rule],
+                                       Function[])
 
 # ── Automated tableau construction ──
 
@@ -632,12 +661,12 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         end
     end
 
-    # Priority 2c: D□/D◇ rules (KD only)
-    if system.name == :KD
+    # Priority 2c: witness-creation rules (seriality, etc.)
+    if !isempty(system.witness_rules)
         for pf in branch.formulas
             pf.formula isa Atom   && continue
             pf.formula isa Bottom && continue
-            r = _try_new_prefix_rules(pf, branch, system)
+            r = _try_witness_rules(pf, branch, system)
             r isa NoRule && continue
             if r isa StackRule
                 new_branch = branch
@@ -658,52 +687,23 @@ end
     _try_priority1_rules(pf, branch, system) -> RuleResult
 
 Try propositional rules and used-prefix modal rules (do not create new worlds).
+Frame-condition rules are taken from `system.used_prefix_rules`, which encodes
+the Sahlqvist correspondence for this system's axioms.
 """
 function _try_priority1_rules(pf::PrefixedFormula, branch::TableauBranch, system::TableauSystem)
     # Propositional rules
     r = apply_propositional_rule(pf, branch)
     r isa NoRule || return r
 
-    sys = system.name
-    # In S5, all worlds are universally accessible — use all prefixes for □T/◇F
-    all_pfx = sys == :S5
-
-    # Used-prefix modal rules
-    r = apply_box_true_rule(pf, branch, all_pfx)
+    # Base K used-prefix rules (□T, ◇F)
+    r = apply_box_true_rule(pf, branch)
     r isa NoRule || return r
-    r = apply_diamond_false_rule(pf, branch, all_pfx)
+    r = apply_diamond_false_rule(pf, branch)
     r isa NoRule || return r
-    # For S5: ◇T also fires for used prefixes (all worlds accessible)
-    if all_pfx
-        r = apply_diamond_true_rule(pf, branch, true)
-        r isa NoRule || return r
-    end
 
-    if sys ∈ (:KT, :KB, :S4, :S5)
-        r = apply_T_box_rule(pf, branch)
-        r isa NoRule || return r
-        r = apply_T_diamond_rule(pf, branch)
-        r isa NoRule || return r
-    end
-
-    if sys ∈ (:KB, :S5)
-        r = apply_B_box_rule(pf, branch)
-        r isa NoRule || return r
-        r = apply_B_diamond_rule(pf, branch)
-        r isa NoRule || return r
-    end
-
-    if sys ∈ (:K4, :S4, :S5)
-        r = apply_4_box_rule(pf, branch)
-        r isa NoRule || return r
-        r = apply_4_diamond_rule(pf, branch)
-        r isa NoRule || return r
-    end
-
-    if sys == :S5
-        r = apply_4T_box_rule(pf, branch)
-        r isa NoRule || return r
-        r = apply_4T_diamond_rule(pf, branch)
+    # Frame-condition used-prefix rules (T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇)
+    for rule in system.used_prefix_rules
+        r = rule(pf, branch)
         r isa NoRule || return r
     end
 
@@ -711,23 +711,17 @@ function _try_priority1_rules(pf::PrefixedFormula, branch::TableauBranch, system
 end
 
 """
-    _try_new_prefix_rules(pf, branch, system) -> RuleResult
+    _try_witness_rules(pf, branch, system) -> RuleResult
 
-Try new-prefix modal rules (□F, ◇T, D□, D◇) — applied after priority-1 rules.
+Try witness-creation rules from `system.witness_rules` (e.g., D□/D◇ for
+seriality). These fire at priority 2c, after all used-prefix rules, because
+they create new worlds rather than propagating into existing ones.
 """
-function _try_new_prefix_rules(pf::PrefixedFormula, branch::TableauBranch, system::TableauSystem)
-    r = apply_box_false_rule(pf, branch)
-    r isa NoRule || return r
-    r = apply_diamond_true_rule(pf, branch)
-    r isa NoRule || return r
-
-    if system.name == :KD
-        r = apply_D_box_rule(pf, branch)
-        r isa NoRule || return r
-        r = apply_D_diamond_rule(pf, branch)
+function _try_witness_rules(pf::PrefixedFormula, branch::TableauBranch, system::TableauSystem)
+    for rule in system.witness_rules
+        r = rule(pf, branch)
         r isa NoRule || return r
     end
-
     NoRule()
 end
 

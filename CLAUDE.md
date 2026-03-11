@@ -41,6 +41,10 @@ These principles exist to ensure the package generalizes beyond the specific exa
 - **Generality over examples**: Implementations must work for an arbitrary modal logic, not only the one currently illustrated in B&D. When implementing from a specific example, ask: *would this still work if the frame conditions changed?* If not, refactor before proceeding.
 - **Logic variants as configurations**: Deontic, epistemic, and temporal logics should be expressible as configurations of the base system (specific frame conditions + operator aliases), not as parallel reimplementations.
 
+## **Known Architectural Gap (Future Work)** 
+
+`ModalSystem` (Hilbert-style axiomatics) and `TableauSystem` (proof procedure) are currently separate objects that share the same Sahlqvist table but are not automatically connected. A future step would allow `TableauSystem` to be derived from a `ModalSystem` via the Sahlqvist correspondence. This requires careful design — do not attempt to connect them without a written plan approved first.
+
 ## Core Abstractions
 
 - **Formulas**: A type hierarchy rooted in an abstract `Formula` type, with concrete types for propositions, negation, conjunction, disjunction, implication, and modal operators (Box, Diamond, and logic-specific variants).
@@ -111,5 +115,5 @@ When implementing a new B&D chapter:
 
 - **Box and Diamonds (B&D)**: Primary textbook driving implementation. Local PDF at `notes/bd-screen.pdf`. Online: [bd.openlogicproject.org](https://bd.openlogicproject.org)
 - **Fitting (1999)**: "Tableau Methods for Modal and Temporal Logics" (in *Handbook of Tableau Methods*) — canonical algorithmic reference for proof procedures; descriptions are close to pseudocode and generalize cleanly.
-- **Blackburn, de Rijke & Venema (2001)**: *Modal Logic* (Cambridge) — authoritative reference for frame conditions, their algebraic characterizations, and the relationship between axioms and frame properties.
+- **Blackburn, de Rijke & Venema (2001)**: *Modal Logic* (Cambridge) — Ch. 1 (parametric semantics, general frames), Ch. 3 (frame conditions as first-class objects, Sahlqvist correspondence), Ch. 4 (completeness and canonical models).
 - **Gasquet et al. (2014)**: *Kripke's Worlds* (Birkhäuser) — explicitly about building modal logic tools; useful for generic architecture and the LoTREC prover design.

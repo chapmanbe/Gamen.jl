@@ -188,6 +188,29 @@ Base.show(io::IO, ::SchemaB) = print(io, "B")
 Base.show(io::IO, ::Schema4) = print(io, "4")
 Base.show(io::IO, ::Schema5) = print(io, "5")
 
+# ── Sahlqvist correspondence: axiom schema → frame predicate ──
+
+"""
+    frame_predicate(schema::AxiomSchema) -> Union{Function, Nothing}
+
+Return the frame property predicate corresponding to `schema` via Sahlqvist
+correspondence (BdRV Ch.3, Table 3.1), or `nothing` if the schema imposes
+no first-order frame condition.
+
+This mapping is the Sahlqvist table:
+- SchemaT  → is_reflexive   (∀x Rxx)
+- SchemaD  → is_serial      (∀x ∃y Rxy)
+- SchemaB  → is_symmetric   (∀xy Rxy → Ryx)
+- Schema4  → is_transitive  (∀xyz Rxy ∧ Ryz → Rxz)
+- Schema5  → is_euclidean   (∀xyz Rxy ∧ Rxz → Ryz)
+"""
+frame_predicate(::AxiomSchema)  = nothing
+frame_predicate(::SchemaT)      = is_reflexive
+frame_predicate(::SchemaD)      = is_serial
+frame_predicate(::SchemaB)      = is_symmetric
+frame_predicate(::Schema4)      = is_transitive
+frame_predicate(::Schema5)      = is_euclidean
+
 """
     is_instance(φ::Formula, schema::AxiomSchema) -> Bool
 

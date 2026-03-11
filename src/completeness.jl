@@ -376,26 +376,15 @@ end
 
 # ── Internal helpers ──
 
-"""Return a frame filter predicate for the given modal system."""
+"""Return a frame filter predicate for the given modal system.
+
+Uses the Sahlqvist correspondence declared on each AxiomSchema via
+`frame_predicate` (BdRV Ch.3): each schema carries its own frame
+condition, so this function simply collects them.
+"""
 function _frame_filter(system::ModalSystem)
-    checks = Function[]
-    for schema in system.schemas
-        if schema isa SchemaT
-            push!(checks, is_reflexive)
-        elseif schema isa SchemaD
-            push!(checks, is_serial)
-        elseif schema isa SchemaB
-            push!(checks, is_symmetric)
-        elseif schema isa Schema4
-            push!(checks, is_transitive)
-        elseif schema isa Schema5
-            push!(checks, is_euclidean)
-        end
-    end
-    if isempty(checks)
-        return _ -> true
-    end
-    return frame -> all(check -> check(frame), checks)
+    checks = filter(!isnothing, frame_predicate.(system.schemas))
+    isempty(checks) ? (_ -> true) : (frame -> all(c -> c(frame), checks))
 end
 
 """Lazily enumerate all possible frames on the given worlds."""
