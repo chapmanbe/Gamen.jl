@@ -680,9 +680,9 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
             right = _add_unique(branch, result.right)
             # If both branches are identical to parent, all conclusions already present
             (left == branch && right == branch) && continue
-            # If one side is same as parent (already saturated), only return changed side
-            left  == branch && return [right]
-            right == branch && return [left]
+            # If one arm is already present, this branch is the survivor of a
+            # previous split — do not discard it by returning only the other arm.
+            (left == branch || right == branch) && continue
             return [left, right]
         end
     end

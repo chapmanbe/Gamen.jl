@@ -1441,6 +1441,19 @@ using Test
             @test !tableau_consistent(TABLEAU_K, Formula[p, Not(p)])
             # {□p, ¬p} unsatisfiable in KT (T axiom makes □p → p)
             @test !tableau_consistent(TABLEAU_KT, Formula[Box(p), Not(p)])
+
+            # SplitRule must not discard open branches when one arm of a split
+            # is already present (regression: previously reported inconsistent)
+            @test tableau_consistent(TABLEAU_K, Formula[Implies(p, q), Not(q)])
+            @test tableau_consistent(TABLEAU_K, Formula[Implies(p, q), p])
+            @test tableau_consistent(TABLEAU_K, Formula[Or(p, q), Not(q)])
+            @test tableau_consistent(TABLEAU_K, Formula[Or(p, q), Not(p)])
+            @test tableau_consistent(TABLEAU_K, Formula[p, Or(p, q), Not(q)])
+            # Modal with conditional
+            @test tableau_consistent(TABLEAU_KD,
+                Formula[Implies(p, Box(Not(q))), Box(q)])
+            @test tableau_consistent(TABLEAU_KD,
+                Formula[Implies(p, Box(q)), Not(p)])
         end
 
         @testset "Completeness (Theorem 6.19) and countermodel extraction (§6.9)" begin
