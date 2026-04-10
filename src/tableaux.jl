@@ -112,12 +112,19 @@ pf_false(σ::Prefix, A::Formula) = PrefixedFormula(σ, F_SIGN, A)
 
 A branch in a prefixed tableau: an ordered list of `PrefixedFormula`s.
 A branch is *closed* if it contains σ T A and σ F A for some σ, A.
+
+The `scan_start` field tracks where the Priority 1 scan should begin.
+Formulas before this index have already been checked and returned NoRule.
+After a world-creating rule fires (Priority 2), `scan_start` resets to 1
+because Box-true/Diamond-false rules may need to propagate to the new child.
 """
 struct TableauBranch
     formulas::Vector{PrefixedFormula}
+    scan_start::Int
 end
 
-TableauBranch() = TableauBranch(PrefixedFormula[])
+TableauBranch(formulas::Vector{PrefixedFormula}) = TableauBranch(formulas, 1)
+TableauBranch() = TableauBranch(PrefixedFormula[], 1)
 
 function Base.show(io::IO, b::TableauBranch)
     if is_closed(b)
@@ -193,7 +200,7 @@ end
 Return a new branch with pf appended (non-mutating).
 """
 function append_formula(branch::TableauBranch, pf::PrefixedFormula)
-    TableauBranch([branch.formulas; pf])
+    TableauBranch([branch.formulas; pf], branch.scan_start)
 end
 
 Base.:(==)(a::TableauBranch, b::TableauBranch) = a.formulas == b.formulas
@@ -671,7 +678,12 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
     is_closed(branch) && return [branch]
 
     # Priority 1: propositional and used-prefix rules
-    for pf in branch.formulas
+    # Start scanning from scan_start — formulas before this index returned NoRule
+    # on the previous call and haven't been invalidated by new child prefixes.
+    n = length(branch.formulas)
+    last_applied = n  # will become scan_start for returned branches
+    for i in branch.scan_start:n
+        pf = branch.formulas[i]
         pf.formula isa Atom   && continue
         pf.formula isa Bottom && continue
 
@@ -685,7 +697,9 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            return [new_branch]
+            # Rule fired at index i; next scan resumes here (same formula may
+            # have additional rules, e.g. propositional done but box-true pending)
+            return [TableauBranch(new_branch.formulas, i)]
         elseif result isa SplitRule
             function _add_unique(b, pfs)
                 for pf in pfs
@@ -701,12 +715,15 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
             # If one arm is already present, this branch is the survivor of a
             # previous split — do not discard it by returning only the other arm.
             (left == branch || right == branch) && continue
-            return [left, right]
+            return [TableauBranch(left.formulas, i),
+                    TableauBranch(right.formulas, i)]
         end
     end
 
     # Priority 2a: □F and 𝐆F rules first (before ◇T/𝐅T) — ensures worlds are named
-    # before diamond-true rules fire on them
+    # before diamond-true rules fire on them.
+    # World-creating rules reset scan_start to 1: new children mean old
+    # Box-true/Diamond-false rules may need to propagate again.
     for pf in branch.formulas
         if pf.formula isa Box && pf.sign isa FalseSign
             r = apply_box_false_rule(pf, branch)
@@ -723,7 +740,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            return [new_branch]
+            return [TableauBranch(new_branch.formulas, 1)]
         end
     end
 
@@ -744,7 +761,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            return [new_branch]
+            return [TableauBranch(new_branch.formulas, 1)]
         end
     end
 
@@ -762,7 +779,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                     new_branch = append_formula(new_branch, addition)
                 end
                 new_branch == branch && continue
-                return [new_branch]
+                return [TableauBranch(new_branch.formulas, 1)]
             end
         end
     end
