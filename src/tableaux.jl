@@ -172,6 +172,22 @@ function fresh_prefix(branch::TableauBranch, σ::Prefix)
 end
 
 """
+    _has_witness(branch::TableauBranch, σ::Prefix, target::PrefixedFormula) -> Bool
+
+Return `true` if some child prefix τ of σ already has a formula matching
+`target` (with τ substituted for the prefix). Used to guard world-creating
+rules against redundant witness creation.
+"""
+function _has_witness(branch::TableauBranch, σ::Prefix, sign::Sign, formula::Formula)
+    for pf in branch.formulas
+        τ = pf.prefix
+        length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq || continue
+        pf.sign == sign && pf.formula == formula && return true
+    end
+    false
+end
+
+"""
     append_formula(branch::TableauBranch, pf::PrefixedFormula) -> TableauBranch
 
 Return a new branch with pf appended (non-mutating).
@@ -311,6 +327,7 @@ function apply_box_false_rule(pf::PrefixedFormula, branch::TableauBranch)
     pf.sign isa FalseSign && pf.formula isa Box || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
+    _has_witness(branch, σ, F_SIGN, A) && return NoRule()
     τ = fresh_prefix(branch, σ)
     StackRule([pf_false(τ, A)])
 end
@@ -325,6 +342,7 @@ function apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch)
     pf.sign isa TrueSign && pf.formula isa Diamond || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
+    _has_witness(branch, σ, T_SIGN, A) && return NoRule()
     τ = fresh_prefix(branch, σ)
     StackRule([pf_true(τ, A)])
 end
@@ -687,11 +705,16 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         end
     end
 
-    # Priority 2a: □F rules first (before ◇T) — ensures worlds are named
+    # Priority 2a: □F and 𝐆F rules first (before ◇T/𝐅T) — ensures worlds are named
     # before diamond-true rules fire on them
     for pf in branch.formulas
-        pf.formula isa Box && pf.sign isa FalseSign || continue
-        r = apply_box_false_rule(pf, branch)
+        if pf.formula isa Box && pf.sign isa FalseSign
+            r = apply_box_false_rule(pf, branch)
+        elseif pf.formula isa FutureBox && pf.sign isa FalseSign
+            r = apply_futurebox_false_rule(pf, branch)
+        else
+            continue
+        end
         r isa NoRule && continue
         if r isa StackRule
             new_branch = branch
@@ -704,10 +727,15 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         end
     end
 
-    # Priority 2b: ◇T rules
+    # Priority 2b: ◇T and 𝐅T rules
     for pf in branch.formulas
-        pf.formula isa Diamond && pf.sign isa TrueSign || continue
-        r = apply_diamond_true_rule(pf, branch)
+        if pf.formula isa Diamond && pf.sign isa TrueSign
+            r = apply_diamond_true_rule(pf, branch)
+        elseif pf.formula isa FutureDiamond && pf.sign isa TrueSign
+            r = apply_futurediamond_true_rule(pf, branch)
+        else
+            continue
+        end
         r isa NoRule && continue
         if r isa StackRule
             new_branch = branch
@@ -758,6 +786,12 @@ function _try_priority1_rules(pf::PrefixedFormula, branch::TableauBranch, system
     r = apply_box_true_rule(pf, branch)
     r isa NoRule || return r
     r = apply_diamond_false_rule(pf, branch)
+    r isa NoRule || return r
+
+    # Base temporal used-prefix rules (𝐆T, 𝐅F)
+    r = apply_futurebox_true_rule(pf, branch)
+    r isa NoRule || return r
+    r = apply_futurediamond_false_rule(pf, branch)
     r isa NoRule || return r
 
     # Frame-condition used-prefix rules (T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇)
@@ -926,6 +960,11 @@ function _collect_atoms!(out::Vector{Symbol}, f::Formula)
         _collect_atoms!(out, f.consequent)
     elseif f isa Box || f isa Diamond
         _collect_atoms!(out, f.operand)
+    elseif f isa FutureBox || f isa FutureDiamond || f isa PastBox || f isa PastDiamond
+        _collect_atoms!(out, f.operand)
+    elseif f isa Since || f isa Until
+        _collect_atoms!(out, f.left)
+        _collect_atoms!(out, f.right)
     end
 end
 

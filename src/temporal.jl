@@ -216,6 +216,191 @@ function satisfies(model::TemporalModel, t::Symbol, f::Until)
     false
 end
 
+# ── Temporal tableau rules ──
+#
+# These follow the same pattern as the modal rules in tableaux.jl (Table 6.2–6.3, B&D).
+# FutureBox (𝐆) and FutureDiamond (𝐅) use the same prefix tree as Box/Diamond —
+# in Phase 1, temporal and deontic accessibility share a single relation.
+
+# ── Base temporal rules (analogous to □/◇ rules for K, Table 6.2) ──
+
+"""
+    apply_futurebox_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+𝐆T rule: σ T 𝐆A → σ.n T A, for each used child prefix σ.n on the branch.
+Analogous to `apply_box_true_rule` for □.
+"""
+function apply_futurebox_true_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa TrueSign && pf.formula isa FutureBox || return NoRule()
+    σ = pf.prefix
+    A = pf.formula.operand
+    used = used_prefixes(branch)
+
+    additions = PrefixedFormula[]
+    for τ in used
+        τ == σ && continue
+        is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
+        is_child || continue
+        new_pf = pf_true(τ, A)
+        new_pf ∉ branch.formulas && push!(additions, new_pf)
+    end
+
+    isempty(additions) ? NoRule() : StackRule(additions)
+end
+
+"""
+    apply_futurebox_false_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+𝐆F rule: σ F 𝐆A → σ.n F A, for a new prefix σ.n not on the branch.
+Analogous to `apply_box_false_rule` for □.
+"""
+function apply_futurebox_false_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa FalseSign && pf.formula isa FutureBox || return NoRule()
+    σ = pf.prefix
+    A = pf.formula.operand
+    _has_witness(branch, σ, F_SIGN, A) && return NoRule()
+    τ = fresh_prefix(branch, σ)
+    StackRule([pf_false(τ, A)])
+end
+
+"""
+    apply_futurediamond_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+𝐅T rule: σ T 𝐅A → σ.n T A, for a new prefix σ.n not on the branch.
+Analogous to `apply_diamond_true_rule` for ◇.
+"""
+function apply_futurediamond_true_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa TrueSign && pf.formula isa FutureDiamond || return NoRule()
+    σ = pf.prefix
+    A = pf.formula.operand
+    _has_witness(branch, σ, T_SIGN, A) && return NoRule()
+    τ = fresh_prefix(branch, σ)
+    StackRule([pf_true(τ, A)])
+end
+
+"""
+    apply_futurediamond_false_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+𝐅F rule: σ F 𝐅A → σ.n F A, for each used child prefix σ.n on the branch.
+Analogous to `apply_diamond_false_rule` for ◇.
+"""
+function apply_futurediamond_false_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa FalseSign && pf.formula isa FutureDiamond || return NoRule()
+    σ = pf.prefix
+    A = pf.formula.operand
+    used = used_prefixes(branch)
+
+    additions = PrefixedFormula[]
+    for τ in used
+        τ == σ && continue
+        is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
+        is_child || continue
+        new_pf = pf_false(τ, A)
+        new_pf ∉ branch.formulas && push!(additions, new_pf)
+    end
+
+    isempty(additions) ? NoRule() : StackRule(additions)
+end
+
+# ── Temporal frame condition rules ──
+
+"""
+    apply_temporal_T_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+Temporal T𝐆 rule (reflexive temporal frames): σ T 𝐆A → σ T A.
+Analogous to `apply_T_box_rule` for □.
+"""
+function apply_temporal_T_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa TrueSign && pf.formula isa FutureBox || return NoRule()
+    σ = pf.prefix
+    A = pf.formula.operand
+    new_pf = pf_true(σ, A)
+    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+end
+
+"""
+    apply_temporal_T_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+Temporal T𝐅 rule (reflexive temporal frames): σ F 𝐅A → σ F A.
+Analogous to `apply_T_diamond_rule` for ◇.
+"""
+function apply_temporal_T_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa FalseSign && pf.formula isa FutureDiamond || return NoRule()
+    σ = pf.prefix
+    A = pf.formula.operand
+    new_pf = pf_false(σ, A)
+    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+end
+
+"""
+    apply_temporal_4_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+Temporal 4𝐆 rule (transitive temporal frames): σ T 𝐆A → σ.n T 𝐆A, for each used child σ.n.
+Analogous to `apply_4_box_rule` for □.
+"""
+function apply_temporal_4_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa TrueSign && pf.formula isa FutureBox || return NoRule()
+    σ = pf.prefix
+    used = used_prefixes(branch)
+
+    additions = PrefixedFormula[]
+    for τ in used
+        if length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
+            new_pf = pf_true(τ, pf.formula)
+            new_pf ∉ branch.formulas && push!(additions, new_pf)
+        end
+    end
+
+    isempty(additions) ? NoRule() : StackRule(additions)
+end
+
+"""
+    apply_temporal_4_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+
+Temporal 4𝐅 rule (transitive temporal frames): σ F 𝐅A → σ.n F 𝐅A, for each used child σ.n.
+Analogous to `apply_4_diamond_rule` for ◇.
+"""
+function apply_temporal_4_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch)
+    pf.sign isa FalseSign && pf.formula isa FutureDiamond || return NoRule()
+    σ = pf.prefix
+    used = used_prefixes(branch)
+
+    additions = PrefixedFormula[]
+    for τ in used
+        if length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
+            new_pf = pf_false(τ, pf.formula)
+            new_pf ∉ branch.formulas && push!(additions, new_pf)
+        end
+    end
+
+    isempty(additions) ? NoRule() : StackRule(additions)
+end
+
+# ── Combined deontic-temporal tableau system ──
+
+"""
+    TABLEAU_KDt
+
+Tableau system for combined deontic-temporal logic. Deontic operators (□/◇)
+have serial frames (D axiom); temporal operators (𝐆/𝐅) have reflexive and
+transitive frames.
+
+In Phase 1, deontic and temporal accessibility share a single relation.
+Multi-relational prefixes (distinguishing R_d from R_t) are deferred to Phase 2.
+"""
+const TABLEAU_KDt = TableauSystem(:KDt,
+    Function[
+        # Temporal reflexivity (T axiom for time): 𝐆A → A
+        apply_temporal_T_futurebox_rule, apply_temporal_T_futurediamond_rule,
+        # Temporal transitivity (4 axiom for time): 𝐆A → 𝐆𝐆A
+        apply_temporal_4_futurebox_rule, apply_temporal_4_futurediamond_rule,
+    ],
+    Function[
+        # Deontic seriality (D axiom): □A → ◇A
+        apply_D_box_rule, apply_D_diamond_rule,
+    ]
+)
+
 # ── Frame properties for temporal logics (Table 14.1) ──
 
 """

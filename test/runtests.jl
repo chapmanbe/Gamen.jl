@@ -1456,6 +1456,38 @@ using Test
                 Formula[Implies(p, Box(q)), Not(p)])
         end
 
+        @testset "Combined deontic-temporal (TABLEAU_KDt)" begin
+            # Pure temporal theorems (reflexive temporal frames)
+            # 𝐆p → p (temporal reflexivity)
+            @test tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureBox(p), p))
+            # 𝐆p → 𝐅p (box implies diamond, via reflexivity)
+            @test tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureBox(p), FutureDiamond(p)))
+
+            # Combined: O(𝐅p) ∧ O(𝐆¬p) → inconsistent
+            # Obligatory that p eventually holds, but obligatory that p never holds
+            @test !tableau_consistent(TABLEAU_KDt,
+                Formula[Box(FutureDiamond(p)), Box(FutureBox(Not(p)))])
+
+            # Temporal reflexivity through deontic nesting: 𝐆(□p) → □p
+            @test tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureBox(Box(p)), Box(p)))
+
+            # D axiom preserved through temporal nesting: □(𝐅p) → ◇(𝐅p)
+            @test tableau_proves(TABLEAU_KDt, Formula[],
+                Implies(Box(FutureDiamond(p)), Diamond(FutureDiamond(p))))
+
+            # Consistency: conditional obligation with temporal constraint
+            # "If p then always ¬q obligatory" + "q eventually obligatory" — consistent (set p=false)
+            @test tableau_consistent(TABLEAU_KDt,
+                Formula[Implies(p, Box(FutureBox(Not(q)))), Box(FutureDiamond(q))])
+
+            # Pure temporal consistency: 𝐆p ∧ 𝐅q is satisfiable
+            @test tableau_consistent(TABLEAU_KDt, Formula[FutureBox(p), FutureDiamond(q)])
+
+            # Pure temporal inconsistency: 𝐆p ∧ 𝐅¬p is unsatisfiable
+            # (reflexivity gives p, and we need a successor where ¬p, but 𝐆 propagates)
+            @test !tableau_consistent(TABLEAU_KDt, Formula[FutureBox(p), FutureDiamond(Not(p))])
+        end
+
         @testset "Completeness (Theorem 6.19) and countermodel extraction (§6.9)" begin
             # Theorem 6.19: if no closed tableau exists, Γ is satisfiable.
             # extract_countermodel constructs the model M(Δ) from an open complete branch.
