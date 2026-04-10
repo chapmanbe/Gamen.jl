@@ -3,6 +3,7 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Gamen = "d58aead4-12fe-4bc4-9bd9-a7dede724567"
 GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [sources]
 Gamen = {path = ".."}
