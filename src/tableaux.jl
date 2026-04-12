@@ -113,14 +113,27 @@ pf_false(σ::Prefix, A::Formula) = PrefixedFormula(σ, F_SIGN, A)
 A branch in a prefixed tableau: an ordered list of `PrefixedFormula`s.
 A branch is *closed* if it contains σ T A and σ F A for some σ, A.
 
-The `scan_start` field tracks where the Priority 1 scan should begin.
-Formulas before this index have already been checked and returned NoRule.
-After a world-creating rule fires (Priority 2), `scan_start` resets to 1
-because Box-true/Diamond-false rules may need to propagate to the new child.
+Fields:
+- `formulas`: ordered list of prefixed formulas (for iteration and indexing)
+- `formula_set`: `Set{PrefixedFormula}` for O(1) membership checks
+- `prefix_set`: `Set{Prefix}` for O(1) used-prefix queries
+- `expanded`: `BitSet` tracking which formula indices have been fully processed
+  by Priority 1 rules and need not be re-checked
+- `scan_start`: where the Priority 1 scan resumes (formulas before this index
+  returned NoRule and haven't been invalidated by new child prefixes)
 """
 struct TableauBranch
     formulas::Vector{PrefixedFormula}
+    formula_set::Set{PrefixedFormula}
+    prefix_set::Set{Prefix}
+    expanded::BitSet
     scan_start::Int
+end
+
+function TableauBranch(formulas::Vector{PrefixedFormula}, scan_start::Int)
+    fset = Set{PrefixedFormula}(formulas)
+    pset = Set{Prefix}(pf.prefix for pf in formulas)
+    TableauBranch(formulas, fset, pset, BitSet(), scan_start)
 end
 
 TableauBranch(formulas::Vector{PrefixedFormula}) = TableauBranch(formulas, 1)
@@ -147,7 +160,7 @@ function is_closed(branch::TableauBranch)
     for pf in branch.formulas
         if pf.sign isa TrueSign
             companion = PrefixedFormula(pf.prefix, F_SIGN, pf.formula)
-            if companion ∈ branch.formulas
+            if companion ∈ branch.formula_set
                 return true
             end
         end
@@ -161,7 +174,7 @@ end
 Return the set of all prefixes that appear on this branch.
 """
 function used_prefixes(branch::TableauBranch)
-    Set{Prefix}(pf.prefix for pf in branch.formulas)
+    branch.prefix_set
 end
 
 """
@@ -186,10 +199,11 @@ Return `true` if some child prefix τ of σ already has a formula matching
 rules against redundant witness creation.
 """
 function _has_witness(branch::TableauBranch, σ::Prefix, sign::Sign, formula::Formula)
+    # Check if any child prefix of σ has the given signed formula
     for pf in branch.formulas
         τ = pf.prefix
         length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq || continue
-        pf.sign == sign && pf.formula == formula && return true
+        typeof(pf.sign) == typeof(sign) && pf.formula == formula && return true
     end
     false
 end
@@ -200,10 +214,13 @@ end
 Return a new branch with pf appended (non-mutating).
 """
 function append_formula(branch::TableauBranch, pf::PrefixedFormula)
-    TableauBranch([branch.formulas; pf], branch.scan_start)
+    new_formulas = [branch.formulas; pf]
+    new_fset = union(branch.formula_set, Set([pf]))
+    new_pset = union(branch.prefix_set, Set([pf.prefix]))
+    TableauBranch(new_formulas, new_fset, new_pset, copy(branch.expanded), branch.scan_start)
 end
 
-Base.:(==)(a::TableauBranch, b::TableauBranch) = a.formulas == b.formulas
+Base.:(==)(a::TableauBranch, b::TableauBranch) = a.formula_set == b.formula_set
 
 # ── Tableau rules (Tables 6.1–6.2 and 6.3) ──
 
@@ -318,7 +335,7 @@ function apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch)
         is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
         is_child || continue
         new_pf = pf_true(τ, A)
-        new_pf ∉ branch.formulas && push!(additions, new_pf)
+        new_pf ∉ branch.formula_set && push!(additions, new_pf)
     end
 
     isempty(additions) ? NoRule() : StackRule(additions)
@@ -372,7 +389,7 @@ function apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch)
         is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
         is_child || continue
         new_pf = pf_false(τ, A)
-        new_pf ∉ branch.formulas && push!(additions, new_pf)
+        new_pf ∉ branch.formula_set && push!(additions, new_pf)
     end
 
     isempty(additions) ? NoRule() : StackRule(additions)
@@ -391,7 +408,7 @@ function apply_T_box_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ = pf.prefix
     A = pf.formula.operand
     new_pf = pf_true(σ, A)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
@@ -404,7 +421,7 @@ function apply_T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ = pf.prefix
     A = pf.formula.operand
     new_pf = pf_false(σ, A)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
@@ -417,7 +434,7 @@ function apply_D_box_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ = pf.prefix
     A = pf.formula.operand
     new_pf = pf_true(σ, Diamond(A))
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
@@ -430,7 +447,7 @@ function apply_D_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ = pf.prefix
     A = pf.formula.operand
     new_pf = pf_false(σ, Box(A))
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
@@ -445,7 +462,7 @@ function apply_B_box_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ = parent_prefix(σ_n)
     A = pf.formula.operand
     new_pf = pf_true(σ, A)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
@@ -460,7 +477,7 @@ function apply_B_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ = parent_prefix(σ_n)
     A = pf.formula.operand
     new_pf = pf_false(σ, A)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
@@ -477,7 +494,7 @@ function apply_4_box_rule(pf::PrefixedFormula, branch::TableauBranch)
     for τ in used
         if length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
             new_pf = pf_true(τ, pf.formula)
-            new_pf ∉ branch.formulas && push!(additions, new_pf)
+            new_pf ∉ branch.formula_set && push!(additions, new_pf)
         end
     end
 
@@ -499,7 +516,7 @@ function apply_4_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
     for τ in used
         if length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
             new_pf = pf_false(τ, pf.formula)
-            new_pf ∉ branch.formulas && push!(additions, new_pf)
+            new_pf ∉ branch.formula_set && push!(additions, new_pf)
         end
     end
 
@@ -517,7 +534,7 @@ function apply_4T_box_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ_n = pf.prefix
     σ = parent_prefix(σ_n)
     new_pf = pf_true(σ, pf.formula)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
@@ -531,7 +548,7 @@ function apply_4T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
     σ_n = pf.prefix
     σ = parent_prefix(σ_n)
     new_pf = pf_false(σ, pf.formula)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
+    new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 # ── Sahlqvist correspondence: axiom schema → tableau rules ──
@@ -674,36 +691,57 @@ Rules are tried in priority order across all formulas:
 
 Returns [branch] unchanged if no rule applies (saturated branch).
 """
+
+# Helper: true if a formula is purely propositional (no modal/temporal operators).
+# Propositional formulas can be marked as expanded after processing since their
+# rules never depend on which worlds exist.
+_is_propositional(f::Formula) = f isa Not || f isa And || f isa Or || f isa Implies || f isa Iff
+
 function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
     is_closed(branch) && return [branch]
 
     # Priority 1: propositional and used-prefix rules
     # Start scanning from scan_start — formulas before this index returned NoRule
     # on the previous call and haven't been invalidated by new child prefixes.
+    # Skip formulas marked as expanded (propositional formulas that have been
+    # fully processed and will never produce new results).
     n = length(branch.formulas)
     last_applied = n  # will become scan_start for returned branches
     for i in branch.scan_start:n
+        i ∈ branch.expanded && continue
         pf = branch.formulas[i]
         pf.formula isa Atom   && continue
         pf.formula isa Bottom && continue
 
         result = _try_priority1_rules(pf, branch, system)
-        result isa NoRule && continue
+        if result isa NoRule
+            # Mark propositional formulas as expanded — they won't produce
+            # new results even after new worlds are created. Modal formulas
+            # (Box, Diamond, FutureBox, etc.) are NOT marked because their
+            # rules depend on which child prefixes exist.
+            if _is_propositional(pf.formula)
+                push!(branch.expanded, i)
+            end
+            continue
+        end
 
         if result isa StackRule
             new_branch = branch
             for addition in result.additions
-                addition ∈ new_branch.formulas && continue
+                addition ∈ new_branch.formula_set && continue
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            # Rule fired at index i; next scan resumes here (same formula may
-            # have additional rules, e.g. propositional done but box-true pending)
-            return [TableauBranch(new_branch.formulas, i)]
+            # Rule fired: mark propositional formulas as expanded
+            if _is_propositional(pf.formula)
+                push!(new_branch.expanded, i)
+            end
+            return [TableauBranch(new_branch.formulas, new_branch.formula_set,
+                                  new_branch.prefix_set, new_branch.expanded, i)]
         elseif result isa SplitRule
             function _add_unique(b, pfs)
                 for pf in pfs
-                    pf ∈ b.formulas && continue
+                    pf ∈ b.formula_set && continue
                     b = append_formula(b, pf)
                 end
                 b
@@ -715,8 +753,17 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
             # If one arm is already present, this branch is the survivor of a
             # previous split — do not discard it by returning only the other arm.
             (left == branch || right == branch) && continue
-            return [TableauBranch(left.formulas, i),
-                    TableauBranch(right.formulas, i)]
+            # Mark the split formula as expanded on both branches
+            left_exp = copy(left.expanded)
+            right_exp = copy(right.expanded)
+            if _is_propositional(pf.formula)
+                push!(left_exp, i)
+                push!(right_exp, i)
+            end
+            return [TableauBranch(left.formulas, left.formula_set,
+                                  left.prefix_set, left_exp, i),
+                    TableauBranch(right.formulas, right.formula_set,
+                                  right.prefix_set, right_exp, i)]
         end
     end
 
@@ -736,11 +783,12 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         if r isa StackRule
             new_branch = branch
             for addition in r.additions
-                addition ∈ new_branch.formulas && continue
+                addition ∈ new_branch.formula_set && continue
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            return [TableauBranch(new_branch.formulas, 1)]
+            return [TableauBranch(new_branch.formulas, new_branch.formula_set,
+                                  new_branch.prefix_set, BitSet(), 1)]
         end
     end
 
@@ -757,11 +805,12 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         if r isa StackRule
             new_branch = branch
             for addition in r.additions
-                addition ∈ new_branch.formulas && continue
+                addition ∈ new_branch.formula_set && continue
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            return [TableauBranch(new_branch.formulas, 1)]
+            return [TableauBranch(new_branch.formulas, new_branch.formula_set,
+                                  new_branch.prefix_set, BitSet(), 1)]
         end
     end
 
@@ -775,11 +824,12 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
             if r isa StackRule
                 new_branch = branch
                 for addition in r.additions
-                    addition ∈ new_branch.formulas && continue
+                    addition ∈ new_branch.formula_set && continue
                     new_branch = append_formula(new_branch, addition)
                 end
                 new_branch == branch && continue
-                return [TableauBranch(new_branch.formulas, 1)]
+                return [TableauBranch(new_branch.formulas, new_branch.formula_set,
+                                  new_branch.prefix_set, BitSet(), 1)]
             end
         end
     end
