@@ -1526,6 +1526,58 @@ using Test
             @test tableau_proves(TABLEAU_K, Formula[], Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
         end
 
+        @testset "Tableau blocking (loop checking)" begin
+            # _ancestors helper
+            @test Gamen._ancestors(Prefix([1])) == Prefix[]
+            @test Gamen._ancestors(Prefix([1,2])) == [Prefix([1])]
+            @test Gamen._ancestors(Prefix([1,2,3])) == [Prefix([1]), Prefix([1,2])]
+
+            # _prefix_content extracts signed formulas at a prefix
+            σ = Prefix([1]); τ = Prefix([1,1])
+            branch = TableauBranch([pf_true(σ, p), pf_false(σ, q), pf_true(τ, p)])
+            content_σ = Gamen._prefix_content(branch, σ)
+            content_τ = Gamen._prefix_content(branch, τ)
+            @test length(content_σ) == 2
+            @test length(content_τ) == 1
+            @test content_τ ⊆ content_σ  # τ has subset of σ's formulas
+
+            # _should_block: child with subset of parent's content is blocked
+            @test !Gamen._should_block(branch, σ)  # root is never blocked
+            @test Gamen._should_block(branch, τ)    # τ ⊆ σ
+
+            # _should_block: child with strictly more content is not blocked
+            branch2 = TableauBranch([pf_true(σ, p), pf_true(τ, p), pf_true(τ, q)])
+            @test !Gamen._should_block(branch2, τ)  # τ has {p,q}, σ has {p}
+
+            # Temporal blocking: 𝐆(□p) exercises blocking — without it, the
+            # seriality rule creates worlds indefinitely (each isomorphic to its parent)
+            root = Prefix([1])
+            t = build_tableau([pf_true(root, FutureBox(Box(p)))], TABLEAU_KDt)
+            @test !is_closed(t)
+            # With blocking, the tableau should have very few worlds (3 prefixes,
+            # with 1.1.1 blocked because its content ⊆ ancestor 1.1's content)
+            open_branch = t.branches[findfirst(b -> !is_closed(b), t.branches)]
+            @test length(open_branch.formulas) <= 15  # would be ~1000+ without blocking
+            @test !isempty(open_branch.blocked)  # at least one prefix is blocked
+
+            # Blocking preserves correctness: temporal theorems still prove
+            @test tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureBox(p), p))
+            @test tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureBox(p), FutureDiamond(p)))
+
+            # Blocking preserves correctness: temporal non-theorems stay open
+            @test !tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureDiamond(p), FutureBox(p)))
+
+            # Blocking preserves correctness: temporal inconsistencies still close
+            @test !tableau_consistent(TABLEAU_KDt, Formula[FutureBox(p), FutureDiamond(Not(p))])
+
+            # Blocking preserves correctness: temporal consistencies stay open
+            @test tableau_consistent(TABLEAU_KDt, Formula[FutureBox(p), FutureDiamond(q)])
+
+            # Non-temporal tableaux are unaffected (no blocking triggers)
+            @test tableau_proves(TABLEAU_K, Formula[], Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), p))
+        end
+
     end  # Chapter 6
 
     # ──────────────────────────────────────────────────────────────────

@@ -63,12 +63,22 @@ Frame enumeration in `is_decidable_within`, `is_derivable_from`, and `is_consist
 
 This is a fundamental complexity bound, not a bug to be fixed. Do not attempt to optimize around it by increasing the limit.
 
+## Tableau Blocking
+
+Temporal tableaux use **ancestor-based blocking** to ensure termination. A prefix σ is blocked when an unblocked ancestor has a superset of its formula content — the subtableau from σ would be isomorphic, so expansion is redundant. Without blocking, temporal formulas like `𝐆(□p)` create isomorphic worlds indefinitely.
+
+Blocking is integrated at two points in `_apply_all_rules`:
+- **Strategy A**: World-creating rules (Priority 2) skip blocked prefixes and check new prefixes for blocking after creation
+- **Strategy B**: The Priority 1 scan skips formulas at blocked prefixes
+
+References: Fitting (1983) Ch. 9 (loop checking), Wolper (1985) for temporal tableaux.
+
 ## Testing
 
 - Use the `Test` stdlib with `@testset` and `@test`.
 - CI via GitHub Actions using the standard `julia-runtest` workflow.
 - **Known slow test:** The `Decidability (Theorem 5.17)` testset in Chapter 5 takes ~80 seconds due to exhaustive model enumeration. This is expected.
-- All 399 tests pass.
+- All 553 tests pass.
 
 ## Documentation
 

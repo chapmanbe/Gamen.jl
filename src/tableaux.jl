@@ -119,6 +119,9 @@ Fields:
 - `prefix_set`: `Set{Prefix}` for O(1) used-prefix queries
 - `expanded`: `BitSet` tracking which formula indices have been fully processed
   by Priority 1 rules and need not be re-checked
+- `blocked`: `Set{Prefix}` of prefixes blocked by ancestor subsumption — a prefix
+  σ is blocked when an ancestor σ' has a superset of its formula content, so the
+  subtableau from σ would be isomorphic and need not be expanded
 - `scan_start`: where the Priority 1 scan resumes (formulas before this index
   returned NoRule and haven't been invalidated by new child prefixes)
 """
@@ -127,13 +130,14 @@ struct TableauBranch
     formula_set::Set{PrefixedFormula}
     prefix_set::Set{Prefix}
     expanded::BitSet
+    blocked::Set{Prefix}
     scan_start::Int
 end
 
 function TableauBranch(formulas::Vector{PrefixedFormula}, scan_start::Int)
     fset = Set{PrefixedFormula}(formulas)
     pset = Set{Prefix}(pf.prefix for pf in formulas)
-    TableauBranch(formulas, fset, pset, BitSet(), scan_start)
+    TableauBranch(formulas, fset, pset, BitSet(), Set{Prefix}(), scan_start)
 end
 
 TableauBranch(formulas::Vector{PrefixedFormula}) = TableauBranch(formulas, 1)
@@ -217,7 +221,8 @@ function append_formula(branch::TableauBranch, pf::PrefixedFormula)
     new_formulas = [branch.formulas; pf]
     new_fset = union(branch.formula_set, Set([pf]))
     new_pset = union(branch.prefix_set, Set([pf.prefix]))
-    TableauBranch(new_formulas, new_fset, new_pset, copy(branch.expanded), branch.scan_start)
+    TableauBranch(new_formulas, new_fset, new_pset, copy(branch.expanded),
+                  copy(branch.blocked), branch.scan_start)
 end
 
 Base.:(==)(a::TableauBranch, b::TableauBranch) = a.formula_set == b.formula_set
@@ -679,6 +684,63 @@ const TABLEAU_S5 = TableauSystem(:S5, Function[apply_T_box_rule,  apply_T_diamon
                                                apply_4T_box_rule, apply_4T_diamond_rule],
                                        Function[])
 
+# ── Blocking for temporal tableaux ──
+
+"""
+    _prefix_content(branch::TableauBranch, σ::Prefix) -> Set{Tuple{Type,Formula}}
+
+The formula content of prefix σ: the set of (sign_type, formula) pairs at σ.
+Used to determine whether a prefix is subsumed by an ancestor.
+"""
+function _prefix_content(branch::TableauBranch, σ::Prefix)
+    Set{Tuple{Type,Formula}}(
+        (typeof(pf.sign), pf.formula)
+        for pf in branch.formulas
+        if pf.prefix == σ
+    )
+end
+
+"""
+    _ancestors(σ::Prefix) -> Vector{Prefix}
+
+Return all proper ancestor prefixes of σ, from root to parent.
+
+# Example
+
+```julia
+_ancestors(Prefix([1,2,3]))  # [Prefix([1]), Prefix([1,2])]
+```
+"""
+function _ancestors(σ::Prefix)
+    [Prefix(σ.seq[1:k]) for k in 1:(length(σ.seq)-1)]
+end
+
+"""
+    _should_block(branch::TableauBranch, σ::Prefix) -> Bool
+
+Return `true` if prefix σ should be blocked because an ancestor has a
+superset (or equal set) of its formula content. A blocked prefix need not
+be expanded further — its subtableau would be isomorphic to the ancestor's.
+
+Blocking is sound because: if an ancestor σ' has content ⊇ content(σ), then
+any model satisfying σ' also satisfies σ. Blocking preserves all open branches
+and cannot cause a branch to close that should remain open.
+
+See Fitting (1983), Ch. 9 (loop checking); Wolper (1985) for temporal tableaux.
+"""
+function _should_block(branch::TableauBranch, σ::Prefix)
+    σ ∈ branch.blocked && return true
+    length(σ.seq) <= 1 && return false  # root is never blocked
+    σ_content = _prefix_content(branch, σ)
+    for anc in _ancestors(σ)
+        anc ∈ branch.blocked && continue  # blocked ancestors don't count
+        if σ_content ⊆ _prefix_content(branch, anc)
+            return true
+        end
+    end
+    false
+end
+
 # ── Automated tableau construction ──
 
 """
@@ -712,6 +774,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         pf = branch.formulas[i]
         pf.formula isa Atom   && continue
         pf.formula isa Bottom && continue
+        pf.prefix ∈ branch.blocked && continue  # Strategy B: skip blocked prefixes
 
         result = _try_priority1_rules(pf, branch, system)
         if result isa NoRule
@@ -737,7 +800,8 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 push!(new_branch.expanded, i)
             end
             return [TableauBranch(new_branch.formulas, new_branch.formula_set,
-                                  new_branch.prefix_set, new_branch.expanded, i)]
+                                  new_branch.prefix_set, new_branch.expanded,
+                                  copy(new_branch.blocked), i)]
         elseif result isa SplitRule
             function _add_unique(b, pfs)
                 for pf in pfs
@@ -761,9 +825,11 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 push!(right_exp, i)
             end
             return [TableauBranch(left.formulas, left.formula_set,
-                                  left.prefix_set, left_exp, i),
+                                  left.prefix_set, left_exp,
+                                  copy(left.blocked), i),
                     TableauBranch(right.formulas, right.formula_set,
-                                  right.prefix_set, right_exp, i)]
+                                  right.prefix_set, right_exp,
+                                  copy(right.blocked), i)]
         end
     end
 
@@ -772,6 +838,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
     # World-creating rules reset scan_start to 1: new children mean old
     # Box-true/Diamond-false rules may need to propagate again.
     for pf in branch.formulas
+        pf.prefix ∈ branch.blocked && continue  # Strategy A: skip blocked prefixes
         if pf.formula isa Box && pf.sign isa FalseSign
             r = apply_box_false_rule(pf, branch)
         elseif pf.formula isa FutureBox && pf.sign isa FalseSign
@@ -787,13 +854,19 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
+            # Check blocking for newly created prefixes
+            new_blocked = copy(new_branch.blocked)
+            for np in setdiff(new_branch.prefix_set, branch.prefix_set)
+                _should_block(new_branch, np) && push!(new_blocked, np)
+            end
             return [TableauBranch(new_branch.formulas, new_branch.formula_set,
-                                  new_branch.prefix_set, BitSet(), 1)]
+                                  new_branch.prefix_set, BitSet(), new_blocked, 1)]
         end
     end
 
     # Priority 2b: ◇T and 𝐅T rules
     for pf in branch.formulas
+        pf.prefix ∈ branch.blocked && continue  # Strategy A: skip blocked prefixes
         if pf.formula isa Diamond && pf.sign isa TrueSign
             r = apply_diamond_true_rule(pf, branch)
         elseif pf.formula isa FutureDiamond && pf.sign isa TrueSign
@@ -809,14 +882,20 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
+            # Check blocking for newly created prefixes
+            new_blocked = copy(new_branch.blocked)
+            for np in setdiff(new_branch.prefix_set, branch.prefix_set)
+                _should_block(new_branch, np) && push!(new_blocked, np)
+            end
             return [TableauBranch(new_branch.formulas, new_branch.formula_set,
-                                  new_branch.prefix_set, BitSet(), 1)]
+                                  new_branch.prefix_set, BitSet(), new_blocked, 1)]
         end
     end
 
     # Priority 2c: witness-creation rules (seriality, etc.)
     if !isempty(system.witness_rules)
         for pf in branch.formulas
+            pf.prefix ∈ branch.blocked && continue  # Strategy A: skip blocked prefixes
             pf.formula isa Atom   && continue
             pf.formula isa Bottom && continue
             r = _try_witness_rules(pf, branch, system)
@@ -828,8 +907,13 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                     new_branch = append_formula(new_branch, addition)
                 end
                 new_branch == branch && continue
+                # Check blocking for newly created prefixes
+                new_blocked = copy(new_branch.blocked)
+                for np in setdiff(new_branch.prefix_set, branch.prefix_set)
+                    _should_block(new_branch, np) && push!(new_blocked, np)
+                end
                 return [TableauBranch(new_branch.formulas, new_branch.formula_set,
-                                  new_branch.prefix_set, BitSet(), 1)]
+                                  new_branch.prefix_set, BitSet(), new_blocked, 1)]
             end
         end
     end
