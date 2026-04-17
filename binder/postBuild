@@ -1,0 +1,19 @@
+#!/bin/bash
+set -ex
+
+echo "Precompiling Gamen.jl notebooks environment..."
+
+# Instantiate and precompile the notebooks environment
+# This ensures Gamen.jl (local package) and all dependencies
+# (CairoMakie, GraphMakie, Graphs, PlutoUI) are ready
+julia --optimize=0 -e '
+    using Pkg
+
+    # Instantiate the notebooks environment (includes Gamen.jl via local path)
+    Pkg.activate("notebooks")
+    Pkg.instantiate()
+    Pkg.precompile()
+'
+
+# Warm up Pluto
+julia --optimize=0 binder/warmup_server.jl

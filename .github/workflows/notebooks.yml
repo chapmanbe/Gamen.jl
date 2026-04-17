@@ -1,0 +1,72 @@
+name: Export Pluto Notebooks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'notebooks/**'
+      - 'src/**'
+      - '.github/workflows/notebooks.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: pluto-export
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: "1"
+
+      - name: Cache Julia artifacts
+        uses: julia-actions/cache@v2
+        with:
+          cache-registries: "true"
+
+      - name: Cache notebook states
+        uses: actions/cache@v4
+        with:
+          path: pluto_state_cache
+          key: ${{ runner.os }}-pluto-v1-${{ hashFiles('notebooks/Project.toml', 'src/**') }}-${{ hashFiles('notebooks/pluto/**/*.jl') }}
+          restore-keys: |
+            ${{ runner.os }}-pluto-v1-${{ hashFiles('notebooks/Project.toml', 'src/**') }}
+
+      - name: Export Pluto notebooks
+        run: |
+          julia -e '
+            using Pkg
+            Pkg.activate(mktempdir())
+            Pkg.add(Pkg.PackageSpec(name="PlutoSliderServer", version="1"))
+
+            import PlutoSliderServer
+
+            PlutoSliderServer.export_directory("notebooks/pluto";
+              Export_output_dir="notebook_html",
+              Export_cache_dir="pluto_state_cache",
+              Export_baked_state=true,
+              Export_baked_notebookfile=true,
+              Export_offer_binder=true,
+              Export_binder_url="https://mybinder.org/v2/gh/chapmanbe/Gamen.jl/main",
+              Export_disable_ui=true,
+              Export_create_index=true,
+            )'
+        timeout-minutes: 30
+
+      - name: Deploy notebooks to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          folder: notebook_html
+          target-folder: notebooks
+          clean: false

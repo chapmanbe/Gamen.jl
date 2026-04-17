@@ -12,6 +12,12 @@
   <a href="https://bd.openlogicproject.org">
     <img src="https://img.shields.io/badge/textbook-Boxes%20%26%20Diamonds-blue" alt="Boxes and Diamonds">
   </a>
+  <a href="https://chapmanbe.github.io/Gamen.jl/notebooks/">
+    <img src="https://img.shields.io/badge/notebooks-browse%20online-orange" alt="Browse Notebooks">
+  </a>
+  <a href="https://mybinder.org/v2/gh/chapmanbe/Gamen.jl/main?urlpath=pluto">
+    <img src="https://mybinder.org/badge_logo.svg" alt="Launch Binder">
+  </a>
 </p>
 
 ---
@@ -186,7 +192,7 @@ src/
 ext/
   GamenMakieExt/        # Optional visualization (CairoMakie + GraphMakie)
 test/
-  runtests.jl           # Test suite (399 tests)
+  runtests.jl           # Test suite (553 tests)
 docs/                   # Documenter.jl documentation
 notebooks/
   Project.toml          # Notebook environment (includes visualization deps)
