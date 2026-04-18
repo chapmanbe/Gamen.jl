@@ -406,8 +406,8 @@ Combining schemas gives named systems of modal logic. Each system corresponds to
 | **K** | K | All frames | Minimal modal logic |
 | **KD** | K + D | Serial frames | Deontic logic (obligations) |
 | **T** (= KT) | K + T | Reflexive frames | Knowledge (factive) |
-| **K4** | K + 4 | Transitive frames | Provability logic |
-| **S4** | K + T + 4 | Preorders (reflexive + transitive) | Intuitionistic logic |
+| **K4** | K + 4 | Transitive frames | Base for provability logic (GL adds the Lob axiom) |
+| **S4** | K + T + 4 | Preorders (reflexive + transitive) | Related to intuitionistic logic (via Godel translation) |
 | **S5** | K + T + 5 | Equivalence relations (reflexive + symmetric + transitive) | Epistemic logic |
 
 A **preorder** is a relation that is both reflexive and transitive — it lets you chain accessibility but always includes the starting point. An **equivalence relation** adds symmetry: you can always go back. These are standard notions from order theory.
@@ -466,7 +466,7 @@ end
 # ╔═╡ 2a2b3c4d-0065-0065-0065-000000000065
 visualize_model(KripkeModel(s5_frame, [:p => [:w1, :w2]]),
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 1.0), :w3 => (2.0, -1.0)),
-	title = "S5 frame: all worlds see all worlds")
+	title = "S5 frame (single equivalence class, fully connected)")
 
 # ╔═╡ 2a2b3c4d-0066-0066-0066-000000000066
 md"""
