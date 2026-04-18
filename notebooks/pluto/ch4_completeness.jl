@@ -274,8 +274,7 @@ md"""
 2. **Accessibility**: R^Σ relates Δ to Δ' iff □⁻¹Δ ⊆ Δ' (if □A ∈ Δ then A ∈ Δ' — whatever is necessary at Δ must be true at Δ')
 3. **Valuation**: V^Σ(p) = {Δ : p ∈ Δ} (an atom is true at a world iff the world's formula set contains it)
 
-For a finite language, we can enumerate all complete consistent sets
-and build this model explicitly.
+In general, the canonical model is infinite (even a language with one propositional variable generates infinitely many formulas). But when we restrict to a finite set of formulas (a "closure" as defined above), we can enumerate all complete consistent sets over that finite closure and build the model explicitly. This is what Gamen.jl does:
 """
 
 # ╔═╡ 4a4b4c4d-0044-0044-0044-000000000044

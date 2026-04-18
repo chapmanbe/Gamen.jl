@@ -86,7 +86,7 @@ Let's build some formulas:
 md"""
 ### Negation: ¬p — "not p"
 
-A negation is true when p is false
+A negation **flips** the truth value: ¬p is true when p is false, and false when p is true. It is the simplest connective — it takes one formula and returns its opposite.
 """
 
 # ╔═╡ 0a0b0c0d-0007-0007-0007-000000000007
@@ -196,7 +196,7 @@ the promise is not broken because the condition was never triggered.
 md"""
 ## Modus Ponens: The Core Inference Rule
 
-**Modus ponens** (Latin: "mode where affirming affirms") is the fundamental rule of logical inference:
+**Modus ponens** (Latin: *modus ponendo ponens*, "the mode that, by affirming, affirms") is the fundamental rule of logical inference:
 
 > If **P** is true, and **P → Q** is true, then **Q** must be true.
 
@@ -363,7 +363,7 @@ md"""
 
 1. Build the formula $(p \lor q) \to (q \lor p)$ and check whether it is a tautology. Why should it be?
 
-2. Is $p \to (q \to p)$ a tautology? What does it mean in plain language?
+2. Is ((p → q) → p) → p a tautology? This is **Peirce's law** — try to figure out *why* it is (or isn't) true before checking with `is_tautology`.
 
 3. Build a formula that is a **contradiction** (false under every assignment) and verify it with `is_tautology(Not(your_formula))`.
 

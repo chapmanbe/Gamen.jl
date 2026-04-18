@@ -494,7 +494,7 @@ end
 
 # ╔═╡ 3a3b3c3d-0058-0058-0058-000000000058
 md"""
-We can visualize these frames to see their different structures. Despite their differences, the K-provable theorem □p → □(q → p) holds on all of them — that is what soundness guarantees.
+We can visualize these models to see their different structures. Despite their differences, the K-provable theorem □p → □(q → p) holds on all of them — that is what soundness guarantees.
 """
 
 # ╔═╡ 3a3b3c3d-0059-0059-0059-000000000059
@@ -502,7 +502,7 @@ begin
 	model1_s = KripkeModel(frame1_s, [:p => [:w1, :w2]])
 	visualize_model(model1_s,
 		positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
-		title = "Frame 1: simple (w₁ → w₂)")
+		title = "Model 1: simple (w₁ → w₂)")
 end
 
 # ╔═╡ 3a3b3c3d-0060-0060-0060-000000000060
@@ -510,7 +510,7 @@ begin
 	model2_s = KripkeModel(frame2_s, [:p => [:w1]])
 	visualize_model(model2_s,
 		positions = Dict(:w1 => (0.0, 0.0)),
-		title = "Frame 2: reflexive singleton (w₁ → w₁)")
+		title = "Model 2: reflexive singleton (w₁ → w₁)")
 end
 
 # ╔═╡ 3a3b3c3d-0061-0061-0061-000000000061
@@ -518,7 +518,7 @@ begin
 	model3_s = KripkeModel(frame3_s, [:p => [:w1, :w2, :w3]])
 	visualize_model(model3_s,
 		positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0), :w3 => (4.0, 0.0)),
-		title = "Frame 3: chain (w₁ → w₂ → w₃)")
+		title = "Model 3: chain (w₁ → w₂ → w₃)")
 end
 
 # ╔═╡ 3a3b3c3d-0032-0032-0032-000000000032

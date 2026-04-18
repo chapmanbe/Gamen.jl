@@ -269,7 +269,7 @@ The word "worlds" sounds metaphysical, but think of them concretely as **situati
 - **Epistemic logic** — situations consistent with what an agent knows
 - **Deontic logic** — outcomes that comply with the rules
 
-The accessibility relation says which situations are reachable or relevant from which. When we write Rww', we mean: from the perspective of situation w, situation w' is an accessible alternative.
+The accessibility relation says which situations are reachable or relevant from which. When we write wRw', we mean: from the perspective of situation w, situation w' is an accessible alternative.
 """
 
 # ╔═╡ 1a2b3c4d-0070-0070-0070-000000000070
@@ -317,8 +317,8 @@ The satisfaction relation is defined inductively — propositional cases first, 
 | 4 | $M, w \Vdash B \land C$ iff $M, w \Vdash B$ and $M, w \Vdash C$ |
 | 5 | $M, w \Vdash B \lor C$ iff $M, w \Vdash B$ or $M, w \Vdash C$ |
 | 6 | $M, w \Vdash B \to C$ iff $M, w \not\Vdash B$ or $M, w \Vdash C$ |
-| 7 | $M, w \Vdash \square B$ iff $M, w' \Vdash B$ for all $w'$ with $Rww'$ |
-| 8 | $M, w \Vdash \diamond B$ iff $M, w' \Vdash B$ for some $w'$ with $Rww'$ |
+| 7 | $M, w \Vdash \square B$ iff $M, w' \Vdash B$ for all $w'$ with $wRw'$ |
+| 8 | $M, w \Vdash \diamond B$ iff $M, w' \Vdash B$ for some $w'$ with $wRw'$ |
 
 Clauses 1–6 are standard propositional logic. Clauses 7–8 are the modal heart:
 - **□B** is true at $w$ if B holds in *every* world accessible from $w$
@@ -400,7 +400,7 @@ md"""
 - □A is equivalent to ¬◇¬A ("necessarily A" means "it is not possible that not-A")
 - ◇A is equivalent to ¬□¬A ("possibly A" means "it is not necessary that not-A")
 
-This is analogous to how ∀x P(x) is equivalent to ¬∃x ¬P(x) in predicate logic — "for all" and "there exists" are duals in exactly the same way.
+If you have encountered first-order logic, this is analogous to how "for all" (∀) and "there exists" (∃) are duals: ∀x P(x) is equivalent to ¬∃x ¬P(x). But no prior knowledge of first-order logic is needed here — the key point is simply that □ and ◇ are two sides of the same coin.
 
 Let's verify this holds at every world in our model:
 """

@@ -41,11 +41,11 @@ This turns out to be one of the most powerful ideas in modal logic. Different sh
 | Reflexive | T | "If p is necessary, then p is true" — knowledge (you know only truths) |
 | Serial | KD | "If p is obligatory, then p is permitted" — deontic reasoning (obligations must be achievable) |
 | Transitive | K4 | "If p is necessary, then it's necessarily necessary" — introspection |
-| Equivalence relation | S5 | "All worlds agree on what's possible" — logical necessity |
+| Equivalence relation | S5 | Within each equivalence class, worlds agree on what's possible — epistemic logic, provability |
 
 The correspondence is not a coincidence. It was proved by Sahlqvist (1975) as a general theorem: a wide class of modal axioms correspond precisely to first-order conditions on frames. This chapter explores the specific correspondences that matter most.
 
-**Why should you care?** When you choose a modal logic for an application — say, KD for clinical guidelines or S5 for common knowledge — you are choosing which frame properties your models must satisfy. Understanding the correspondence tells you exactly what assumptions you are making.
+**Why should you care?** When you choose a modal logic for an application — say, KD for clinical guidelines or S5 for epistemic reasoning — you are choosing which frame properties your models must satisfy. Understanding the correspondence tells you exactly what assumptions you are making. (Note: common knowledge requires a *multimodal* logic with separate accessibility relations for each agent, which goes beyond what we cover here.)
 
 $(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) argue that every knowledge representation plays five roles simultaneously, including serving as an *ontological commitment* — a decision about 'in what terms should I think about the world?' Choosing a frame property is exactly this kind of commitment. When you require seriality, you commit to a world where dead ends don't exist. When you require reflexivity, you commit to a world where the actual situation is always among the accessible alternatives. These are not technical implementation details — they are assumptions about the domain that determine what your system can and cannot represent."])))
 """
@@ -184,11 +184,11 @@ Look at each frame description and predict its properties before expanding the a
 
 **1.** A frame with worlds {a, b} and relation {a→b, b→a}.
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Symmetric** (yes), **Serial** (yes — each world has a successor), **Reflexive** (no — neither world accesses itself), **Transitive** (no — a→b→a but a↛a), **Euclidean** (yes — a's successors {b} trivially see each other)."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Symmetric** (yes), **Serial** (yes — each world has a successor), **Reflexive** (no — neither world accesses itself), **Transitive** (no — a→b→a but a↛a), **Euclidean** (no — euclidean requires that if wRw' and wRw'' then w'Rw''; since aRb and aRb, we'd need bRb, but b only accesses a)."])))
 
 **2.** A frame with worlds {a, b, c} and relation {a→a, a→b, a→c}.
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Reflexive** (no — only a accesses itself), **Serial** (no — b and c have no successors), **Symmetric** (no — a→b but b↛a), **Transitive** (trivially yes — no chains to extend), **Euclidean** (no — a→b and a→c but b↛c)."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Reflexive** (no — only a accesses itself), **Serial** (no — b and c have no successors), **Symmetric** (no — a→b but b↛a), **Transitive** (yes — the only chains starting from a lead to b and c, which have no successors, so no new edges are required), **Euclidean** (no — a→b and a→c but b↛c)."])))
 
 **3.** A single world {w} with relation {w→w}.
 
@@ -392,7 +392,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**No.** The frame
 
 **3.** An equivalence relation (reflexive + symmetric + transitive). Which schemas are valid?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**All of them:** T (reflexive), B (symmetric), 4 (transitive), 5 (equivalence implies euclidean), D (reflexive implies serial). This is why S5 is such a strong logic — equivalence relations validate everything."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**All five schemas listed in section 2.3:** T (reflexive), B (symmetric), 4 (transitive), 5 (equivalence implies euclidean), D (reflexive implies serial). This is why S5 is such a strong logic — equivalence relations satisfy all the standard frame properties."])))
 """
 
 # ╔═╡ 2a2b3c4d-0023-0023-0023-000000000023
@@ -407,10 +407,12 @@ Combining schemas gives named systems of modal logic. Each system corresponds to
 | **KD** | K + D | Serial frames | Deontic logic (obligations) |
 | **T** (= KT) | K + T | Reflexive frames | Knowledge (factive) |
 | **K4** | K + 4 | Transitive frames | Provability logic |
-| **S4** | K + T + 4 | Preorders | Intuitionistic logic |
-| **S5** | K + T + 5 | Equivalence relations | Logical necessity, common knowledge |
+| **S4** | K + T + 4 | Preorders (reflexive + transitive) | Intuitionistic logic |
+| **S5** | K + T + 5 | Equivalence relations (reflexive + symmetric + transitive) | Epistemic logic |
 
-Let's verify that S4 frames validate both T and 4, and S5 frames validate everything:
+A **preorder** is a relation that is both reflexive and transitive — it lets you chain accessibility but always includes the starting point. An **equivalence relation** adds symmetry: you can always go back. These are standard notions from order theory.
+
+Let's verify which schemas are valid on S4 and S5 frames:
 """
 
 # ╔═╡ 2a2b3c4d-0024-0024-0024-000000000024
@@ -457,7 +459,7 @@ begin
 	| 4: □p → □□p | $(is_valid_on_frame(s5_frame, schema_4)) |
 	| 5: ◇p → □◇p | $(is_valid_on_frame(s5_frame, schema_5)) |
 
-	S5 validates all schemas — the equivalence relation is the strongest frame condition.
+	S5 validates all five standard schemas (K, T, D, B, 4, 5) — the equivalence relation satisfies all the standard frame properties.
 	"""
 end
 
@@ -474,13 +476,13 @@ md"""
 
 $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**KD.** Seriality (Schema D: □p → ◇p) ensures that if p is obligatory, then p is at least permitted — there exists an acceptable world where p holds. You don't need reflexivity (T) because obligations don't need to be *actual*, just *achievable*."])))
 
-**2.** You are modeling an agent's knowledge. If the agent knows p, then p must actually be true (no false beliefs). Which logic?
+**2.** You are modeling an agent's knowledge. If the agent knows p, then p must actually be true — there is no false knowledge. What is the weakest logic that captures this?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**T (= KT)** at minimum. Schema T (□p → p) says: if you know p, then p is true. This is the *factivity* of knowledge. Most epistemic logics use S4 or S5, which add introspection (knowing that you know)."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**T (= KT)** at minimum. Schema T (□p → p) says: if you know p, then p is true. This is the *factivity* of knowledge — distinguishing knowledge from mere belief. Most epistemic logics use S4 or S5, which add introspection (knowing that you know)."])))
 
-**3.** You want a logic where all worlds agree on what's possible — there's a single, universal standard of possibility. Which logic?
+**3.** You want a logic where within each equivalence class of worlds, what is possible and necessary is agreed upon. Which logic?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**S5.** Schema 5 (◇p → □◇p) guarantees that if something is possible at any world, it's possible at every world. The equivalence relation means all worlds are connected — there's no 'local' possibility, only global agreement."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**S5.** Schema 5 (◇p → □◇p) guarantees that if something is possible at a world, every world accessible from it agrees. In an equivalence relation, the frame partitions into classes where all worlds within a class see each other — so within each class, necessity and possibility are uniform. Note: this is *not* the same as a universal frame (where every world sees every world); S5 frames can have multiple disconnected equivalence classes."])))
 """
 
 # ╔═╡ 2a2b3c4d-0067-0067-0067-000000000067
@@ -506,7 +508,8 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Try `KripkeFrame(
 
 **4. Challenge:** Can a frame be euclidean without being transitive? Build one and test.
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Try `KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w1 => :w3, :w2 => :w3, :w3 => :w2])`. w₁'s successors (w₂, w₃) see each other (euclidean). But w₁→w₂→w₃ yet w₁→w₃ is already there... actually this IS transitive. Euclideanness is a strong condition. In fact, for frames with the property that every world has at most one predecessor, euclidean implies transitive. Try to find a counterexample!"])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Yes! Try `KripkeFrame([:w1, :w2, :w3], [:w1 => :w2, :w2 => :w2, :w2 => :w3, :w3 => :w3, :w3 => :w2])`. Check: w₁'s only successor is w₂, so euclidean is vacuous at w₁. At w₂: w₂→w₂ and w₂→w₃, so we need w₂→w₃ and w₃→w₃ and w₃→w₂ — all present. At w₃: similarly satisfied. But NOT transitive: w₁→w₂→w₃ yet w₁↛w₃. Verify with `is_euclidean(f)` and `is_transitive(f)`."])))
+
 """
 
 # ╔═╡ Cell order:
