@@ -54,7 +54,7 @@ end;
 
 # ╔═╡ 6a6b6c6d-0004-0004-0004-000000000004
 md"""
-## 6.1 Introduction
+## Introduction
 
 Tableaux are downward-branching trees of *signed formulas*. For modal logic,
 each formula is also *prefixed* by a sequence of positive integers naming a world.
@@ -110,7 +110,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes.** Differen
 
 # ╔═╡ 6a6b6c6d-0007-0007-0007-000000000007
 md"""
-## 6.2 Rules for K (Table 6.1 and 6.2)
+## Rules for K (Table 6.1 and 6.2)
 
 **Propositional rules** apply to a formula at prefix σ, adding conclusions at σ.
 - ¬T: `σ T ¬A` → add `σ F A`
@@ -133,7 +133,7 @@ The distinction "used vs. new" is essential for soundness (Definition 6.2).
 
 # ╔═╡ 6a6b6c6d-0008-0008-0008-000000000008
 md"""
-## 6.3 Example 6.1: ⊢ (□p ∧ □q) → □(p ∧ q)
+## Example 6.1: ⊢ (□p ∧ □q) → □(p ∧ q)
 
 **Assumption:** `1 F (□p ∧ □q) → □(p ∧ q)`
 
@@ -209,8 +209,7 @@ end
 
 # ╔═╡ 6a6b6c6d-0012-0012-0012-000000000012
 md"""
-## 6.4 Soundness for K (Theorem 6.6)
-
+## Soundness for K
 The tableau method is **sound**: if there is a closed tableau for a set of
 assumptions, those assumptions are unsatisfiable.
 
@@ -307,7 +306,7 @@ $(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens: Roles 
 
 # ╔═╡ 6a6b6c6d-0015-0015-0015-000000000015
 md"""
-## 6.5 Rules for Other Accessibility Relations (Tables 6.3 and 6.4)
+## Rules for Other Accessibility Relations (Tables 6.3 and 6.4)
 
 For logics determined by special frame properties, we add rules that
 "know" about the accessibility relation:
@@ -474,7 +473,7 @@ end
 
 # ╔═╡ 6a6b6c6d-0022-0022-0022-000000000022
 md"""
-## 6.5 Example 6.9 (B&D): S5 ⊢ □A → ◇□A (B axiom)
+## Example 6.9 (B&D): S5 ⊢ □A → ◇□A (B axiom)
 
 This shows that S5 proves the B axiom.
 
@@ -506,7 +505,7 @@ end
 
 # ╔═╡ 6a6b6c6d-0024-0024-0024-000000000024
 md"""
-## 6.6 Using the Tableau Checker
+## Using the Tableau Checker
 
 The `tableau_proves(system, premises, conclusion)` function builds a complete
 tableau and returns `true` if it closes.
@@ -589,7 +588,7 @@ visualize_model(cm_cons, title = "{□p, ¬p} is satisfiable in K")
 
 # ╔═╡ 6a6b6c6d-0027-0027-0027-000000000027
 md"""
-## 6.7 Completeness (Definition 6.17, Proposition 6.18)
+## Completeness (Definition 6.17, Proposition 6.18)
 
 A branch is **complete** if:
 1. For every propositional stacking rule applied to `σ S A`, the conclusion is on the branch.

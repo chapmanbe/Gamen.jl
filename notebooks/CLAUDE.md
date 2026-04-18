@@ -76,6 +76,24 @@ The `notebooks/Project.toml` includes Gamen.jl (via local path), CairoMakie, Gra
 
 Pluto cell IDs follow the pattern `NaNbNcNd-XXXX-XXXX-XXXX-XXXXXXXXXXXX` (established in CLAUDE.md at project root).
 
+## Section Headings and B&D References
+
+Use **descriptive headings** for notebook sections, not B&D section/definition numbers. Reference B&D numbers inline in the prose.
+
+**Do this:**
+```markdown
+## Relational Models
+
+A *model* M = ⟨W, R, V⟩ consists of three components (Definition 1.6, B&D):
+```
+
+**Not this:**
+```markdown
+## 1.4 Relational Models (Definition 1.6)
+```
+
+B&D uses continuous numbering across chapters (1.1, 1.2, ..., 1.23), so using their section numbers as headings creates confusing gaps (jumping from "1.1" to "1.4" to "1.10"). Our notebook sections have their own logical flow. B&D references belong in the text, formatted as "(Definition X.Y, B&D)" or "(Proposition X.Y, B&D)".
+
 ## Pluto Markdown Rendering Rules
 
 Pluto's markdown renderer has quirks that affect how content displays:

@@ -35,7 +35,7 @@ end;
 
 # ╔═╡ e1e2e3e4-0004-0004-0004-000000000004
 md"""
-## 14.1 Introduction
+## Introduction
 
 Temporal logic extends modal logic with operators for *time*. Instead of
 "possible worlds," we have *time points* with a *precedence relation* ≺.
@@ -57,8 +57,7 @@ Kripke models we've been using throughout, just with a temporal reading.
 
 # ╔═╡ e1e2e3e4-0005-0005-0005-000000000005
 md"""
-## 14.2 The Language (Definition 14.2)
-
+## The Language
 Temporal formulas extend the propositional base with four unary operators:
 - **P**A: A was true at some t' with t' ≺ t ("previously")
 - **H**A: A was true at all t' with t' ≺ t ("historically")
@@ -103,8 +102,7 @@ end
 
 # ╔═╡ e1e2e3e4-0008-0008-0008-000000000008
 md"""
-## 14.3 Temporal Models (Definition 14.3)
-
+## Temporal Models
 A *temporal model* M = ⟨T, ≺, V⟩ consists of:
 1. A nonempty set T of *time points*
 2. A binary *precedence relation* ≺ on T
@@ -134,8 +132,7 @@ end
 
 # ╔═╡ e1e2e3e4-0010-0010-0010-000000000010
 md"""
-## 14.4 Truth Conditions (Definition 14.4)
-
+## Truth Conditions
 The temporal operators are evaluated as follows:
 
 | Operator | M,t ⊩ A iff... |
@@ -198,7 +195,7 @@ end
 
 # ╔═╡ e1e2e3e4-0015-0015-0015-000000000015
 md"""
-## 14.4 Duality
+## Duality
 
 Just as □ and ◇ are duals, the temporal operators come in dual pairs:
 - **H**A = ¬**P**¬A (if A has always been true ↔ it's never been that ¬A was true)
@@ -229,8 +226,7 @@ end
 
 # ╔═╡ e1e2e3e4-0018-0018-0018-000000000018
 md"""
-## 14.5 Since and Until (Definition 14.5)
-
+## Since and Until
 **S**BC (Since): M,t ⊩ SBC iff there exists t' ≺ t such that:
 - M,t' ⊩ B, and
 - for all s with t' ≺ s ≺ t (strictly between t' and t): M,s ⊩ C
@@ -270,7 +266,7 @@ end
 
 # ╔═╡ e1e2e3e4-0020-0020-0020-000000000020
 md"""
-## 14.3 Frame Correspondence Properties (Table 14.1)
+## Frame Correspondence Properties (Table 14.1)
 
 Just as in normal modal logic, restricting the precedence relation yields
 additional valid formulas. Table 14.1 lists several:

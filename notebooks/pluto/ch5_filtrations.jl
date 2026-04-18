@@ -54,7 +54,7 @@ end;
 
 # ╔═╡ 5a5b5c5d-0004-0004-0004-000000000004
 md"""
-## 5.1 Introduction
+## Introduction
 
 Filtrations give us a way to turn an infinite (counter)model into a finite one.
 The key idea: identify worlds that agree on all formulas in a finite set Γ.
@@ -68,8 +68,7 @@ up to a bounded finite size.
 
 # ╔═╡ 5a5b5c5d-0005-0005-0005-000000000005
 md"""
-## 5.2 Closure Properties (Definition 5.1)
-
+## Closure Properties
 A set Γ is **closed under subformulas** if every subformula of every A ∈ Γ
 is also in Γ.
 
@@ -126,8 +125,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"No (unless it con
 
 # ╔═╡ 5a5b5c5d-0010-0010-0010-000000000010
 md"""
-## 5.3 Γ-Equivalence (Definition 5.2)
-
+## Γ-Equivalence
 Two worlds u, v in a model M are **Γ-equivalent** (written u ≡_Γ v) if they
 agree on every formula in Γ:
 
@@ -197,8 +195,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"At most 2^n class
 
 # ╔═╡ 5a5b5c5d-0014-0014-0014-000000000014
 md"""
-## 5.4 Filtrations (Definition 5.4)
-
+## Filtrations
 A **filtration** M* of M through Γ is any model with:
 1. W* = {[w] : w ∈ W} — worlds are the equivalence classes
 2. R* satisfies the sandwich conditions (2a)–(2c):
@@ -215,7 +212,7 @@ The filtration lemma is what makes filtrations useful: truth is preserved.
 
 # ╔═╡ 5a5b5c5d-0015-0015-0015-000000000015
 md"""
-## 5.5 Finest and Coarsest Filtrations (Definitions 5.7, 5.9)
+## Finest and Coarsest Filtrations (Definitions 5.7, 5.9)
 
 There are many possible filtrations of M through Γ — they differ only in
 which pairs R*[u][v] hold. Two canonical choices:
@@ -340,8 +337,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The finest filtra
 
 # ╔═╡ 5a5b5c5d-0020-0020-0020-000000000020
 md"""
-## 5.6 Filtrations are Finite (Proposition 5.12)
-
+## Filtrations are Finite
 If Γ is finite with n formulas, then any filtration M* through Γ has at most
 **2ⁿ worlds** — one per subset of Γ (since each class is determined by which
 formulas in Γ hold at its worlds).
@@ -362,8 +358,7 @@ end
 
 # ╔═╡ 5a5b5c5d-0022-0022-0022-000000000022
 md"""
-## 5.7 K has the Finite Model Property (Proposition 5.14)
-
+## K has the Finite Model Property
 **K has the finite model property**: if A is false at some world in some model,
 then A is false at some world in a *finite* model.
 
@@ -396,8 +391,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"K imposes no cond
 
 # ╔═╡ 5a5b5c5d-0024-0024-0024-000000000024
 md"""
-## 5.8 S5 is Decidable (Theorem 5.17)
-
+## S5 is Decidable
 **S5 has the finite model property** (Corollary 5.16). Combined with the size
 bound from Proposition 5.12, this gives:
 
@@ -456,8 +450,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"At most 2^4 = 16 
 
 # ╔═╡ 5a5b5c5d-0028-0028-0028-000000000028
 md"""
-## 5.9 Filtrations and Frame Properties (Theorem 5.18)
-
+## Filtrations and Frame Properties
 The coarsest filtration is not necessarily symmetric or transitive even if the
 original model is. We need stronger accessibility conditions (Table 5.1, B&D):
 

@@ -58,7 +58,7 @@ end
 
 # ╔═╡ 2a2b3c4d-0004-0004-0004-000000000004
 md"""
-## 2.1 Validity on a Frame
+## Validity on a Frame
 
 Recall from Chapter 1 that a formula can be *true in a model*. But a model includes a specific valuation V. A stronger notion is **validity on a frame** (Definition 2.1):
 
@@ -113,9 +113,9 @@ $(Markdown.MD(Markdown.Admonition("hint", "What's the difference between 'true i
 
 # ╔═╡ 2a2b3c4d-0007-0007-0007-000000000007
 md"""
-## 2.2 Frame Properties (Definition 2.3)
+## Frame Properties
 
-The key insight of frame definability is that certain **structural properties** of the accessibility relation correspond to specific modal schemas.
+The key insight of frame definability is that certain **structural properties** of the accessibility relation correspond to specific modal schemas (Definition 2.3, B&D).
 
 The five main properties are:
 
@@ -197,7 +197,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**All five proper
 
 # ╔═╡ 2a2b3c4d-0010-0010-0010-000000000010
 md"""
-## 2.3 The Correspondence Results
+## The Correspondence Results
 
 The central results of Chapter 2 show that each frame property corresponds to a modal schema being valid on the frame. This is the **frame correspondence theorem** — the bridge between syntax (formulas) and semantics (frame structure).
 
@@ -397,7 +397,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**All of them:** 
 
 # ╔═╡ 2a2b3c4d-0023-0023-0023-000000000023
 md"""
-## 2.4 Normal Modal Logics
+## Normal Modal Logics
 
 Combining schemas gives named systems of modal logic. Each system corresponds to a class of frames:
 

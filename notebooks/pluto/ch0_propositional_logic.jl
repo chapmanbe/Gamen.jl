@@ -44,11 +44,8 @@ not neither.
 | "2 + 2 = 5" | ✓ Yes | False (but still a proposition!) |
 | "Close the door" | ✗ No | A command — not true or false |
 | "Is it raining?" | ✗ No | A question — not true or false |
-| "This statement is false" | ✗ No | Paradox — neither true nor false |
 
-Propositions are the **atoms** of formal logic. We represent them as variables:
-- $p$ = "It is raining"
-- $q$ = "The ground is wet"
+Propositions are the **atoms** of formal logic. We represent them with variables like p ("It is raining") and q ("The ground is wet"), and build complex statements by combining them with logical connectives.
 
 In Gamen.jl, we create atomic propositions with `Atom`:
 """
@@ -63,7 +60,14 @@ end
 
 # ╔═╡ 0a0b0c0d-0005-0005-0005-000000000005
 md"""
-## Logical Connectives
+## Logical Constants and Connectives
+
+Before introducing connectives, two special constants are worth knowing:
+
+- **⊥** ("bottom" or "falsity") — a formula that is *always false*. In Gamen.jl: `Bottom()`
+- **⊤** ("top" or "truth") — a formula that is *always true*. Defined as ¬⊥. In Gamen.jl: `Top()`
+
+These may seem trivial, but they play important roles: ⊥ is used to define inconsistency (a set of formulas is inconsistent if you can derive ⊥ from it), and ⊤ is useful as a placeholder that is trivially satisfied.
 
 We build complex statements from simple ones using **connectives**:
 
@@ -81,6 +85,8 @@ Let's build some formulas:
 # ╔═╡ 0a0b0c0d-0006-0006-0006-000000000006
 md"""
 ### Negation: ¬p — "not p"
+
+A negation is true when p is false
 """
 
 # ╔═╡ 0a0b0c0d-0007-0007-0007-000000000007
@@ -122,6 +128,18 @@ is only broken if it rains and you don't bring an umbrella.
 # ╔═╡ 0a0b0c0d-0013-0013-0013-000000000013
 p_implies_q = Implies(p, q)
 
+# ╔═╡ 0a0b0c0d-0040-0040-0040-000000000040
+md"""
+### Biconditional: p ↔ q — "p if and only if q"
+
+A biconditional is true when both sides have the **same** truth value — both true or both false. It is equivalent to (p → q) ∧ (q → p): the implication goes both ways.
+
+"You pass if and only if you score above 70" means: above 70 guarantees passing, AND passing guarantees you were above 70.
+"""
+
+# ╔═╡ 0a0b0c0d-0041-0041-0041-000000000041
+p_iff_q = Iff(p, q)
+
 # ╔═╡ 0a0b0c0d-0014-0014-0014-000000000014
 md"""
 ## Truth Tables via Model Checking
@@ -143,7 +161,7 @@ begin
 	# World where p=false, q=true
 	w_ft = KripkeModel(KripkeFrame([:w], Pair{Symbol,Symbol}[]), [:q => [:w]])
 	# World where p=false, q=false
-	w_ff = KripkeModel(KripkeFrame([:w], Pair{Symbol,Symbol}[]), Symbol[])
+	w_ff = KripkeModel(KripkeFrame([:w], Pair{Symbol,Symbol}[]), Pair{Symbol,Vector{Symbol}}[])
 
 	md"""
 	### Truth table for p ∧ q (conjunction)
@@ -178,18 +196,18 @@ the promise is not broken because the condition was never triggered.
 md"""
 ## Modus Ponens: The Core Inference Rule
 
-**Modus ponens** (Latin: "method of putting") is the fundamental rule of logical inference:
+**Modus ponens** (Latin: "mode where affirming affirms") is the fundamental rule of logical inference:
 
 > If **P** is true, and **P → Q** is true, then **Q** must be true.
 
-This is how rule-based systems like MYCIN work. Every rule is an implication:
+Every "if...then" rule works this way — from everyday reasoning to legal codes to game rules:
 
 ```
-IF   gram-positive AND coccus AND chains    (P)
-THEN the organism is streptococcus          (Q)
+IF   you land on another player's property AND you don't own it    (P)
+THEN you must pay rent                                             (Q)
 ```
 
-When the premises are observed (P is true), the conclusion follows (Q must be true).
+When the conditions are met (P is true), the conclusion follows (Q must be true). This is the engine behind every rule-based system, from board games to tax codes to clinical decision support.
 
 Let's verify modus ponens is a valid inference in Gamen.jl:
 """
@@ -264,8 +282,7 @@ end
 
 # ╔═╡ 0a0b0c0d-0024-0024-0024-000000000024
 md"""
-Yes! The chain rule is valid. This is how MYCIN chains hundreds of rules together:
-each conclusion becomes a premise for the next rule, and the chain is logically sound.
+Yes! The chain rule is valid. This is how complex reasoning works — each conclusion becomes a premise for the next step, and the chain is logically sound. Sherlock Holmes, tax law, medical diagnosis — any domain where conclusions feed into further reasoning relies on this pattern.
 """
 
 # ╔═╡ 0a0b0c0d-0025-0025-0025-000000000025
@@ -369,6 +386,8 @@ md"""
 # ╠═0a0b0c0d-0011-0011-0011-000000000011
 # ╟─0a0b0c0d-0012-0012-0012-000000000012
 # ╠═0a0b0c0d-0013-0013-0013-000000000013
+# ╟─0a0b0c0d-0040-0040-0040-000000000040
+# ╠═0a0b0c0d-0041-0041-0041-000000000041
 # ╟─0a0b0c0d-0014-0014-0014-000000000014
 # ╠═0a0b0c0d-0015-0015-0015-000000000015
 # ╟─0a0b0c0d-0016-0016-0016-000000000016

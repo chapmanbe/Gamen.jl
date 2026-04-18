@@ -50,7 +50,7 @@ The key construction is the **canonical model** -- a model built directly from t
 
 # ╔═╡ 4a4b4c4d-0003-0003-0003-000000000003
 md"""
-## 4.1 Introduction
+## Introduction
 
 The soundness theorem (Theorem 3.31) tells us that everything derivable
 in a modal system is valid. *Completeness* is the converse: every valid
@@ -109,7 +109,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The subformulas o
 
 # ╔═╡ 4a4b4c4d-0009-0009-0009-000000000009
 md"""
-## 4.2 Derivability and Consistency
+## Derivability and Consistency
 
 **Derivability from a set** (Definition 3.36): Γ ⊢\_Σ A means A is derivable
 from premises in Γ within system Σ. By soundness and completeness, we
@@ -176,7 +176,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Consistent in K b
 
 # ╔═╡ 4a4b4c4d-0013-0013-0013-000000000013
 md"""
-## 4.3 Complete Sigma-Consistent Sets
+## Complete Consistent Sets
 
 **Definition 4.1:** A set Γ is *complete Σ-consistent* if it is
 Σ-consistent and for every formula A in the language, either A ∈ Γ or ¬A ∈ Γ.
@@ -202,7 +202,7 @@ end
 
 # ╔═╡ 4a4b4c4d-0015-0015-0015-000000000015
 md"""
-## 4.4 Lindenbaum's Lemma
+## Lindenbaum's Lemma
 
 **Theorem 4.3 (Lindenbaum's Lemma):** Every Σ-consistent set can be
 extended to a *complete* Σ-consistent set.
@@ -236,7 +236,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"In KT, yes: axiom
 
 # ╔═╡ 4a4b4c4d-0018-0018-0018-000000000018
 md"""
-## 4.5 Modal Operators on Sets
+## Modal Operators on Sets
 
 **Definition 4.5** defines operations on sets of formulas that mirror
 the modal operators:
@@ -266,7 +266,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"□⁻¹Γ = {p, 
 
 # ╔═╡ 4a4b4c4d-0020-0020-0020-000000000020
 md"""
-## 4.6 Canonical Models
+## Canonical Models
 
 **Definition 4.11:** The *canonical model* M^Σ = ⟨W^Σ, R^Σ, V^Σ⟩ is built entirely from the proof system:
 
@@ -337,7 +337,7 @@ end
 
 # ╔═╡ 4a4b4c4d-0024-0024-0024-000000000024
 md"""
-## 4.7 The Truth Lemma
+## The Truth Lemma
 
 **Proposition 4.12 (Truth Lemma):** For every formula A in the language
 and every world Δ in the canonical model:
@@ -359,7 +359,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"It equates a *sem
 
 # ╔═╡ 4a4b4c4d-0026-0026-0026-000000000026
 md"""
-## 4.8 Completeness of K (Corollary 4.15)
+## Completeness of K
 
 Since the canonical model determines **K**, we have:
 
@@ -380,7 +380,7 @@ end
 
 # ╔═╡ 4a4b4c4d-0028-0028-0028-000000000028
 md"""
-## 4.9 Frame Completeness (Theorem 4.16)
+## Frame Completeness
 
 The canonical model's frame inherits the properties corresponding to
 the axioms in the system. This is the key to extending completeness

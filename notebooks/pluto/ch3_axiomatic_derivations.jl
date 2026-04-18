@@ -49,7 +49,7 @@ $(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"D
 
 # ╔═╡ 3a3b3c3d-0003-0003-0003-000000000003
 md"""
-## 3.1 Substitution
+## Substitution
 
 A *substitution* replaces propositional variables with arbitrary formulas.
 This is the mechanism by which axiom *schemas* generate their *instances*:
@@ -99,7 +99,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"No. A key propert
 
 # ╔═╡ 3a3b3c3d-0007-0007-0007-000000000007
 md"""
-## 3.2 Tautologies and Tautological Instances
+## Tautologies and Tautological Instances
 
 A *propositional tautology* is a modal-free formula that is true under every
 truth-value assignment. Gamen.jl checks this by exhaustive truth-table evaluation.
@@ -164,7 +164,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"No. The skeleton 
 
 # ╔═╡ 3a3b3c3d-0012-0012-0012-000000000012
 md"""
-## 3.3 Axiom Schemas
+## Axiom Schemas
 
 A modal logic is determined by its axiom schemas. Every normal modal logic
 includes the **K** axiom and the **Dual** axiom. Additional schemas define
@@ -244,7 +244,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Yes. Schema T is 
 
 # ╔═╡ 3a3b3c3d-0018-0018-0018-000000000018
 md"""
-## 3.4 Modal Systems
+## Modal Systems
 
 A **modal system** (Definition 3.9) is defined by its set of axiom schemas.
 Gamen.jl provides eight standard systems:
@@ -282,7 +282,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"□p → ◇p (le
 
 # ╔═╡ 3a3b3c3d-0020-0020-0020-000000000020
 md"""
-## 3.5 Derivations and Proof Checking
+## Derivations and Proof Checking
 
 A **derivation** (Definition 3.3) is a sequence of formulas where each step
 is justified by one of four rules:
@@ -427,8 +427,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Step 1: ⊤ (taut
 
 # ╔═╡ 3a3b3c3d-0027-0027-0027-000000000027
 md"""
-## 3.6 Dual Formulas (Definition 3.26)
-
+## Dual Formulas
 The *dual* of a formula is obtained by swapping:
 - ⊥ ↔ ⊤
 - ∧ ↔ ∨
@@ -470,8 +469,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"If A is valid (tr
 
 # ╔═╡ 3a3b3c3d-0030-0030-0030-000000000030
 md"""
-## 3.7 Soundness (Theorem 3.31)
-
+## Soundness
 If a formula is provable in a modal system, it is valid on the
 corresponding class of frames. We can verify this semantically:
 K-provable formulas should be valid on *all* frames, and

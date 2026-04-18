@@ -38,7 +38,7 @@ end;
 
 # ╔═╡ f1f2f3f4-0004-0004-0004-000000000004
 md"""
-## 15.1 Introduction
+## Introduction
 
 Epistemic logic interprets the modal operators as *knowledge* rather than
 necessity/possibility. The formula K_a A reads "agent a knows A."
@@ -55,8 +55,7 @@ w' is *consistent with a's information at w*.
 
 # ╔═╡ f1f2f3f4-0005-0005-0005-000000000005
 md"""
-## 15.2 The Language (Definition 15.2)
-
+## The Language
 The epistemic language extends propositional logic with:
 - K_a A for each agent a ∈ G: "agent a knows A"
 
@@ -78,8 +77,7 @@ end
 
 # ╔═╡ f1f2f3f4-0007-0007-0007-000000000007
 md"""
-## 15.3 Relational Models (Definition 15.4)
-
+## Relational Models
 A *multi-agent model* M = ⟨W, R, V⟩ where:
 1. W is a nonempty set of possible worlds
 2. R = {R_a : a ∈ G} is a family of accessibility relations, one per agent
@@ -113,8 +111,7 @@ end
 
 # ╔═╡ f1f2f3f4-0009-0009-0009-000000000009
 md"""
-## 15.4 Truth Conditions (Definition 15.5)
-
+## Truth Conditions
 Truth for K_a is exactly like □ in normal modal logic, but using R_a:
 
 M, w ⊩ K_a B  iff  for all w' ∈ W with R_a ww': M, w' ⊩ B
@@ -150,7 +147,7 @@ end
 
 # ╔═╡ f1f2f3f4-0012-0012-0012-000000000012
 md"""
-## 15.5 Epistemic Principles (Table 15.1)
+## Epistemic Principles (Table 15.1)
 
 | Principle | Formula | Frame property | Reading |
 |:----------|:--------|:---------------|:--------|
@@ -201,8 +198,7 @@ end
 
 # ╔═╡ f1f2f3f4-0015-0015-0015-000000000015
 md"""
-## 15.3 Group and Common Knowledge (Definition 15.3 and 15.6)
-
+## Group and Common Knowledge
 **Group knowledge** E_{G'} A = ⋀_{b∈G'} K_b A:
 "Everyone in G' knows A."
 
@@ -241,8 +237,7 @@ end
 
 # ╔═╡ f1f2f3f4-0017-0017-0017-000000000017
 md"""
-## 15.6 Bisimulations (Definition 15.7)
-
+## Bisimulations
 A **bisimulation** ℛ ⊆ W₁ × W₂ between two models M₁ and M₂ satisfies:
 for every ⟨w₁, w₂⟩ ∈ ℛ:
 

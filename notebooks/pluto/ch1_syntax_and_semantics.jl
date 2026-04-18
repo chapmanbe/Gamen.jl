@@ -64,10 +64,9 @@ The LLM on your laptop uses none of this. It predicts the next token. Modal logi
 
 # ╔═╡ 1a2b3c4d-0003-0003-0003-000000000003
 md"""
-## 1.1 The Language of Basic Modal Logic
+## The Language of Basic Modal Logic
 
-The language of modal logic (Definition 1.1) starts with the language of propositional logic (1-3 below) and
-extends it with two new operators (4 and 5 below):
+The language of modal logic (Definition 1.1, B&D) starts with the language of propositional logic (1-3 below) and extends it with two new operators (4 and 5 below):
 
 1. The propositional constant for falsity: $\bot$
 2. Propositional variables: $p_0, p_1, p_2, \ldots$
@@ -252,7 +251,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Propositional.*
 
 # ╔═╡ 1a2b3c4d-0012-0012-0012-000000000012
 md"""
-## 1.4 Relational Models
+## Relational Models
 
 A *model* $M = \langle W, R, V \rangle$ consists of three components (Definition 1.6):
 
@@ -275,9 +274,9 @@ The accessibility relation says which situations are reachable or relevant from 
 
 # ╔═╡ 1a2b3c4d-0070-0070-0070-000000000070
 md"""
-$(Markdown.MD(Markdown.Admonition("hint", "Example: Tic-tac-toe", [md"Imagine a tic-tac-toe game where X has just moved. Each *world* is a board state. The accessibility relation connects the current board to all boards reachable by O's next move. □(X wins) means 'X wins no matter what O does' — true in *every* accessible state. ◇(O wins) means 'there exists a move where O wins' — true in *some* accessible state. If □(X wins) is false but ◇(X wins) is true, the game is still open."])))
+$(Markdown.MD(Markdown.Admonition("note", "Example: Tic-tac-toe", [md"Imagine a tic-tac-toe game where X has just moved. Each *world* is a board state. The accessibility relation connects the current board to all boards reachable by O's next move. □(X wins) means 'X wins no matter what O does' — true in *every* accessible state. ◇(O wins) means 'there exists a move where O wins' — true in *some* accessible state. If □(X wins) is false but ◇(X wins) is true, the game is still open."])))
 
-$(Markdown.MD(Markdown.Admonition("hint", "Example: Clinical treatment", [md"A patient presents with an infection. Each *world* is a possible treatment outcome. The accessibility relation connects the current state to outcomes reachable by different antibiotic choices. □(patient recovers) means 'the patient recovers under every treatment option' — a strong claim. ◇(adverse reaction) means 'there exists a treatment that causes an adverse reaction' — a weaker but important warning."])))
+$(Markdown.MD(Markdown.Admonition("note", "Example: Clinical treatment", [md"A patient presents with an infection. Each *world* is a possible treatment outcome. The accessibility relation connects the current state to outcomes reachable by different antibiotic choices. □(patient recovers) means 'the patient recovers under every treatment option' — a strong claim. ◇(adverse reaction) means 'there exists a treatment that causes an adverse reaction' — a weaker but important warning."])))
 """
 
 # ╔═╡ 1a2b3c4d-0071-0071-0071-000000000071
@@ -304,9 +303,9 @@ visualize_model(model,
 
 # ╔═╡ 1a2b3c4d-0014-0014-0014-000000000014
 md"""
-## 1.5 Truth at a World (Definition 1.7)
+## Truth at a World
 
-We use the **satisfaction operator** ⊩ (also called "forces" or "satisfies") to express that a formula is true at a particular world in a model. We write M, w ⊩ A to mean "formula A is true at world w in model M."
+We use the **satisfaction operator** ⊩ (also called "forces" or "satisfies") to express that a formula is true at a particular world in a model (Definition 1.7, B&D). We write M, w ⊩ A to mean "formula A is true at world w in model M."
 
 The satisfaction relation is defined inductively — propositional cases first, then the modal cases that give □ and ◇ their meaning:
 
@@ -394,9 +393,9 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Several work: `An
 
 # ╔═╡ 1a2b3c4d-0018-0018-0018-000000000018
 md"""
-## Proposition 1.8 — Duality of □ and ◇
+## Duality of □ and ◇
 
-The book proves that □ and ◇ are **duals** — each can be defined in terms of the other:
+□ and ◇ are **duals** — each can be defined in terms of the other (Proposition 1.8, B&D):
 
 - □A is equivalent to ¬◇¬A ("necessarily A" means "it is not possible that not-A")
 - ◇A is equivalent to ¬□¬A ("possibly A" means "it is not necessary that not-A")
@@ -419,10 +418,9 @@ end
 
 # ╔═╡ 1a2b3c4d-0020-0020-0020-000000000020
 md"""
-## 1.6 Truth in a Model (Definition 1.9)
+## Truth in a Model
 
-A formula $A$ is *true in a model* $M$ (written $M \Vdash A$) if it is true
-at every world in $M$:
+A formula A is *true in a model* M (written M ⊩ A) if it is true at every world in M (Definition 1.9, B&D):
 """
 
 # ╔═╡ 1a2b3c4d-0021-0021-0021-000000000021
@@ -439,10 +437,9 @@ end
 
 # ╔═╡ 1a2b3c4d-0022-0022-0022-000000000022
 md"""
-## 1.10 Entailment (Definition 1.23)
+## Entailment
 
-A set of formulas $\Gamma$ *entails* $A$ in model $M$ if: whenever all formulas
-in $\Gamma$ are true at a world $w$, then $A$ is also true at $w$.
+A set of formulas Γ *entails* A in model M if: whenever all formulas in Γ are true at a world w, then A is also true at w (Definition 1.23, B&D).
 """
 
 # ╔═╡ 1a2b3c4d-0023-0023-0023-000000000023
