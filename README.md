@@ -196,22 +196,38 @@ test/
 docs/                   # Documenter.jl documentation
 notebooks/
   Project.toml          # Notebook environment (includes visualization deps)
-  pluto/                # Interactive Pluto notebooks, one per chapter
+  pluto/                # B&D textbook companion notebooks
+  health/               # Health application notebooks
   jupyter/              # Jupyter notebook versions
 ```
 
 ## Notebooks
 
-Interactive notebooks are available for each chapter:
+Two parallel tracks of interactive notebooks:
+
+### B&D Textbook Companion (`notebooks/pluto/`)
 
 | Notebook | Topic |
 |:---------|:------|
+| `ch0_propositional_logic` | Propositional logic review |
 | `ch1_syntax_and_semantics` | Formulas, models, model checking |
 | `ch2_frame_definability` | Frame properties and correspondence |
 | `ch3_axiomatic_derivations` | Proof systems and derivations |
 | `ch4_completeness` | Canonical models and completeness |
 | `ch5_filtrations` | Filtrations, FMP, and decidability |
 | `ch6_tableaux` | Modal tableaux and proof search |
+
+### Health Applications (`notebooks/health/`)
+
+| Notebook | Topic |
+|:---------|:------|
+| `ch0_health_clinical_rules` | MYCIN, clinical production rules |
+| `ch1_health_clinical_obligations` | Guideline obligations as □/◇ |
+| `ch2_health_guideline_properties` | Frame properties for guidelines |
+| `ch3_health_deontic_systems` | KD as the logic of clinical guidelines |
+| `ch4_health_completeness` | Trusting consistency results |
+| `ch5_health_decidability` | Decidability for guideline checking |
+| `ch6_health_conflict_detection` | Automated guideline conflict detection |
 
 Open with [Pluto.jl](https://github.com/fonsp/Pluto.jl):
 

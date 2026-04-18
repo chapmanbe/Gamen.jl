@@ -26,17 +26,25 @@ This means every notebook must:
 - **CairoMakie + GraphMakie + Graphs** — Kripke model visualization via `GamenMakieExt`
 - **Pure Julia** — no Python, no external services. Everything runs locally.
 
-## Notebook Naming Convention
+## Notebook Directory Structure
+
+The two tracks live in separate directories under `notebooks/`, sharing the same environment (`notebooks/Project.toml`):
 
 ```
-notebooks/pluto/
-  ch0_propositional_logic.jl            # Prerequisite: propositional logic review
-  ch0_health_clinical_rules.jl          # Health parallel: MYCIN, clinical rules
-  ch1_syntax_and_semantics.jl           # B&D Chapter 1
-  ch1_health_clinical_obligations.jl    # Health parallel for Chapter 1
-  ch2_frame_definability.jl             # B&D Chapter 2
-  ch2_health_guideline_properties.jl    # Health parallel for Chapter 2
-  ...
+notebooks/
+  Project.toml                          # Shared environment (Gamen, CairoMakie, etc.)
+  pluto/                                # B&D track — textbook companion notebooks
+    ch0_propositional_logic.jl
+    ch1_syntax_and_semantics.jl
+    ch2_frame_definability.jl
+    ...
+    ext_deontic_temporal.jl             # Extension: combined logics
+  health/                               # Health track — clinical application notebooks
+    ch0_health_clinical_rules.jl
+    ch1_health_clinical_obligations.jl
+    ch2_health_guideline_properties.jl
+    ...
+    ext_health_guideline_conflicts.jl   # Extension: guideline conflicts
 ```
 
 ## Environment and Imports

@@ -37,9 +37,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: pluto_state_cache
-          key: ${{ runner.os }}-pluto-v2-${{ hashFiles('notebooks/Project.toml', 'src/**') }}-${{ hashFiles('notebooks/pluto/**/*.jl') }}
+          key: ${{ runner.os }}-pluto-v3-${{ hashFiles('notebooks/Project.toml', 'src/**') }}-${{ hashFiles('notebooks/pluto/**/*.jl', 'notebooks/health/**/*.jl') }}
           restore-keys: |
-            ${{ runner.os }}-pluto-v2-${{ hashFiles('notebooks/Project.toml', 'src/**') }}
+            ${{ runner.os }}-pluto-v3-${{ hashFiles('notebooks/Project.toml', 'src/**') }}
 
       - name: Instantiate notebooks environment
         run: |
@@ -58,8 +58,21 @@ jobs:
 
             import PlutoSliderServer
 
+            # Export B&D track notebooks
             PlutoSliderServer.export_directory("notebooks/pluto";
-              Export_output_dir="notebook_html",
+              Export_output_dir="notebook_html/pluto",
+              Export_cache_dir="pluto_state_cache",
+              Export_baked_state=true,
+              Export_baked_notebookfile=true,
+              Export_offer_binder=true,
+              Export_binder_url="https://mybinder.org/v2/gh/chapmanbe/Gamen.jl/main",
+              Export_disable_ui=true,
+              Export_create_index=true,
+            )
+
+            # Export health track notebooks
+            PlutoSliderServer.export_directory("notebooks/health";
+              Export_output_dir="notebook_html/health",
               Export_cache_dir="pluto_state_cache",
               Export_baked_state=true,
               Export_baked_notebookfile=true,
