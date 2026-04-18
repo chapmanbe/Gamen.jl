@@ -13,3 +13,4 @@ docs/build/
 # OS
 .DS_Store
 notebooks/pluto/.*.swp
+notebooks/reviews/
