@@ -97,11 +97,17 @@ function Gamen.visualize_model(model::KripkeModel;
 
     graphplot!(ax, g; gp_kwargs...)
 
-    # Set axis limits with padding so labels aren't clipped
+    # Set axis limits with padding so labels and self-loops aren't clipped
     xmin, xmax = extrema(xs)
     ymin, ymax = extrema(ys)
     xpad = max(0.8, (xmax - xmin) * 0.3)
     ypad = max(0.8, (ymax - ymin) * 0.3)
+    # Extra padding when self-loops are present (they extend beyond node positions)
+    has_self_loops = any(e -> src(e) == dst(e), edge_list)
+    if has_self_loops
+        ypad = max(ypad, 1.2)
+        xpad = max(xpad, 1.2)
+    end
     xlims!(ax, xmin - xpad, xmax + xpad)
     ylims!(ax, ymin - ypad, ymax + ypad)
 

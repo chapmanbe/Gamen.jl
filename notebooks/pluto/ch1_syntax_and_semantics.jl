@@ -352,13 +352,17 @@ end
 
 # ╔═╡ 1a2b3c4d-0017-0017-0017-000000000017
 md"""
-Notice:
-- **Item 1** is true: $q$ holds at $w_1$? No — $V(q) = \{w_2\}$, so $q$ is false at $w_1$.
-- **Item 4** is false: $w_3$ satisfies neither $p$ nor $q$, so $p \lor q$ fails there, and $\square(p \lor q)$ fails at $w_1$.
-- **Items 5 and 6** are *vacuously true*: $w_3$ has no accessible worlds, so $\square B$ holds for any $B$ at $w_3$.
-- **Item 7** is true: $w_2$ is accessible from $w_1$ and $q$ holds at $w_2$.
-- **Item 8** is false: $w_3$ is accessible from $w_1$ but $q$ fails there.
-- **Item 9**: $\square\square\lnot q$ is true at $w_1$ because $w_2$ and $w_3$ have no successors, making $\square\lnot q$ vacuously true at both. So $\lnot\square\square\lnot q$ is false.
+Reading the results:
+
+- **Item 1 → false.** V(q) = {w₂}, so q is false at w₁.
+- **Item 2 → true.** q is false at w₃, so ¬q is true there.
+- **Item 3 → true.** p is true at w₁, so p ∨ q holds (only one disjunct needed).
+- **Item 4 → false.** □(p ∨ q) at w₁ requires p ∨ q at both w₂ and w₃. But w₃ has neither p nor q, so it fails.
+- **Item 5 → true (vacuously).** w₃ has no accessible worlds. □q requires q at *all* successors — when there are none, this is vacuously satisfied.
+- **Item 6 → true (vacuously).** Same reasoning: □⊥ at a dead-end world is vacuously true, because there are no successors to check.
+- **Item 7 → true.** ◇q at w₁ requires q at *some* successor. w₂ is accessible and q holds there.
+- **Item 8 → false.** □q at w₁ requires q at *all* successors. w₃ is accessible but q fails there.
+- **Item 9 → false.** □□¬q is true at w₁: both w₂ and w₃ have no successors, making □¬q vacuously true at both. Since □□¬q is true, ¬□□¬q is false.
 """
 
 # ╔═╡ 1a2b3c4d-0052-0052-0052-000000000052
@@ -367,25 +371,25 @@ md"""
 
 Before looking at the model checker output, try to work out each answer by hand using the diagram above. Then expand the hint to check.
 
-**1.** Does $M, w_2 \Vdash \square p$ hold?
+**1.** Does M, w₂ ⊩ □p hold?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes (vacuously).** $w_2$ has no accessible worlds, so □p is true at $w_2$ for any formula — there are no worlds to check. `satisfies(model, :w2, Box(p))` returns `true`."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes (vacuously).** w₂ has no accessible worlds, so □p is true at w₂ for any formula — there are no worlds to check. `satisfies(model, :w2, Box(p))` returns `true`."])))
 
-**2.** Does $M, w_1 \Vdash \diamond(p \land q)$ hold?
+**2.** Does M, w₁ ⊩ ◇(p ∧ q) hold?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes.** $w_2$ is accessible from $w_1$, and both $p$ and $q$ are true at $w_2$. `satisfies(model, :w1, Diamond(And(p, q)))` returns `true`."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes.** w₂ is accessible from w₁, and both p and q are true at w₂. `satisfies(model, :w1, Diamond(And(p, q)))` returns `true`."])))
 
-**3.** Does $M, w_1 \Vdash \square p$ hold?
+**3.** Does M, w₁ ⊩ □p hold?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**No.** $w_3$ is accessible from $w_1$, but $p \notin V(p)$ at $w_3$ (only at $w_1$ and $w_2$). Wait — actually $V(p) = \{w_1, w_2\}$, so $p$ is false at $w_3$. Therefore □p fails at $w_1$. `satisfies(model, :w1, Box(p))` returns `false`."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**No.** w₃ is accessible from w₁, but V(p) = {w₁, w₂}, so p is false at w₃. Therefore □p fails at w₁. `satisfies(model, :w1, Box(p))` returns `false`."])))
 
-**4.** Does $M, w_1 \Vdash \diamond q \land \diamond \lnot q$ hold?
+**4.** Does M, w₁ ⊩ ◇q ∧ ◇¬q hold?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes.** ◇q: $w_2$ is accessible and $q$ holds there. ◇¬q: $w_3$ is accessible and $q$ fails there. Both diamonds are satisfied, so the conjunction holds. `satisfies(model, :w1, And(Diamond(q), Diamond(Not(q))))` returns `true`. This means: from $w_1$'s perspective, $q$ is *contingent* — both possible and possibly false."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes.** ◇q: w₂ is accessible and q holds there. ◇¬q: w₃ is accessible and q fails there. Both diamonds are satisfied, so the conjunction holds. `satisfies(model, :w1, And(Diamond(q), Diamond(Not(q))))` returns `true`. This means: from w₁'s perspective, q is *contingent* — both possible and possibly false."])))
 
-**5. Challenge:** Construct a formula that is true at $w_3$ but false at $w_1$ and $w_2$.
+**5. Challenge:** Construct a formula that is true at w₃ but false at w₁ and w₂.
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Several work: `And(Not(p), Not(q))` — neither $p$ nor $q$ holds at $w_3$, but at least one holds at the other worlds. Or `Box(Bottom())` — vacuously true at $w_3$ (no successors), false at $w_1$ (has successors)."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Several work: `And(Not(p), Not(q))` — neither p nor q holds at w₃, but at least one holds at the other worlds. Or `Box(Bottom())` — vacuously true at w₃ (no successors), false at w₁ (has successors)."])))
 """
 
 # ╔═╡ 1a2b3c4d-0018-0018-0018-000000000018
