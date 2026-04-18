@@ -41,6 +41,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pluto-v1-${{ hashFiles('notebooks/Project.toml', 'src/**') }}
 
+      - name: Instantiate notebooks environment
+        run: |
+          julia -e '
+            using Pkg
+            Pkg.activate("notebooks")
+            Pkg.instantiate()
+            Pkg.precompile()'
+
       - name: Export Pluto notebooks
         run: |
           julia -e '
@@ -60,7 +68,7 @@ jobs:
               Export_disable_ui=true,
               Export_create_index=true,
             )'
-        timeout-minutes: 30
+        timeout-minutes: 60
 
       - name: Deploy notebooks to gh-pages
         uses: JamesIves/github-pages-deploy-action@v4
