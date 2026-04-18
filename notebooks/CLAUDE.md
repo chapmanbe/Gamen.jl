@@ -101,7 +101,8 @@ Pluto's markdown renderer has quirks that affect how content displays:
 - **Inline LaTeX at line endings causes line breaks.** Do NOT write `$W$:` at the end of a line — Pluto inserts a newline between the LaTeX and the colon. Instead, restructure as a complete sentence: "A nonempty set of worlds $W$" rather than "$W$: a nonempty set of worlds."
 - **Use Unicode (□, ◇, ¬, ∧, ∨, →, ⊩) instead of LaTeX** for modal operators in prose. LaTeX like `$\square$` can cause line-splitting. Unicode renders reliably.
 - **Admonitions with multiline content**: Use `md"single line"` (not `md"""multiline"""`) inside `Markdown.Admonition`. Triple-quoted strings nested inside `$()` interpolation within an outer `md"""..."""` cause parse errors.
-- **Never mix LaTeX and admonitions in the same cell.** A `md"""..."""` block containing both LaTeX (`$W$`, `$Rww'$`) and `$(Markdown.MD(Markdown.Admonition(...)))` will fail — Pluto's parser can't distinguish LaTeX `$` from Julia interpolation `$`. Split them into separate cells.
+- **Never mix LaTeX and admonitions in the same cell.** A `md"""..."""` block containing both LaTeX (`$W$`, `$wRw'$`) and `$(Markdown.MD(Markdown.Admonition(...)))` will fail — Pluto's parser can't distinguish LaTeX `$` from Julia interpolation `$`. Split them into separate cells.
+- **Accessibility notation:** Use infix `wRw'` (not prefix `Rww'`). B&D uses both, but `wRw'` is standard in the modal logic literature (Blackburn et al., Chellas) and reads more naturally. This differs from B&D's Definition 1.6 which uses prefix notation — note this for students when the difference matters.
 
 ## Notebook Structure
 
