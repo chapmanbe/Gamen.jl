@@ -57,7 +57,14 @@ in a modal system is valid. *Completeness* is the converse: every valid
 formula is derivable.
 
 The key construction is the **canonical model**, whose worlds are
-*complete Sigma-consistent sets* of formulas.
+*complete consistent sets* of formulas. We will build up to this
+step by step, defining each term along the way.
+
+Throughout this chapter, we use the convention:
+- **Σ** (Sigma) — a modal system (K, KT, KD, S4, etc.)
+- **Γ** (Gamma) — a set of formulas (premises, assumptions)
+- **Δ** (Delta) — a maximal consistent set (a "world" in the canonical model)
+- **Σ-consistent** — consistent *with respect to system Σ*; meaning we cannot derive ⊥ from Γ using the axioms and rules of Σ
 """
 
 # ╔═╡ 4a4b4c4d-0004-0004-0004-000000000004
@@ -71,8 +78,12 @@ end;
 md"""
 ## Subformulas and Closure
 
+A **subformula** of a formula A is any formula that appears as a "building block" within A. For example, the subformulas of □(p → q) are: the whole formula □(p → q), the inner formula p → q, and the atoms p and q. Every formula is a subformula of itself.
+
+Think of it like parsing a sentence: "The cat sat on the mat" contains the noun phrases "the cat," "the mat," and the verb "sat." Similarly, □(p → q) contains the subexpressions □(p → q), p → q, p, and q.
+
 Before constructing canonical models, we need tools for working with
-finite languages. The `subformulas` function collects all subformulas
+these finite sets. The `subformulas` function collects all subformulas
 of a given formula.
 """
 
@@ -100,9 +111,9 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The subformulas o
 md"""
 ## 4.2 Derivability and Consistency
 
-**Derivability from a set** (Definition 3.36): Gamma ⊢\_Sigma A means A is derivable
-from premises in Gamma within system Sigma. By soundness and completeness, we
-can check this *semantically*: A holds at every world where all of Gamma hold,
+**Derivability from a set** (Definition 3.36): Γ ⊢\_Σ A means A is derivable
+from premises in Γ within system Σ. By soundness and completeness, we
+can check this *semantically*: A holds at every world where all of Γ hold,
 in every model of the appropriate class.
 """
 
@@ -132,9 +143,9 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Not derivable in 
 
 # ╔═╡ 4a4b4c4d-0011-0011-0011-000000000011
 md"""
-**Consistency** (Definition 3.39): A set Gamma is Sigma-consistent iff ⊥ is not
-derivable from Gamma. Equivalently, there exists a model in the appropriate
-class with a world satisfying all formulas in Gamma.
+**Consistency** (Definition 3.39): A set Γ is Σ-consistent iff ⊥ is not
+derivable from Γ using the axioms and rules of Σ. Equivalently, there exists a model in the appropriate
+class with a world satisfying all formulas in Γ.
 """
 
 # ╔═╡ 4a4b4c4d-0012-0012-0012-000000000012
@@ -167,11 +178,10 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Consistent in K b
 md"""
 ## 4.3 Complete Sigma-Consistent Sets
 
-**Definition 4.1:** A set Gamma is *complete Sigma-consistent* if it is
-Sigma-consistent and for every formula A, either A in Gamma or ¬A in Gamma.
+**Definition 4.1:** A set Γ is *complete Σ-consistent* if it is
+Σ-consistent and for every formula A in the language, either A ∈ Γ or ¬A ∈ Γ.
 
-These are the "maximally decided" consistent sets -- they settle the
-truth value of every formula.
+In plain language: a complete consistent set has an *opinion* about every formula — it either includes the formula or includes its negation, but never both (consistency) and never neither (completeness). These are the "maximally decided" consistent sets — they settle the truth value of every formula, which is why they can serve as worlds in a model.
 """
 
 # ╔═╡ 4a4b4c4d-0014-0014-0014-000000000014
@@ -194,8 +204,8 @@ end
 md"""
 ## 4.4 Lindenbaum's Lemma
 
-**Theorem 4.3 (Lindenbaum's Lemma):** Every Sigma-consistent set can be
-extended to a *complete* Sigma-consistent set.
+**Theorem 4.3 (Lindenbaum's Lemma):** Every Σ-consistent set can be
+extended to a *complete* Σ-consistent set.
 
 The construction processes formulas one at a time: for each formula A,
 if adding A keeps the set consistent, add A; otherwise add ¬A.
@@ -231,10 +241,10 @@ md"""
 **Definition 4.5** defines operations on sets of formulas that mirror
 the modal operators:
 
-- □Gamma = {□B : B in Gamma} -- prefix every formula with □
-- ◇Gamma = {◇B : B in Gamma} -- prefix every formula with ◇
-- □⁻¹Gamma = {B : □B in Gamma} -- strip the □ from boxed formulas
-- ◇⁻¹Gamma = {B : ◇B in Gamma} -- strip the ◇ from diamond formulas
+- □Γ = {□B : B ∈ Γ} — prefix every formula with □
+- ◇Γ = {◇B : B ∈ Γ} — prefix every formula with ◇
+- □⁻¹Γ = {B : □B ∈ Γ} — strip the □ from boxed formulas
+- ◇⁻¹Γ = {B : ◇B ∈ Γ} — strip the ◇ from diamond formulas
 """
 
 # ╔═╡ 4a4b4c4d-0019-0019-0019-000000000019
@@ -249,20 +259,20 @@ end
 
 # ╔═╡ 4a4b4c4d-0043-0043-0043-000000000043
 md"""
-**Exercise 5.** Given Gamma = {□p, □(p → q), ◇r, p}, what is □⁻¹Gamma?
+**Exercise 5.** Given Γ = {□p, □(p → q), ◇r, p}, what is □⁻¹Γ?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"□⁻¹Gamma = {p, p → q}. We extract the contents of formulas that start with □: □p gives p, and □(p → q) gives p → q. The formulas ◇r and p do not start with □, so they contribute nothing. This operation is central to the canonical model's accessibility relation."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"□⁻¹Γ = {p, p → q}. We extract the contents of formulas that start with □: □p gives p, and □(p → q) gives p → q. The formulas ◇r and p do not start with □, so they contribute nothing. This operation is central to the canonical model's accessibility relation."])))
 """
 
 # ╔═╡ 4a4b4c4d-0020-0020-0020-000000000020
 md"""
 ## 4.6 Canonical Models
 
-**Definition 4.11:** The *canonical model* M^Sigma = ⟨W^Sigma, R^Sigma, V^Sigma⟩ where:
+**Definition 4.11:** The *canonical model* M^Σ = ⟨W^Σ, R^Σ, V^Σ⟩ is built entirely from the proof system:
 
-1. W^Sigma = all complete Sigma-consistent sets
-2. R^Sigma Delta Delta' iff □⁻¹Delta ⊆ Delta' (if □A in Delta then A in Delta')
-3. V^Sigma(p) = {Delta : p in Delta}
+1. **Worlds**: W^Σ = all complete Σ-consistent sets (each world is a maximally decided set of formulas)
+2. **Accessibility**: R^Σ relates Δ to Δ' iff □⁻¹Δ ⊆ Δ' (if □A ∈ Δ then A ∈ Δ' — whatever is necessary at Δ must be true at Δ')
+3. **Valuation**: V^Σ(p) = {Δ : p ∈ Δ} (an atom is true at a world iff the world's formula set contains it)
 
 For a finite language, we can enumerate all complete consistent sets
 and build this model explicitly.
@@ -300,8 +310,8 @@ end
 md"""
 ### Visualizing the Canonical Model for K
 
-Each node is a world -- a maximal consistent set. The edges represent
-the canonical accessibility relation: Delta sees Delta' when □⁻¹Delta ⊆ Delta'.
+Each node is a world — a maximal consistent set of formulas. The edges represent
+the canonical accessibility relation: Δ sees Δ' when □⁻¹Δ ⊆ Δ'.
 """
 
 # ╔═╡ 4a4b4c4d-0046-0046-0046-000000000046
@@ -330,12 +340,11 @@ md"""
 ## 4.7 The Truth Lemma
 
 **Proposition 4.12 (Truth Lemma):** For every formula A in the language
-and every world Delta in the canonical model:
+and every world Δ in the canonical model:
 
-M^Sigma, Delta ⊩ A  if and only if  A in Delta
+M^Σ, Δ ⊩ A  if and only if  A ∈ Δ
 
-This is the heart of the completeness proof -- it connects the semantic
-notion (satisfaction) with the syntactic notion (membership).
+In plain language: a formula is *true at a world* (the semantic concept) exactly when the world's formula set *contains* it (the syntactic concept). This is the heart of the completeness proof — it bridges the gap between proof and truth.
 """
 
 # ╔═╡ 4a4b4c4d-0025-0025-0025-000000000025
