@@ -28,7 +28,25 @@ begin
 	using Pkg
 	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
+	import CairoMakie, GraphMakie, Graphs
 end
+
+# ╔═╡ 4a4b4c4d-0038-0038-0038-000000000038
+md"""
+## Why Completeness Matters
+
+Soundness (Chapter 3) told us that our proof system is *safe*: everything we can prove is actually true. But soundness alone leaves a nagging question:
+
+> **If something is true in all models with property X, can we always *prove* it from axioms?**
+
+Completeness says **yes**. It is the guarantee that our proof system is not missing anything. If a formula is valid -- true in every model of the appropriate class -- then there exists a derivation from the axioms.
+
+The contrapositive is equally important: **if no proof of inconsistency exists, then a consistent model exists.** You can trust a negative result. When the proof system fails to derive a contradiction from your assumptions, that is not because the system is weak -- it is because those assumptions genuinely *can* coexist.
+
+For health informatics, this matters concretely: suppose you formalize a set of clinical guidelines and check them for consistency. If the proof system reports "no contradiction found," completeness guarantees that a model exists where all the guidelines can be simultaneously satisfied. Without completeness, "no contradiction found" might just mean "our proof system isn't powerful enough to detect the contradiction." With completeness, silence really does mean safety.
+
+The key construction is the **canonical model** -- a model built directly from the syntax of the proof system, whose worlds are *maximal consistent sets of formulas*. It is perhaps the most elegant construction in modal logic: we build a model out of pure logic, and prove that it has exactly the right properties.
+"""
 
 # ╔═╡ 4a4b4c4d-0003-0003-0003-000000000003
 md"""
@@ -39,7 +57,7 @@ in a modal system is valid. *Completeness* is the converse: every valid
 formula is derivable.
 
 The key construction is the **canonical model**, whose worlds are
-*complete Σ-consistent sets* of formulas.
+*complete Sigma-consistent sets* of formulas.
 """
 
 # ╔═╡ 4a4b4c4d-0004-0004-0004-000000000004
@@ -71,13 +89,20 @@ suitable for constructing canonical models.
 # ╔═╡ 4a4b4c4d-0008-0008-0008-000000000008
 formula_closure([p, Box(p)])
 
+# ╔═╡ 4a4b4c4d-0039-0039-0039-000000000039
+md"""
+**Exercise 1.** How many formulas are in the closure of {p, □(p → q)}? Think about it, then check below.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The subformulas of □(p → q) are: □(p → q), p → q, p, q. Adding p gives {p, q, p → q, □(p → q)}. The closure adds negations: {p, ¬p, q, ¬q, p → q, ¬(p → q), □(p → q), ¬□(p → q)} -- 8 formulas total. Try `length(formula_closure([p, Box(Implies(p, q))]))` to verify."])))
+"""
+
 # ╔═╡ 4a4b4c4d-0009-0009-0009-000000000009
 md"""
 ## 4.2 Derivability and Consistency
 
-**Derivability from a set** (Definition 3.36): Γ ⊢\_Σ A means A is derivable
-from premises in Γ within system Σ. By soundness and completeness, we
-can check this *semantically*: A holds at every world where all of Γ hold,
+**Derivability from a set** (Definition 3.36): Gamma ⊢\_Sigma A means A is derivable
+from premises in Gamma within system Sigma. By soundness and completeness, we
+can check this *semantically*: A holds at every world where all of Gamma hold,
 in every model of the appropriate class.
 """
 
@@ -98,11 +123,18 @@ begin
 	(mp = deriv_mp, nec = deriv_nec, T_in_K = deriv_t, T_in_KT = deriv_kt)
 end
 
+# ╔═╡ 4a4b4c4d-0040-0040-0040-000000000040
+md"""
+**Exercise 2.** Is □p → □□p derivable in K? What about in K4? Why does this make sense?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Not derivable in K, but derivable in K4. K4 includes axiom 4 (□p → □□p), which corresponds to transitivity. In a transitive frame, if p holds at all accessible worlds, it also holds at all worlds accessible from those -- so □p implies □□p. Try: `is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), Box(Box(p))); max_worlds=2)` and compare with `SYSTEM_K4`."])))
+"""
+
 # ╔═╡ 4a4b4c4d-0011-0011-0011-000000000011
 md"""
-**Consistency** (Definition 3.39): A set Γ is Σ-consistent iff ⊥ is not
-derivable from Γ. Equivalently, there exists a model in the appropriate
-class with a world satisfying all formulas in Γ.
+**Consistency** (Definition 3.39): A set Gamma is Sigma-consistent iff ⊥ is not
+derivable from Gamma. Equivalently, there exists a model in the appropriate
+class with a world satisfying all formulas in Gamma.
 """
 
 # ╔═╡ 4a4b4c4d-0012-0012-0012-000000000012
@@ -124,14 +156,21 @@ begin
 	 K_box_notp = cons_k, KT_box_notp = cons_kt)
 end
 
+# ╔═╡ 4a4b4c4d-0041-0041-0041-000000000041
+md"""
+**Exercise 3.** Is {□p, □¬p} consistent in K? What about in KD? Explain the difference.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Consistent in K but NOT in KD. In K, a world with no successors makes both □p and □¬p vacuously true. KD requires seriality (every world has at least one successor), so some successor must satisfy both p and ¬p -- impossible. This is why KD is the logic of obligations: you cannot be simultaneously obligated to do p and obligated to do ¬p. Try: `is_consistent(SYSTEM_K, [Box(p), Box(Not(p))]; max_worlds=2)` vs `is_consistent(SYSTEM_KD, [Box(p), Box(Not(p))]; max_worlds=2)`."])))
+"""
+
 # ╔═╡ 4a4b4c4d-0013-0013-0013-000000000013
 md"""
-## 4.3 Complete Σ-Consistent Sets
+## 4.3 Complete Sigma-Consistent Sets
 
-**Definition 4.1:** A set Γ is *complete Σ-consistent* if it is
-Σ-consistent and for every formula A, either A ∈ Γ or ¬A ∈ Γ.
+**Definition 4.1:** A set Gamma is *complete Sigma-consistent* if it is
+Sigma-consistent and for every formula A, either A in Gamma or ¬A in Gamma.
 
-These are the "maximally decided" consistent sets — they settle the
+These are the "maximally decided" consistent sets -- they settle the
 truth value of every formula.
 """
 
@@ -155,8 +194,8 @@ end
 md"""
 ## 4.4 Lindenbaum's Lemma
 
-**Theorem 4.3 (Lindenbaum's Lemma):** Every Σ-consistent set can be
-extended to a *complete* Σ-consistent set.
+**Theorem 4.3 (Lindenbaum's Lemma):** Every Sigma-consistent set can be
+extended to a *complete* Sigma-consistent set.
 
 The construction processes formulas one at a time: for each formula A,
 if adding A keeps the set consistent, add A; otherwise add ¬A.
@@ -178,6 +217,13 @@ begin
 	(extension = ext_box, box_p = Box(p) ∈ ext_box)
 end
 
+# ╔═╡ 4a4b4c4d-0042-0042-0042-000000000042
+md"""
+**Exercise 4.** If you extend {□p} using Lindenbaum's Lemma in **KT**, must p be in the result? What about in **K**?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"In KT, yes: axiom T says □p → p, so any KT-consistent set containing □p must also contain p (otherwise you could derive a contradiction). In K, not necessarily: K has no axiom forcing □p → p, so a complete K-consistent extension of {□p} might contain ¬p. Try extending in both systems and compare."])))
+"""
+
 # ╔═╡ 4a4b4c4d-0018-0018-0018-000000000018
 md"""
 ## 4.5 Modal Operators on Sets
@@ -185,10 +231,10 @@ md"""
 **Definition 4.5** defines operations on sets of formulas that mirror
 the modal operators:
 
-- □Γ = {□B : B ∈ Γ} — prefix every formula with □
-- ◇Γ = {◇B : B ∈ Γ} — prefix every formula with ◇
-- □⁻¹Γ = {B : □B ∈ Γ} — strip the □ from boxed formulas
-- ◇⁻¹Γ = {B : ◇B ∈ Γ} — strip the ◇ from diamond formulas
+- □Gamma = {□B : B in Gamma} -- prefix every formula with □
+- ◇Gamma = {◇B : B in Gamma} -- prefix every formula with ◇
+- □⁻¹Gamma = {B : □B in Gamma} -- strip the □ from boxed formulas
+- ◇⁻¹Gamma = {B : ◇B in Gamma} -- strip the ◇ from diamond formulas
 """
 
 # ╔═╡ 4a4b4c4d-0019-0019-0019-000000000019
@@ -201,18 +247,30 @@ begin
 	 diamond_inv_Γ = diamond_inverse(Γ))
 end
 
+# ╔═╡ 4a4b4c4d-0043-0043-0043-000000000043
+md"""
+**Exercise 5.** Given Gamma = {□p, □(p → q), ◇r, p}, what is □⁻¹Gamma?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"□⁻¹Gamma = {p, p → q}. We extract the contents of formulas that start with □: □p gives p, and □(p → q) gives p → q. The formulas ◇r and p do not start with □, so they contribute nothing. This operation is central to the canonical model's accessibility relation."])))
+"""
+
 # ╔═╡ 4a4b4c4d-0020-0020-0020-000000000020
 md"""
 ## 4.6 Canonical Models
 
-**Definition 4.11:** The *canonical model* M^Σ = ⟨W^Σ, R^Σ, V^Σ⟩ where:
+**Definition 4.11:** The *canonical model* M^Sigma = ⟨W^Sigma, R^Sigma, V^Sigma⟩ where:
 
-1. W^Σ = all complete Σ-consistent sets
-2. R^Σ ΔΔ' iff □⁻¹Δ ⊆ Δ' (if □A ∈ Δ then A ∈ Δ')
-3. V^Σ(p) = {Δ : p ∈ Δ}
+1. W^Sigma = all complete Sigma-consistent sets
+2. R^Sigma Delta Delta' iff □⁻¹Delta ⊆ Delta' (if □A in Delta then A in Delta')
+3. V^Sigma(p) = {Delta : p in Delta}
 
 For a finite language, we can enumerate all complete consistent sets
 and build this model explicitly.
+"""
+
+# ╔═╡ 4a4b4c4d-0044-0044-0044-000000000044
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"The canonical model construction is itself a striking example of knowledge representation. Each world is a *maximal consistent set of beliefs* -- a complete, coherent picture of what might be true. The accessibility relation encodes logical entailment between these belief sets. As Buchanan (2006) observed, 'making assumptions explicit is valuable, whether or not the system is correct.' The canonical model makes the assumptions of a logical system maximally explicit: its worlds are literally the *possible states of belief* that the axioms permit. Completeness then guarantees that these explicit axioms capture *everything* the frame properties force -- nothing is hidden."])))
 """
 
 # ╔═╡ 4a4b4c4d-0021-0021-0021-000000000021
@@ -224,7 +282,7 @@ end
 
 # ╔═╡ 4a4b4c4d-0022-0022-0022-000000000022
 md"""
-The canonical model for **K** over {p, □p} has 4 worlds — all
+The canonical model for **K** over {p, □p} has 4 worlds -- all
 combinations of p/¬p and □p/¬□p. Let's inspect them:
 """
 
@@ -238,21 +296,57 @@ begin
 	end
 end
 
+# ╔═╡ 4a4b4c4d-0045-0045-0045-000000000045
+md"""
+### Visualizing the Canonical Model for K
+
+Each node is a world -- a maximal consistent set. The edges represent
+the canonical accessibility relation: Delta sees Delta' when □⁻¹Delta ⊆ Delta'.
+"""
+
+# ╔═╡ 4a4b4c4d-0046-0046-0046-000000000046
+begin
+	# Visualize the canonical model for K over {p, □p}
+	n_k = length(cm_k.worlds)
+	pos_k = if n_k == 4
+		Dict(:Δ1 => (0.0, 1.0), :Δ2 => (2.0, 1.0),
+		     :Δ3 => (0.0, -1.0), :Δ4 => (2.0, -1.0))
+	elseif n_k == 3
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 1.0), :Δ3 => (2.0, -1.0))
+	elseif n_k == 2
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 0.0))
+	else
+		Dict(Symbol("Δ", i) => (2.0 * cos(2π * i / n_k), 2.0 * sin(2π * i / n_k))
+		     for i in 1:n_k)
+	end
+	visualize_model(cm_k.model,
+		positions = pos_k,
+		title = "Canonical model for K over {p, □p}",
+		size = (600, 500))
+end
+
 # ╔═╡ 4a4b4c4d-0024-0024-0024-000000000024
 md"""
 ## 4.7 The Truth Lemma
 
 **Proposition 4.12 (Truth Lemma):** For every formula A in the language
-and every world Δ in the canonical model:
+and every world Delta in the canonical model:
 
-M^Σ, Δ ⊩ A  if and only if  A ∈ Δ
+M^Sigma, Delta ⊩ A  if and only if  A in Delta
 
-This is the heart of the completeness proof — it connects the semantic
+This is the heart of the completeness proof -- it connects the semantic
 notion (satisfaction) with the syntactic notion (membership).
 """
 
 # ╔═╡ 4a4b4c4d-0025-0025-0025-000000000025
 truth_lemma_holds(cm_k)
+
+# ╔═╡ 4a4b4c4d-0047-0047-0047-000000000047
+md"""
+**Exercise 6.** Why is the Truth Lemma surprising? What two very different things does it equate?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"It equates a *semantic* concept (truth at a world in a model, determined by the accessibility relation and valuation) with a *syntactic* concept (membership in a set of formulas, determined by proof-theoretic consistency). The model was built from syntax, yet it behaves exactly as a semantic model should. This is the bridge that connects proof with truth."])))
+"""
 
 # ╔═╡ 4a4b4c4d-0026-0026-0026-000000000026
 md"""
@@ -302,6 +396,36 @@ begin
 	 worlds = length(cm_kt.worlds))
 end
 
+# ╔═╡ 4a4b4c4d-0048-0048-0048-000000000048
+md"""
+### Visualizing Canonical Models Across Systems
+
+Comparing canonical models for different systems reveals how axioms shape
+the structure. Notice how KT's canonical model has self-loops (reflexivity)
+while K's may not.
+"""
+
+# ╔═╡ 4a4b4c4d-0049-0049-0049-000000000049
+begin
+	# Visualize the canonical model for KT
+	n_kt = length(cm_kt.worlds)
+	pos_kt = if n_kt == 2
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 0.0))
+	elseif n_kt == 3
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 1.0), :Δ3 => (2.0, -1.0))
+	elseif n_kt == 4
+		Dict(:Δ1 => (0.0, 1.0), :Δ2 => (2.0, 1.0),
+		     :Δ3 => (0.0, -1.0), :Δ4 => (2.0, -1.0))
+	else
+		Dict(Symbol("Δ", i) => (2.0 * cos(2π * i / n_kt), 2.0 * sin(2π * i / n_kt))
+		     for i in 1:n_kt)
+	end
+	visualize_model(cm_kt.model,
+		positions = pos_kt,
+		title = "Canonical model for KT over {p, □p} (reflexive)",
+		size = (600, 500))
+end
+
 # ╔═╡ 4a4b4c4d-0030-0030-0030-000000000030
 begin
 	# Canonical model for KD is serial
@@ -309,6 +433,27 @@ begin
 
 	(truth_lemma = truth_lemma_holds(cm_kd),
 	 serial = is_serial(cm_kd.model.frame))
+end
+
+# ╔═╡ 4a4b4c4d-0050-0050-0050-000000000050
+begin
+	# Visualize the canonical model for KD
+	n_kd = length(cm_kd.worlds)
+	pos_kd = if n_kd == 2
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 0.0))
+	elseif n_kd == 3
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 1.0), :Δ3 => (2.0, -1.0))
+	elseif n_kd == 4
+		Dict(:Δ1 => (0.0, 1.0), :Δ2 => (2.0, 1.0),
+		     :Δ3 => (0.0, -1.0), :Δ4 => (2.0, -1.0))
+	else
+		Dict(Symbol("Δ", i) => (2.0 * cos(2π * i / n_kd), 2.0 * sin(2π * i / n_kd))
+		     for i in 1:n_kd)
+	end
+	visualize_model(cm_kd.model,
+		positions = pos_kd,
+		title = "Canonical model for KD over {p, □p} (serial)",
+		size = (600, 500))
 end
 
 # ╔═╡ 4a4b4c4d-0031-0031-0031-000000000031
@@ -322,6 +467,34 @@ begin
 	 transitive = is_transitive(cm_s4.model.frame),
 	 worlds = length(cm_s4.worlds))
 end
+
+# ╔═╡ 4a4b4c4d-0051-0051-0051-000000000051
+begin
+	# Visualize the canonical model for S4
+	n_s4 = length(cm_s4.worlds)
+	pos_s4 = if n_s4 == 2
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 0.0))
+	elseif n_s4 == 3
+		Dict(:Δ1 => (0.0, 0.0), :Δ2 => (2.0, 1.0), :Δ3 => (2.0, -1.0))
+	elseif n_s4 == 4
+		Dict(:Δ1 => (0.0, 1.0), :Δ2 => (2.0, 1.0),
+		     :Δ3 => (0.0, -1.0), :Δ4 => (2.0, -1.0))
+	else
+		Dict(Symbol("Δ", i) => (2.0 * cos(2π * i / n_s4), 2.0 * sin(2π * i / n_s4))
+		     for i in 1:n_s4)
+	end
+	visualize_model(cm_s4.model,
+		positions = pos_s4,
+		title = "Canonical model for S4 over {p, □p, □□p} (reflexive + transitive)",
+		size = (600, 500))
+end
+
+# ╔═╡ 4a4b4c4d-0052-0052-0052-000000000052
+md"""
+**Exercise 7.** Look at the canonical model visualizations above. How can you visually tell that the KT model is reflexive? How can you tell the KD model is serial?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Reflexive: every node has a self-loop (an edge from itself to itself). Serial: every node has at least one outgoing edge (no dead ends). A reflexive frame is always serial (self-loops count), but a serial frame need not be reflexive -- a world might see other worlds without seeing itself."])))
+"""
 
 # ╔═╡ 4a4b4c4d-0032-0032-0032-000000000032
 md"""
@@ -352,15 +525,27 @@ end
 md"""
 ## Determination
 
-**Definition 4.13:** A model M *determines* a system Σ if for every
-formula A: M ⊩ A iff Σ ⊢ A.
+**Definition 4.13:** A model M *determines* a system Sigma if for every
+formula A: M ⊩ A iff Sigma ⊢ A.
 
-The canonical model determines its system — that's the content of
+The canonical model determines its system -- that's the content of
 Theorem 4.14.
 """
 
 # ╔═╡ 4a4b4c4d-0036-0036-0036-000000000036
 determines(cm_k.model, SYSTEM_K, [p]; max_worlds=3)
+
+# ╔═╡ 4a4b4c4d-0053-0053-0053-000000000053
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify a key role of knowledge representations: they serve as a *theory of intelligent reasoning* by defining which inferences are sanctioned. Completeness tells us exactly when a proof system's sanctioned inferences match the semantic truth. Without completeness, your representation might silently *miss* valid inferences. With it, you know the axioms capture everything the frame properties force. As Buchanan (2006) put it, 'making assumptions explicit is valuable, whether or not the system is correct.' Completeness goes further: it guarantees that those explicit assumptions are *sufficient*."])))
+"""
+
+# ╔═╡ 4a4b4c4d-0054-0054-0054-000000000054
+md"""
+**Exercise 8.** Suppose you formalize a clinical guideline set and find it is KD-consistent. A colleague says: "Maybe there is a hidden contradiction that KD just cannot detect." How does completeness help you respond?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Completeness guarantees that if no proof of inconsistency exists, then a consistent model exists -- a serial Kripke model where all the guidelines are simultaneously satisfied. So 'KD-consistent' is not a limitation of the proof system: it means the guidelines genuinely can coexist in a world where every obligation is achievable. Your colleague's worry would be valid for an *incomplete* proof system, but not for a complete one."])))
+"""
 
 # ╔═╡ 4a4b4c4d-0037-0037-0037-000000000037
 md"""
@@ -368,11 +553,11 @@ md"""
 
 Chapter 4 establishes the **completeness** of modal logics:
 
-1. Every Σ-consistent set extends to a *complete* Σ-consistent set
+1. Every Sigma-consistent set extends to a *complete* Sigma-consistent set
    (Lindenbaum's Lemma)
 2. The *canonical model* has these sets as worlds, with accessibility
-   defined by □⁻¹Δ ⊆ Δ'
-3. The *Truth Lemma* ensures M^Σ, Δ ⊩ A ↔ A ∈ Δ
+   defined by □⁻¹Delta ⊆ Delta'
+3. The *Truth Lemma* ensures M^Sigma, Delta ⊩ A iff A in Delta
 4. Therefore every valid formula is derivable (completeness)
 5. The canonical model's frame properties match the axiom schemas,
    extending completeness to KT, KD, S4, S5, etc.
@@ -381,38 +566,55 @@ Chapter 4 establishes the **completeness** of modal logics:
 # ╔═╡ Cell order:
 # ╟─4a4b4c4d-0001-0001-0001-000000000001
 # ╠═4a4b4c4d-0002-0002-0002-000000000002
+# ╟─4a4b4c4d-0038-0038-0038-000000000038
 # ╟─4a4b4c4d-0003-0003-0003-000000000003
 # ╠═4a4b4c4d-0004-0004-0004-000000000004
 # ╟─4a4b4c4d-0005-0005-0005-000000000005
 # ╠═4a4b4c4d-0006-0006-0006-000000000006
 # ╟─4a4b4c4d-0007-0007-0007-000000000007
 # ╠═4a4b4c4d-0008-0008-0008-000000000008
+# ╟─4a4b4c4d-0039-0039-0039-000000000039
 # ╟─4a4b4c4d-0009-0009-0009-000000000009
 # ╠═4a4b4c4d-0010-0010-0010-000000000010
+# ╟─4a4b4c4d-0040-0040-0040-000000000040
 # ╟─4a4b4c4d-0011-0011-0011-000000000011
 # ╠═4a4b4c4d-0012-0012-0012-000000000012
+# ╟─4a4b4c4d-0041-0041-0041-000000000041
 # ╟─4a4b4c4d-0013-0013-0013-000000000013
 # ╠═4a4b4c4d-0014-0014-0014-000000000014
 # ╟─4a4b4c4d-0015-0015-0015-000000000015
 # ╠═4a4b4c4d-0016-0016-0016-000000000016
 # ╠═4a4b4c4d-0017-0017-0017-000000000017
+# ╟─4a4b4c4d-0042-0042-0042-000000000042
 # ╟─4a4b4c4d-0018-0018-0018-000000000018
 # ╠═4a4b4c4d-0019-0019-0019-000000000019
+# ╟─4a4b4c4d-0043-0043-0043-000000000043
 # ╟─4a4b4c4d-0020-0020-0020-000000000020
+# ╟─4a4b4c4d-0044-0044-0044-000000000044
 # ╠═4a4b4c4d-0021-0021-0021-000000000021
 # ╟─4a4b4c4d-0022-0022-0022-000000000022
 # ╠═4a4b4c4d-0023-0023-0023-000000000023
+# ╟─4a4b4c4d-0045-0045-0045-000000000045
+# ╠═4a4b4c4d-0046-0046-0046-000000000046
 # ╟─4a4b4c4d-0024-0024-0024-000000000024
 # ╠═4a4b4c4d-0025-0025-0025-000000000025
+# ╟─4a4b4c4d-0047-0047-0047-000000000047
 # ╟─4a4b4c4d-0026-0026-0026-000000000026
 # ╠═4a4b4c4d-0027-0027-0027-000000000027
 # ╟─4a4b4c4d-0028-0028-0028-000000000028
 # ╠═4a4b4c4d-0029-0029-0029-000000000029
+# ╟─4a4b4c4d-0048-0048-0048-000000000048
+# ╠═4a4b4c4d-0049-0049-0049-000000000049
 # ╠═4a4b4c4d-0030-0030-0030-000000000030
+# ╠═4a4b4c4d-0050-0050-0050-000000000050
 # ╠═4a4b4c4d-0031-0031-0031-000000000031
+# ╠═4a4b4c4d-0051-0051-0051-000000000051
+# ╟─4a4b4c4d-0052-0052-0052-000000000052
 # ╟─4a4b4c4d-0032-0032-0032-000000000032
 # ╠═4a4b4c4d-0033-0033-0033-000000000033
 # ╠═4a4b4c4d-0034-0034-0034-000000000034
 # ╟─4a4b4c4d-0035-0035-0035-000000000035
 # ╠═4a4b4c4d-0036-0036-0036-000000000036
+# ╟─4a4b4c4d-0053-0053-0053-000000000053
+# ╟─4a4b4c4d-0054-0054-0054-000000000054
 # ╟─4a4b4c4d-0037-0037-0037-000000000037

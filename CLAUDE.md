@@ -95,6 +95,7 @@ References: Fitting (1983) Ch. 9 (loop checking), Wolper (1985) for temporal tab
 
 - `visualize_model` is only available via the `GamenMakieExt` package extension.
 - **Never call `visualize_model` in core `src/` code** — it must only appear in extension, notebook, or documentation contexts where `CairoMakie`, `GraphMakie`, and `Graphs` are explicitly loaded.
+- **In notebooks, use `import CairoMakie, GraphMakie, Graphs` (not `using`)**. Both Gamen and Makie export `Box` and `Bottom`, causing ambiguity errors with `using`. `import` loads the packages (triggering the extension) without polluting the namespace.
 
 ## Notebooks
 

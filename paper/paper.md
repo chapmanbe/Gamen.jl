@@ -41,11 +41,12 @@ prefixed tableau provers across multiple systems (K, KT, KD, KB, K4, S4, S5).
 It extends beyond the base textbook with deontic, epistemic, and temporal
 logics — the modal logics most relevant to health informatics applications.
 
-Gamen.jl is accompanied by 18 interactive Pluto notebooks [@fonsp2021]: eight
-follow the textbook chapter-by-chapter, eight parallel health-application
-notebooks apply the same formal concepts to clinical reasoning scenarios
+Gamen.jl is accompanied by 20 interactive Pluto notebooks [@fonsp2021]: a
+prerequisite pair reviewing propositional logic through clinical examples, eight
+that follow the textbook chapter-by-chapter, eight parallel health-application
+notebooks that apply the same formal concepts to clinical reasoning scenarios
 (guideline obligations, prescribing permissions, diagnostic knowledge), and two
-extension notebooks explore combined logics. The reactive notebook environment
+extension notebooks exploring combined logics. The reactive notebook environment
 lets students construct models, modify formulas, and see the consequences
 immediately — supporting the hands-on learning that adult learners in
 professional graduate programs require.
@@ -116,7 +117,14 @@ notebooks for teaching modal logic computationally.
 
 ## Textbook Companion Notebooks
 
-The eight core notebooks follow *Boxes and Diamonds* chapter-by-chapter,
+A prerequisite Chapter 0 notebook reviews propositional logic — propositions,
+connectives, truth tables, modus ponens, tautologies — assuming no prior
+background. Its health parallel introduces the same concepts through MYCIN-style
+clinical production rules, then motivates the transition to modal logic by
+showing that guideline language ("must," "should," "may") cannot be captured
+propositionally.
+
+The eight core notebooks then follow *Boxes and Diamonds* chapter-by-chapter,
 covering the standard curriculum of a modal logic course:
 
 1. **Syntax and Semantics** (Ch. 1) — Formula construction, Kripke frames and

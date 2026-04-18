@@ -9,7 +9,7 @@ begin
 	using Pkg
 	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
-	using CairoMakie, GraphMakie, Graphs
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ 1a2b3c4d-0001-0001-0001-000000000001
@@ -28,24 +28,61 @@ We cover:
 - Validity and entailment
 """
 
+# ╔═╡ 1a2b3c4d-0050-0050-0050-000000000050
+md"""
+## Why Modal Logic?
+
+> *"Can't an LLM just do all the reasoning for me?"*
+
+Short answer: no. An LLM can generate plausible text about reasoning, but it cannot *guarantee* that its conclusions follow from its premises. It cannot prove that a set of rules is consistent. It cannot tell you whether a guideline conflict is resolvable. It hallucinates — confidently producing conclusions that are grammatically correct and logically wrong.
+
+Modal logic exists because ordinary propositional logic — "true or false" — is not expressive enough for how we actually reason:
+
+- **"It is raining"** is propositional. True or false.
+- **"It might rain tomorrow"** is modal. It's about *possibility* across situations.
+- **"You must file your taxes"** is modal. It's about *obligation* across acceptable outcomes.
+- **"She knows the password"** is modal. It's about what's true *in every situation consistent with her information*.
+
+These are not exotic philosophical puzzles. They are the structure of everyday reasoning about rules, plans, knowledge, and time. Modal logic gives us a precise language for it — and that precision is what lets us *compute* with it.
+
+### A Brief History
+
+Modal logic began with C. I. Lewis in 1918, who was dissatisfied with the paradoxes of material implication in classical logic (the fact that "if 2+2=5 then the moon is made of cheese" is technically true). He introduced operators for *strict* implication — necessity and possibility — to capture what we intuitively mean by "if...then."
+
+Saul Kripke, as a teenager in the late 1950s, provided the semantics that made modal logic rigorous: **possible worlds** connected by an **accessibility relation**. This turned a philosophical intuition into a mathematical framework — and opened the door to computation.
+
+Today, modal logic is the foundation of:
+- **Software verification** — proving that programs satisfy safety and liveness properties (temporal logic)
+- **AI and multi-agent systems** — reasoning about what agents know and believe (epistemic logic)
+- **Legal and ethical reasoning** — formalizing obligations, permissions, and prohibitions (deontic logic)
+- **Clinical decision support** — ensuring that guideline recommendations are consistent and computable
+- **Database theory** — query languages for graph-structured data
+- **Linguistics** — the semantics of "must," "might," "knows," and "will"
+
+The LLM on your laptop uses none of this. It predicts the next token. Modal logic *proves things*.
+"""
+
 # ╔═╡ 1a2b3c4d-0003-0003-0003-000000000003
 md"""
 ## 1.1 The Language of Basic Modal Logic
 
-The language of modal logic (Definition 1.1) contains:
+The language of modal logic (Definition 1.1) starts with the language of propositional logic (1-3 below) and
+extends it with two new operators (4 and 5 below):
 
 1. The propositional constant for falsity: $\bot$
 2. Propositional variables: $p_0, p_1, p_2, \ldots$
 3. Propositional connectives: $\lnot, \land, \lor, \to$
-4. The modal operator $\square$ (box / necessity)
-5. The modal operator $\diamond$ (diamond / possibility)
+4. The modal operator $\square$ (box) — "necessarily" / "in all accessible situations"
+5. The modal operator $\diamond$ (diamond) — "possibly" / "in some accessible situation"
+
+The key insight: $\square$ and $\diamond$ are *quantifiers over situations*, not truth values. To evaluate them, we need a structured space of situations — a **Kripke model**, named after the logician Saul Kripke, who developed this "possible worlds" semantics as a teenager in the late 1950s.
 """
 
 # ╔═╡ 1a2b3c4d-0004-0004-0004-000000000004
 md"""
 ### Atomic Formulas
 
-We can create propositional variables by name or by index:
+We can create propositional variables ("atoms") by name or by index:
 """
 
 # ╔═╡ 1a2b3c4d-0005-0005-0005-000000000005
@@ -132,11 +169,48 @@ begin
 	verbose_formula == unicode_formula, □ === Box, ◇ === Diamond
 end
 
+# ╔═╡ 1a2b3c4d-0051-0051-0051-000000000051
+md"""
+### Practice: Translate English to Formulas
+
+Before we move to semantics, practice translating English sentences into modal formulas. Try writing each one in Gamen.jl, then expand the hint to check your answer.
+
+Let $p$ = "it is raining" and $q$ = "I have an umbrella."
+
+**1. "It is not raining."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Not(p)` — simply ¬p"])))
+
+**2. "If it is raining, then I have an umbrella."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Implies(p, q)` — p → q"])))
+
+**3. "It is necessarily raining."** (In all accessible situations, it is raining.)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Box(p)` — □p"])))
+
+**4. "It is possible that I have an umbrella."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Diamond(q)` — ◇q"])))
+
+**5. "If it is necessarily raining, then it is raining."** (The T axiom — is this always true?)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Implies(Box(p), p)` — □p → p. This is valid on reflexive frames (Chapter 2)."])))
+
+**6. "It is possible that it is raining and I don't have an umbrella."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Diamond(And(p, Not(q)))` — ◇(p ∧ ¬q). There exists an accessible situation where it rains and I have no umbrella."])))
+
+**7. "If it is necessarily the case that rain implies umbrellas, then if it necessarily rains, I necessarily have an umbrella."** (Schema K)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))` — □(p→q) → (□p → □q). This is valid on *every* frame — it is the defining axiom of the weakest normal modal logic, K."])))
+"""
+
 # ╔═╡ 1a2b3c4d-0010-0010-0010-000000000010
 md"""
 ### Modal-Free Formulas
 
-A formula is *modal-free* if it contains no $\square$ or $\diamond$ operators:
+A formula is *modal-free* if it contains no □ or ◇ operators:
 """
 
 # ╔═╡ 1a2b3c4d-0011-0011-0011-000000000011
@@ -145,22 +219,70 @@ begin
 	is_modal_free(Implies(p, Box(q))) # false — contains □
 end
 
+# ╔═╡ 1a2b3c4d-0054-0054-0054-000000000054
+md"""
+### Practice: Modal or Not?
+
+For each English sentence, decide whether it requires modal logic or can be expressed in propositional logic alone. Then expand the hint.
+
+**1. "The patient has a fever and a cough."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Propositional.** This is a simple conjunction of two facts: fever ∧ cough. No modality needed."])))
+
+**2. "The bridge might collapse under heavy load."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Modal.** 'Might' expresses *possibility* — there exists a situation where the bridge collapses. This requires ◇."])))
+
+**3. "If the test is positive, the patient is infected."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Propositional.** This is a material implication: positive → infected. No modality."])))
+
+**4. "Every employee must complete safety training."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Modal.** 'Must' expresses *obligation* — in all acceptable scenarios, the employee completes training. This requires □ (deontic interpretation)."])))
+
+**5. "Alice knows that the server is down."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Modal.** 'Knows' means the server is down in *every situation consistent with Alice's information*. This is epistemic □."])))
+
+**6. "It is raining or it is not raining."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Propositional.** This is the law of excluded middle: p ∨ ¬p. A tautology — no modality needed."])))
+"""
+
 # ╔═╡ 1a2b3c4d-0012-0012-0012-000000000012
 md"""
 ## 1.4 Relational Models
 
-A *model* $M = \langle W, R, V \rangle$ consists of (Definition 1.6):
+A *model* $M = \langle W, R, V \rangle$ consists of three components (Definition 1.6):
 
-1. $W$: a nonempty set of "worlds"
-2. $R$: a binary accessibility relation on $W$
-3. $V$: a valuation function assigning to each propositional variable $p$ the set $V(p) \subseteq W$ of worlds where $p$ is true
+1. A nonempty set of "worlds" $W$
+2. A binary accessibility relation $R$ on $W$
+3. A valuation function $V$ that assigns to each propositional variable $p$ the set $V(p) \subseteq W$ of worlds where $p$ is true
+
+### What are "worlds"?
+
+The word "worlds" sounds metaphysical, but think of them concretely as **situations** or **states**:
+
+- **Software verification** — states of a running program
+- **Game theory** — positions in a game (e.g., board configurations in chess)
+- **Clinical reasoning** — possible patient scenarios under different treatment choices
+- **Epistemic logic** — situations consistent with what an agent knows
+- **Deontic logic** — outcomes that comply with the rules
+
+The accessibility relation says which situations are reachable or relevant from which. When we write $Rww'$, we mean: from the perspective of situation $w$, situation $w'$ is an accessible alternative.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Example: Tic-tac-toe", [md"Imagine a tic-tac-toe game where X has just moved. Each *world* is a board state. The accessibility relation connects the current board to all boards reachable by O's next move. □(X wins) means 'X wins no matter what O does' — true in *every* accessible state. ◇(O wins) means 'there exists a move where O wins' — true in *some* accessible state. If □(X wins) is false but ◇(X wins) is true, the game is still open."])))
+
+$(Markdown.MD(Markdown.Admonition("hint", "Example: Clinical treatment", [md"A patient presents with an infection. Each *world* is a possible treatment outcome. The accessibility relation connects the current state to outcomes reachable by different antibiotic choices. □(patient recovers) means 'the patient recovers under every treatment option' — a strong claim. ◇(adverse reaction) means 'there exists a treatment that causes an adverse reaction' — a weaker but important warning."])))
 
 ### Figure 1.1 from Boxes and Diamonds
 
-The book's first example model (Figure 1.1) has three worlds:
+The book's first example model (Figure 1.1) has three worlds with the following valuation: $p$ is true at $w_1$ and $w_2$, while $q$ is true only at $w_2$.
+
 - $W = \{w_1, w_2, w_3\}$
-- $R = \{\langle w_1, w_2 \rangle, \langle w_1, w_3 \rangle\}$
-- $V(p) = \{w_1, w_2\}$, $V(q) = \{w_2\}$
+- $R = \{w_1 \to w_2,\; w_1 \to w_3\}$
+- $V(p) = \{w_1, w_2\}$ and $V(q) = \{w_2\}$
 """
 
 # ╔═╡ 1a2b3c4d-0013-0013-0013-000000000013
@@ -178,8 +300,9 @@ visualize_model(model,
 md"""
 ## 1.5 Truth at a World (Definition 1.7)
 
-The satisfaction relation $M, w \Vdash A$ ("$A$ is true at world $w$ in model $M$")
-is defined inductively:
+We use the **satisfaction operator** ⊩ (also called "forces" or "satisfies") to express that a formula is true at a particular world in a model. We write M, w ⊩ A to mean "formula A is true at world w in model M."
+
+The satisfaction relation is defined inductively — propositional cases first, then the modal cases that give □ and ◇ their meaning:
 
 | Clause | Rule |
 |--------|------|
@@ -191,6 +314,10 @@ is defined inductively:
 | 6 | $M, w \Vdash B \to C$ iff $M, w \not\Vdash B$ or $M, w \Vdash C$ |
 | 7 | $M, w \Vdash \square B$ iff $M, w' \Vdash B$ for all $w'$ with $Rww'$ |
 | 8 | $M, w \Vdash \diamond B$ iff $M, w' \Vdash B$ for some $w'$ with $Rww'$ |
+
+Clauses 1–6 are standard propositional logic. Clauses 7–8 are the modal heart:
+- **□B** is true at $w$ if B holds in *every* world accessible from $w$
+- **◇B** is true at $w$ if B holds in *some* world accessible from $w$
 
 Let's verify using the Figure 1.1 model:
 """
@@ -220,18 +347,51 @@ end
 # ╔═╡ 1a2b3c4d-0017-0017-0017-000000000017
 md"""
 Notice:
-- **Item 4** is false because $w_3$ satisfies neither $p$ nor $q$, so $p \lor q$ fails there.
+- **Item 1** is true: $q$ holds at $w_1$? No — $V(q) = \{w_2\}$, so $q$ is false at $w_1$.
+- **Item 4** is false: $w_3$ satisfies neither $p$ nor $q$, so $p \lor q$ fails there, and $\square(p \lor q)$ fails at $w_1$.
 - **Items 5 and 6** are *vacuously true*: $w_3$ has no accessible worlds, so $\square B$ holds for any $B$ at $w_3$.
+- **Item 7** is true: $w_2$ is accessible from $w_1$ and $q$ holds at $w_2$.
+- **Item 8** is false: $w_3$ is accessible from $w_1$ but $q$ fails there.
 - **Item 9**: $\square\square\lnot q$ is true at $w_1$ because $w_2$ and $w_3$ have no successors, making $\square\lnot q$ vacuously true at both. So $\lnot\square\square\lnot q$ is false.
+"""
+
+# ╔═╡ 1a2b3c4d-0052-0052-0052-000000000052
+md"""
+### Practice: Evaluate Formulas on Figure 1.1
+
+Before looking at the model checker output, try to work out each answer by hand using the diagram above. Then expand the hint to check.
+
+**1.** Does $M, w_2 \Vdash \square p$ hold?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes (vacuously).** $w_2$ has no accessible worlds, so □p is true at $w_2$ for any formula — there are no worlds to check. `satisfies(model, :w2, Box(p))` returns `true`."])))
+
+**2.** Does $M, w_1 \Vdash \diamond(p \land q)$ hold?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes.** $w_2$ is accessible from $w_1$, and both $p$ and $q$ are true at $w_2$. `satisfies(model, :w1, Diamond(And(p, q)))` returns `true`."])))
+
+**3.** Does $M, w_1 \Vdash \square p$ hold?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**No.** $w_3$ is accessible from $w_1$, but $p \notin V(p)$ at $w_3$ (only at $w_1$ and $w_2$). Wait — actually $V(p) = \{w_1, w_2\}$, so $p$ is false at $w_3$. Therefore □p fails at $w_1$. `satisfies(model, :w1, Box(p))` returns `false`."])))
+
+**4.** Does $M, w_1 \Vdash \diamond q \land \diamond \lnot q$ hold?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Yes.** ◇q: $w_2$ is accessible and $q$ holds there. ◇¬q: $w_3$ is accessible and $q$ fails there. Both diamonds are satisfied, so the conjunction holds. `satisfies(model, :w1, And(Diamond(q), Diamond(Not(q))))` returns `true`. This means: from $w_1$'s perspective, $q$ is *contingent* — both possible and possibly false."])))
+
+**5. Challenge:** Construct a formula that is true at $w_3$ but false at $w_1$ and $w_2$.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Several work: `And(Not(p), Not(q))` — neither $p$ nor $q$ holds at $w_3$, but at least one holds at the other worlds. Or `Box(Bottom())` — vacuously true at $w_3$ (no successors), false at $w_1$ (has successors)."])))
 """
 
 # ╔═╡ 1a2b3c4d-0018-0018-0018-000000000018
 md"""
 ## Proposition 1.8 — Duality of □ and ◇
 
-The book proves that $\square$ and $\diamond$ are duals:
-- $M, w \Vdash \square A$ iff $M, w \Vdash \lnot\diamond\lnot A$
-- $M, w \Vdash \diamond A$ iff $M, w \Vdash \lnot\square\lnot A$
+The book proves that □ and ◇ are **duals** — each can be defined in terms of the other:
+
+- □A is equivalent to ¬◇¬A ("necessarily A" means "it is not possible that not-A")
+- ◇A is equivalent to ¬□¬A ("possibly A" means "it is not necessary that not-A")
+
+This is analogous to how ∀x P(x) is equivalent to ¬∃x ¬P(x) in predicate logic — "for all" and "there exists" are duals in exactly the same way.
 
 Let's verify this holds at every world in our model:
 """
@@ -286,20 +446,66 @@ begin
 	entails(model2, [p, q], And(p, q))   # {p, q} ⊨ p ∧ q
 end
 
+# ╔═╡ 1a2b3c4d-0053-0053-0053-000000000053
+md"""
+### Practice: Translate and Check
+
+For each English sentence, translate it into a modal formula, then use `satisfies` to check it on the Figure 1.1 model. Use p = "it is sunny" and q = "there is traffic."
+
+**1. "In every accessible situation, it is sunny or there is traffic."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Box(Or(p, q))` — □(p ∨ q). Check at w₁: `satisfies(model, :w1, Box(Or(p, q)))` returns `false` because w₃ has neither p nor q."])))
+
+**2. "There is some accessible situation where it is sunny but there is no traffic."**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Diamond(And(p, Not(q)))` — ◇(p ∧ ¬q). Try it: `satisfies(model, :w1, Diamond(And(p, Not(q))))` returns `false`! At w₂, p is true but q is also true, so p ∧ ¬q fails. At w₃, neither p nor q holds, so p ∧ ¬q also fails. Careful model checking catches an intuitive mistake."])))
+
+**3. "If it is necessarily sunny, then it is sunny."** (Is this true at every world?)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Implies(Box(p), p)` — □p → p. This is Schema T, valid on *reflexive* frames. Our frame is NOT reflexive (no world accesses itself), so it can fail. At w₃, □p is vacuously true (no successors) but p is false. So `is_true_in(model, Implies(Box(p), p))` returns `false`."])))
+"""
+
 # ╔═╡ 1a2b3c4d-0024-0024-0024-000000000024
 md"""
 ## Exploring on Your Own
 
 Try building your own models and checking formulas! Some ideas from the book:
 
-- Verify Proposition 1.19: the schema **K**, $\square(A \to B) \to (\square A \to \square B)$, is valid
-- Check the invalid schemas from Table 1.1, e.g., $A \to \square A$
+- Verify Proposition 1.19: the schema **K**, $\square(A \to B) \to (\square A \to \square B)$, is valid on our model
+- Check the invalid schemas from Table 1.1, e.g., $A \to \square A$ — and find which world falsifies it
+- Build a **reflexive** frame (where every world accesses itself) and verify that Schema T, $\square A \to A$, holds
 - Build the counterexample model from Figure 1.2
+
+### Building Your Own Model
+
+Here's a template to experiment with:
+
+```julia
+# 1. Define the frame
+my_frame = KripkeFrame(
+    [:a, :b, :c],                    # worlds
+    [:a => :b, :b => :c, :a => :a]   # accessibility relation
+)
+
+# 2. Define the valuation
+my_model = KripkeModel(my_frame, [
+    :p => [:a, :b],    # p is true at a and b
+    :q => [:c]          # q is true only at c
+])
+
+# 3. Check formulas
+satisfies(my_model, :a, Diamond(q))   # Is ◇q true at a?
+satisfies(my_model, :a, Box(p))       # Is □p true at a?
+
+# 4. Visualize
+visualize_model(my_model)
+```
 """
 
 # ╔═╡ Cell order:
 # ╟─1a2b3c4d-0001-0001-0001-000000000001
 # ╠═1a2b3c4d-0002-0002-0002-000000000002
+# ╟─1a2b3c4d-0050-0050-0050-000000000050
 # ╟─1a2b3c4d-0003-0003-0003-000000000003
 # ╟─1a2b3c4d-0004-0004-0004-000000000004
 # ╠═1a2b3c4d-0005-0005-0005-000000000005
@@ -309,8 +515,10 @@ Try building your own models and checking formulas! Some ideas from the book:
 # ╠═1a2b3c4d-0009-0009-0009-000000000009
 # ╟─1a2b3c4d-0030-0030-0030-000000000030
 # ╠═1a2b3c4d-0031-0031-0031-000000000031
+# ╟─1a2b3c4d-0051-0051-0051-000000000051
 # ╟─1a2b3c4d-0010-0010-0010-000000000010
 # ╠═1a2b3c4d-0011-0011-0011-000000000011
+# ╟─1a2b3c4d-0054-0054-0054-000000000054
 # ╟─1a2b3c4d-0012-0012-0012-000000000012
 # ╠═1a2b3c4d-0013-0013-0013-000000000013
 # ╠═1a2b3c4d-0040-0040-0040-000000000040
@@ -318,10 +526,12 @@ Try building your own models and checking formulas! Some ideas from the book:
 # ╟─1a2b3c4d-0015-0015-0015-000000000015
 # ╠═1a2b3c4d-0016-0016-0016-000000000016
 # ╟─1a2b3c4d-0017-0017-0017-000000000017
+# ╟─1a2b3c4d-0052-0052-0052-000000000052
 # ╟─1a2b3c4d-0018-0018-0018-000000000018
 # ╠═1a2b3c4d-0019-0019-0019-000000000019
 # ╟─1a2b3c4d-0020-0020-0020-000000000020
 # ╠═1a2b3c4d-0021-0021-0021-000000000021
 # ╟─1a2b3c4d-0022-0022-0022-000000000022
 # ╠═1a2b3c4d-0023-0023-0023-000000000023
+# ╟─1a2b3c4d-0053-0053-0053-000000000053
 # ╟─1a2b3c4d-0024-0024-0024-000000000024
