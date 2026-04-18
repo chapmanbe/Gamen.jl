@@ -270,12 +270,18 @@ The word "worlds" sounds metaphysical, but think of them concretely as **situati
 - **Epistemic logic** — situations consistent with what an agent knows
 - **Deontic logic** — outcomes that comply with the rules
 
-The accessibility relation says which situations are reachable or relevant from which. When we write $Rww'$, we mean: from the perspective of situation $w$, situation $w'$ is an accessible alternative.
+The accessibility relation says which situations are reachable or relevant from which. When we write Rww', we mean: from the perspective of situation w, situation w' is an accessible alternative.
+"""
 
+# ╔═╡ 1a2b3c4d-0070-0070-0070-000000000070
+md"""
 $(Markdown.MD(Markdown.Admonition("hint", "Example: Tic-tac-toe", [md"Imagine a tic-tac-toe game where X has just moved. Each *world* is a board state. The accessibility relation connects the current board to all boards reachable by O's next move. □(X wins) means 'X wins no matter what O does' — true in *every* accessible state. ◇(O wins) means 'there exists a move where O wins' — true in *some* accessible state. If □(X wins) is false but ◇(X wins) is true, the game is still open."])))
 
 $(Markdown.MD(Markdown.Admonition("hint", "Example: Clinical treatment", [md"A patient presents with an infection. Each *world* is a possible treatment outcome. The accessibility relation connects the current state to outcomes reachable by different antibiotic choices. □(patient recovers) means 'the patient recovers under every treatment option' — a strong claim. ◇(adverse reaction) means 'there exists a treatment that causes an adverse reaction' — a weaker but important warning."])))
+"""
 
+# ╔═╡ 1a2b3c4d-0071-0071-0071-000000000071
+md"""
 ### Figure 1.1 from Boxes and Diamonds
 
 The book's first example model (Figure 1.1) has three worlds with the following valuation: $p$ is true at $w_1$ and $w_2$, while $q$ is true only at $w_2$.
@@ -520,6 +526,8 @@ visualize_model(my_model)
 # ╠═1a2b3c4d-0011-0011-0011-000000000011
 # ╟─1a2b3c4d-0054-0054-0054-000000000054
 # ╟─1a2b3c4d-0012-0012-0012-000000000012
+# ╟─1a2b3c4d-0070-0070-0070-000000000070
+# ╟─1a2b3c4d-0071-0071-0071-000000000071
 # ╠═1a2b3c4d-0013-0013-0013-000000000013
 # ╠═1a2b3c4d-0040-0040-0040-000000000040
 # ╟─1a2b3c4d-0014-0014-0014-000000000014
