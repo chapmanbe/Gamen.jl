@@ -99,11 +99,13 @@ References: Fitting (1983) Ch. 9 (loop checking), Wolper (1985) for temporal tab
 
 ## Notebooks
 
-- Write Pluto notebooks first in `notebooks/pluto/`, one per chapter.
-- Generate Jupyter notebooks using: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/<file>.jl`
+- Two parallel tracks: `notebooks/pluto/` (B&D textbook companion) and `notebooks/health/` (clinical application parallels).
+- Both share the environment at `notebooks/Project.toml` and activate with `Pkg.activate(joinpath(@__DIR__, ".."))`.
+- See `notebooks/CLAUDE.md` for detailed notebook conventions (pedagogy, rendering rules, exercises, KR Lens thread).
 - Pluto cell IDs use the pattern `NaNbNcNd-XXXX-XXXX-XXXX-XXXXXXXXXXXX`.
-- Both formats activate the notebooks environment with `Pkg.activate(joinpath(@__DIR__, ".."))`.
-- Visualization (`visualize_model`) requires `using CairoMakie, GraphMakie, Graphs` — loaded via the `GamenMakieExt` package extension.
+- Visualization requires `import CairoMakie, GraphMakie, Graphs` (**not** `using` — name collision with Gamen's `Box`/`Bottom`).
+- Use `/fact-check-notebook chN` to review a notebook for logical correctness, notation consistency, and pedagogical completeness. Reports are saved to `notebooks/reviews/` (gitignored).
+- Generate Jupyter notebooks using: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/<file>.jl`
 
 ## Chapter Implementation Workflow
 
