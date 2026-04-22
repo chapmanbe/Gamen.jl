@@ -20,7 +20,7 @@ atoms(f::Diamond) = atoms(f.operand)
 """
     is_reflexive(frame::KripkeFrame) -> Bool
 
-A frame is *reflexive* if every world accesses itself: ∀w ∈ W, Rww
+A frame is *reflexive* if every world accesses itself: ∀w ∈ W, wRw
 (Definition 2.3, B&D).
 """
 function is_reflexive(frame::KripkeFrame)
@@ -31,7 +31,7 @@ end
     is_symmetric(frame::KripkeFrame) -> Bool
 
 A frame is *symmetric* if accessibility is symmetric:
-∀w, w' ∈ W, Rww' → Rw'w (Definition 2.3, B&D).
+∀w, w' ∈ W, wRw' → w'Rw (Definition 2.3, B&D).
 """
 function is_symmetric(frame::KripkeFrame)
     all(frame.worlds) do w
@@ -45,7 +45,7 @@ end
     is_transitive(frame::KripkeFrame) -> Bool
 
 A frame is *transitive* if accessibility is transitive:
-∀w, w', w'' ∈ W, (Rww' ∧ Rw'w'') → Rww'' (Definition 2.3, B&D).
+∀w, w', w'' ∈ W, (wRw' ∧ w'Rw'') → wRw'' (Definition 2.3, B&D).
 """
 function is_transitive(frame::KripkeFrame)
     all(frame.worlds) do w
@@ -59,7 +59,7 @@ end
     is_serial(frame::KripkeFrame) -> Bool
 
 A frame is *serial* if every world has at least one successor:
-∀w ∈ W, ∃w' ∈ W, Rww' (Definition 2.3, B&D).
+∀w ∈ W, ∃w' ∈ W, wRw' (Definition 2.3, B&D).
 """
 function is_serial(frame::KripkeFrame)
     all(w -> !isempty(accessible(frame, w)), frame.worlds)
@@ -69,7 +69,7 @@ end
     is_euclidean(frame::KripkeFrame) -> Bool
 
 A frame is *euclidean* if:
-∀w, w', w'' ∈ W, (Rww' ∧ Rww'') → Rw'w'' (Definition 2.3, B&D).
+∀w, w', w'' ∈ W, (wRw' ∧ wRw'') → w'Rw'' (Definition 2.3, B&D).
 """
 function is_euclidean(frame::KripkeFrame)
     all(frame.worlds) do w
@@ -86,7 +86,7 @@ end
     is_partially_functional(frame::KripkeFrame) -> Bool
 
 A frame is *partially functional* if every world has at most one successor:
-∀w∀u∀v((Rwu ∧ Rwv) → u = v) (Table frd.2, B&D).
+∀w∀u∀v((wRu ∧ wRv) → u = v) (Table frd.2, B&D).
 """
 function is_partially_functional(frame::KripkeFrame)
     all(w -> length(accessible(frame, w)) <= 1, frame.worlds)
@@ -96,7 +96,7 @@ end
     is_functional(frame::KripkeFrame) -> Bool
 
 A frame is *functional* if every world has exactly one successor:
-∀w∃v∀u(Rwu ↔ u = v) (Table frd.2, B&D).
+∀w∃v∀u(wRu ↔ u = v) (Table frd.2, B&D).
 
 Equivalently, a frame is functional iff it is both serial and partially functional.
 """
@@ -108,7 +108,7 @@ end
     is_weakly_dense(frame::KripkeFrame) -> Bool
 
 A frame is *weakly dense* if every step can be decomposed into two steps:
-∀u∀v(Ruv → ∃w(Ruw ∧ Rwv)) (Table frd.2, B&D).
+∀u∀v(uRv → ∃w(uRw ∧ wRv)) (Table frd.2, B&D).
 """
 function is_weakly_dense(frame::KripkeFrame)
     all(frame.worlds) do u
@@ -125,7 +125,7 @@ end
 
 A frame is *weakly connected* if any two successors of a world are
 related or identical:
-∀w∀u∀v((Rwu ∧ Rwv) → (Ruv ∨ u = v ∨ Rvu)) (Table frd.2, B&D).
+∀w∀u∀v((wRu ∧ wRv) → (uRv ∨ u = v ∨ vRu)) (Table frd.2, B&D).
 """
 function is_weakly_connected(frame::KripkeFrame)
     all(frame.worlds) do w
@@ -143,7 +143,7 @@ end
 
 A frame is *weakly directed* (has the "diamond property" or "confluence")
 if any two successors of a world have a common successor:
-∀w∀u∀v((Rwu ∧ Rwv) → ∃t(Rut ∧ Rvt)) (Table frd.2, B&D).
+∀w∀u∀v((wRu ∧ wRv) → ∃t(uRt ∧ vRt)) (Table frd.2, B&D).
 """
 function is_weakly_directed(frame::KripkeFrame)
     all(frame.worlds) do w
@@ -172,7 +172,7 @@ end
     is_universal(frame::KripkeFrame) -> Bool
 
 A frame's accessibility relation is *universal* if every world is
-accessible from every world: ∀u,v ∈ W, Ruv (Definition frd.11, B&D).
+accessible from every world: ∀u,v ∈ W, uRv (Definition frd.11, B&D).
 """
 function is_universal(frame::KripkeFrame)
     n = length(frame.worlds)

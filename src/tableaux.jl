@@ -1,4 +1,36 @@
 # Chapter 6: Modal Tableaux (B&D)
+#
+# Architecture overview:
+#
+# This file implements prefixed signed tableau systems for modal logic,
+# following Fitting (1999) "Tableau Methods for Modal and Temporal Logics."
+#
+# Key types:
+#   Prefix          — a world name in the tableau (e.g., 1, 1.2, 1.3)
+#   Sign            — T (true) or F (false)
+#   PrefixedFormula — a formula tagged with a prefix and sign: T 1: □p
+#   TableauBranch   — a single branch: list of prefixed formulas + closure status
+#   Tableau         — the full proof tree: a list of branches
+#   TableauSystem   — configuration: name + expansion rules + witness rules
+#
+# Expansion algorithm (_apply_all_rules):
+#   Priority 0: propositional rules (no branching or world creation)
+#   Priority 1: modal rules that reuse existing prefixes (e.g., T□ at prefix σ
+#               adds T formulas at all successors of σ)
+#   Priority 2: world-creating rules (e.g., F□ at prefix σ creates a new
+#               successor σ.n and adds F formula there)
+#
+# Blocking (for temporal logic termination):
+#   Ancestor-based blocking prevents infinite expansion. A prefix σ is blocked
+#   when an unblocked ancestor has a superset of σ's formula content — the
+#   subtableau from σ would be isomorphic. See CLAUDE.md for details.
+#
+# Countermodel extraction:
+#   extract_countermodel reads an open (non-closed) branch and builds a
+#   KripkeModel from the prefixes (worlds) and their formulas (valuation).
+#
+# Systems: TABLEAU_K, TABLEAU_KT, TABLEAU_KD, TABLEAU_KB, TABLEAU_K4,
+#          TABLEAU_S4, TABLEAU_S5, TABLEAU_KDt (deontic-temporal)
 
 # ── Prefixes (Definition 6.1) ──
 

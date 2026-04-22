@@ -198,11 +198,11 @@ correspondence (BdRV Ch.3, Table 3.1), or `nothing` if the schema imposes
 no first-order frame condition.
 
 This mapping is the Sahlqvist table:
-- SchemaT  → is_reflexive   (∀x Rxx)
-- SchemaD  → is_serial      (∀x ∃y Rxy)
-- SchemaB  → is_symmetric   (∀xy Rxy → Ryx)
-- Schema4  → is_transitive  (∀xyz Rxy ∧ Ryz → Rxz)
-- Schema5  → is_euclidean   (∀xyz Rxy ∧ Rxz → Ryz)
+- SchemaT  → is_reflexive   (∀x xRx)
+- SchemaD  → is_serial      (∀x ∃y xRy)
+- SchemaB  → is_symmetric   (∀xy xRy → yRx)
+- Schema4  → is_transitive  (∀xyz xRy ∧ yRz → xRz)
+- Schema5  → is_euclidean   (∀xyz xRy ∧ xRz → yRz)
 """
 frame_predicate(::AxiomSchema)  = nothing
 frame_predicate(::SchemaT)      = is_reflexive

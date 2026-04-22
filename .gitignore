@@ -14,3 +14,4 @@ docs/build/
 .DS_Store
 notebooks/pluto/.*.swp
 notebooks/reviews/
+.mmreview/

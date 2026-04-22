@@ -104,10 +104,13 @@ include("epistemic.jl")
 
 Render a Kripke model (or frame) as a directed graph.
 
-Requires CairoMakie, GraphMakie, and Graphs to be loaded:
+Requires CairoMakie, GraphMakie, and Graphs to be loaded. Use `import`
+(not `using`) to avoid name collisions — both Gamen and Makie export
+`Box` and `Bottom`:
 
 ```julia
-using Gamen, CairoMakie, GraphMakie, Graphs
+using Gamen
+import CairoMakie, GraphMakie, Graphs
 visualize_model(model)
 ```
 
