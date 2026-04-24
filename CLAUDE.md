@@ -79,6 +79,7 @@ References: Fitting (1983) Ch. 9 (loop checking), Wolper (1985) for temporal tab
 - CI via GitHub Actions using the standard `julia-runtest` workflow.
 - **Known slow test:** The `Decidability (Theorem 5.17)` testset in Chapter 5 takes ~80 seconds due to exhaustive model enumeration. This is expected.
 - All 553 tests pass.
+- **Human validation**: Automated tests catch internal inconsistency but not disagreement with B&D. See `notes/human-validation-guide.md` for the paper-to-code audit workflow, hand-worked REPL examples, countermodel inspection, and cross-validation against gamen-hs. Run before JOSE submission and whenever a new module lands.
 
 ## Documentation
 
