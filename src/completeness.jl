@@ -321,13 +321,13 @@ function canonical_model(system::ModalSystem, language; max_worlds::Int=4)
     for φ in closed
         union!(all_atoms_set, atoms(φ))
     end
-    valuation = Dict{Symbol,Set{Symbol}}()
+    valuation = Dict{Atom,Set{Symbol}}()
     for p in all_atoms_set
-        valuation[p] = Set{Symbol}()
         atom_p = Atom(p)
+        valuation[atom_p] = Set{Symbol}()
         for (i, Δ) in enumerate(worlds_sets)
             if atom_p ∈ Δ
-                push!(valuation[p], world_names[i])
+                push!(valuation[atom_p], world_names[i])
             end
         end
     end
@@ -407,16 +407,16 @@ function _enumerate_valuations(worlds::Vector{Symbol}, vars::Vector{Symbol})
     n = length(worlds)
     n_vals = length(vars)
     if n_vals == 0
-        return (Dict{Symbol,Set{Symbol}}() for _ in 1:1)
+        return (Dict{Atom,Set{Symbol}}() for _ in 1:1)
     end
     total = (BigInt(1) << n) ^ n_vals
     (begin
-        val = Dict{Symbol,Set{Symbol}}()
+        val = Dict{Atom,Set{Symbol}}()
         remainder = i
         for v in vars
             bits = remainder & ((BigInt(1) << n) - 1)
             remainder >>= n
-            val[v] = Set{Symbol}(worlds[j] for j in 1:n if (bits >> (j - 1)) & 1 == 1)
+            val[Atom(v)] = Set{Symbol}(worlds[j] for j in 1:n if (bits >> (j - 1)) & 1 == 1)
         end
         val
     end for i in BigInt(0):(total - 1))

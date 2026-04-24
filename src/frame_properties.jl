@@ -196,7 +196,7 @@ function is_valid_on_frame(frame::KripkeFrame, formula::Formula)
 
     if isempty(vars)
         # No propositional variables — just check with empty valuation
-        model = KripkeModel(frame, Dict{Symbol,Set{Symbol}}())
+        model = KripkeModel(frame, Dict{Atom,Set{Symbol}}())
         return is_true_in(model, formula)
     end
 
@@ -206,12 +206,12 @@ function is_valid_on_frame(frame::KripkeFrame, formula::Formula)
     n_valuations = (1 << n_worlds) ^ length(vars)
 
     for i in 0:(n_valuations - 1)
-        val = Dict{Symbol,Set{Symbol}}()
+        val = Dict{Atom,Set{Symbol}}()
         remainder = i
         for var in vars
             bits = remainder & ((1 << n_worlds) - 1)
             remainder >>= n_worlds
-            val[var] = Set{Symbol}(worlds[j] for j in 1:n_worlds if bits & (1 << (j - 1)) != 0)
+            val[Atom(var)] = Set{Symbol}(worlds[j] for j in 1:n_worlds if bits & (1 << (j - 1)) != 0)
         end
         model = KripkeModel(frame, val)
         if !is_true_in(model, formula)

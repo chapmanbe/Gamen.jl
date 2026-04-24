@@ -218,17 +218,15 @@ function _build_filtration(model::KripkeModel, Γ::Set{Formula},
     end
 
     # Build valuation V*(p) = {[u] : u ∈ V(p)}
-    valuation = Pair{Symbol,Vector{Symbol}}[]
-    for (atom_name, true_worlds) in model.valuation
-        # Atom(atom_name) should be in Γ for the filtration to be relevant
+    valuation = Dict{Atom,Set{Symbol}}()
+    for (atom, true_worlds) in model.valuation
         val_classes = Symbol[]
         for (i, cls) in enumerate(classes)
-            # [u] ∈ V*(p) iff some u ∈ V(p) — but by equivalence all agree
             if any(w -> w ∈ true_worlds, cls)
                 push!(val_classes, class_names[i])
             end
         end
-        push!(valuation, atom_name => val_classes)
+        valuation[atom] = Set{Symbol}(val_classes)
     end
 
     frame = KripkeFrame(class_names, relation)
@@ -347,15 +345,15 @@ function _build_filtration_custom(model::KripkeModel, Γ::Set{Formula},
         end
     end
 
-    valuation = Pair{Symbol,Vector{Symbol}}[]
-    for (atom_name, true_worlds) in model.valuation
+    valuation = Dict{Atom,Set{Symbol}}()
+    for (atom, true_worlds) in model.valuation
         val_classes = Symbol[]
         for (i, cls) in enumerate(classes)
             if any(w -> w ∈ true_worlds, cls)
                 push!(val_classes, class_names[i])
             end
         end
-        push!(valuation, atom_name => val_classes)
+        valuation[atom] = Set{Symbol}(val_classes)
     end
 
     frame = KripkeFrame(class_names, relation)

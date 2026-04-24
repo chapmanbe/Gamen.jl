@@ -13,7 +13,7 @@ end
 
 # 2. M, w ⊩ p iff w ∈ V(p).
 function satisfies(model::KripkeModel, world::Symbol, f::Atom)
-    world in get(model.valuation, f.name, Set{Symbol}())
+    world in get(model.valuation, f, Set{Symbol}())
 end
 
 # 3. A ≡ ¬B: M, w ⊩ A iff M, w ⊮ B.

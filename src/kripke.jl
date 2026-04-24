@@ -28,12 +28,11 @@ A model M = ⟨W, R, V⟩ where V is a valuation function assigning to each
 propositional variable p a set V(p) of worlds where p is true
 (Definition 1.6, B&D).
 
-The valuation maps atom names (symbols) to sets of worlds, matching the
-book's convention: V(p) ⊆ W.
+The valuation maps `Atom`s to sets of worlds: V(p) ⊆ W.
 """
 struct KripkeModel
     frame::KripkeFrame
-    valuation::Dict{Symbol,Set{Symbol}}
+    valuation::Dict{Atom,Set{Symbol}}
 end
 
 """
@@ -41,6 +40,7 @@ end
 
 Convenience constructor where valuation is specified as the book does:
 each propositional variable maps to a list of worlds where it is true.
+Symbol keys are automatically wrapped in `Atom`.
 
 # Example (Figure 1.1, B&D)
 ```julia
@@ -49,9 +49,9 @@ model = KripkeModel(frame, [:p => [:w1, :w2], :q => [:w2]])
 ```
 """
 function KripkeModel(frame::KripkeFrame, valuation::Vector{Pair{Symbol,Vector{Symbol}}})
-    val = Dict{Symbol,Set{Symbol}}()
+    val = Dict{Atom,Set{Symbol}}()
     for (atom, worlds) in valuation
-        val[atom] = Set{Symbol}(worlds)
+        val[Atom(atom)] = Set{Symbol}(worlds)
     end
     KripkeModel(frame, val)
 end

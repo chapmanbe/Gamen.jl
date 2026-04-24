@@ -114,17 +114,18 @@ family of accessibility relations (one per agent), and V is a valuation
 
 Fields:
 - `frame::EpistemicFrame`: the multi-agent frame
-- `valuation::Dict{Symbol, Set{Symbol}}`: atom → set of worlds where it is true
+- `valuation::Dict{Atom, Set{Symbol}}`: atom → set of worlds where it is true
 """
 struct EpistemicModel
     frame::EpistemicFrame
-    valuation::Dict{Symbol,Set{Symbol}}
+    valuation::Dict{Atom,Set{Symbol}}
 end
 
 """
     EpistemicModel(frame, valuation_pairs)
 
 Convenience constructor where valuation is a `Vector{Pair{Symbol,Vector{Symbol}}}`.
+Symbol keys are automatically wrapped in `Atom`.
 
 # Example
 ```julia
@@ -133,9 +134,9 @@ model = EpistemicModel(frame, [:p => [:w1,:w2], :q => [:w2]])
 ```
 """
 function EpistemicModel(frame::EpistemicFrame, valuation::Vector{Pair{Symbol,Vector{Symbol}}})
-    val = Dict{Symbol,Set{Symbol}}()
+    val = Dict{Atom,Set{Symbol}}()
     for (atom, worlds) in valuation
-        val[atom] = Set{Symbol}(worlds)
+        val[Atom(atom)] = Set{Symbol}(worlds)
     end
     EpistemicModel(frame, val)
 end
@@ -155,7 +156,7 @@ function satisfies(::EpistemicModel, ::Symbol, ::Bottom)
 end
 
 function satisfies(model::EpistemicModel, world::Symbol, f::Atom)
-    world in get(model.valuation, f.name, Set{Symbol}())
+    world in get(model.valuation, f, Set{Symbol}())
 end
 
 function satisfies(model::EpistemicModel, world::Symbol, f::Not)
@@ -220,7 +221,7 @@ function restrict_model(model::EpistemicModel, announcement::Formula)
     end
 
     # Restrict valuation to W'
-    new_val = Dict{Symbol,Set{Symbol}}()
+    new_val = Dict{Atom,Set{Symbol}}()
     for (atom, worlds) in model.valuation
         new_val[atom] = intersect(worlds, w_prime)
     end
