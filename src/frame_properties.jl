@@ -1,12 +1,12 @@
 """
-    atoms(f::Formula) -> Set{Symbol}
+    atoms(f::Formula) -> Set{Atom}
 
-Collect all propositional variable names appearing in a formula.
+Collect all propositional variables (as `Atom` values) appearing in a formula.
 """
 function atoms end
 
-atoms(::Bottom) = Set{Symbol}()
-atoms(f::Atom) = Set{Symbol}([f.name])
+atoms(::Bottom) = Set{Atom}()
+atoms(f::Atom) = Set{Atom}([f])
 atoms(f::Not) = atoms(f.operand)
 atoms(f::And) = atoms(f.left) ∪ atoms(f.right)
 atoms(f::Or) = atoms(f.left) ∪ atoms(f.right)
@@ -211,7 +211,7 @@ function is_valid_on_frame(frame::KripkeFrame, formula::Formula)
         for var in vars
             bits = remainder & ((1 << n_worlds) - 1)
             remainder >>= n_worlds
-            val[Atom(var)] = Set{Symbol}(worlds[j] for j in 1:n_worlds if bits & (1 << (j - 1)) != 0)
+            val[var] = Set{Symbol}(worlds[j] for j in 1:n_worlds if bits & (1 << (j - 1)) != 0)
         end
         model = KripkeModel(frame, val)
         if !is_true_in(model, formula)

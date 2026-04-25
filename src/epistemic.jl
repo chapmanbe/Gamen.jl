@@ -151,11 +151,13 @@ M,w ⊩ A (Definition 15.5 and 15.11, B&D).
 """
 function satisfies end
 
-function satisfies(::EpistemicModel, ::Symbol, ::Bottom)
+function satisfies(model::EpistemicModel, world::Symbol, ::Bottom)
+    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
     false
 end
 
 function satisfies(model::EpistemicModel, world::Symbol, f::Atom)
+    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
     world in get(model.valuation, f, Set{Symbol}())
 end
 
@@ -181,6 +183,7 @@ end
 
 # K_a B: true at w iff B is true at all R_a-successors
 function satisfies(model::EpistemicModel, world::Symbol, f::Knowledge)
+    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
     all(w -> satisfies(model, w, f.operand),
         accessible(model.frame, f.agent, world))
 end

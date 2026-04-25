@@ -159,6 +159,10 @@ Pluto notebooks under `notebooks/pluto/` are a first-class artifact for the JOSE
 - **`completeness.jl`** — canonical model construction, `lindenbaum_extend`, and `truth_lemma_holds` are the most conceptually dense; any off-by-one in the closure construction shows up only as soundness or completeness failures on specific formulas.
 - **`filtrations.jl`** — `is_decidable_within` is **O(2^(n²))** (see the CLAUDE.md performance warning). Verify the enumeration is actually exhaustive for the stated `max_worlds`, not silently truncated.
 
+## Validation log
+
+Completed validation work — both issues found and sections confirmed correct — is recorded in [`notes/validation-log.md`](validation-log.md). Update that log whenever a module section passes review or an issue is resolved. This is the citable record for the JOSE submission.
+
 ## What to report
 
 If you find a discrepancy between the paper and the code:

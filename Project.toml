@@ -1,7 +1,7 @@
 name = "Gamen"
 uuid = "d58aead4-12fe-4bc4-9bd9-a7dede724567"
 authors = ["Brian E. Chapman, Ph.D. <chapmanbe@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 

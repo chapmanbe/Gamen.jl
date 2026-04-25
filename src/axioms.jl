@@ -5,14 +5,14 @@
 """
     substitute(φ::Formula, σ) -> Formula
 
-Apply substitution `σ` to formula `φ`, replacing each `Atom(name)` whose
-`name` is a key in `σ` with the corresponding formula. `σ` should be a
-`Dict{Symbol, <:Formula}` or similar mapping.
+Apply substitution `σ` to formula `φ`, replacing each `Atom` that is a key
+in `σ` with the corresponding formula. `σ` should be a
+`Dict{Atom, <:Formula}` or similar mapping.
 """
 function substitute end
 
 substitute(φ::Bottom, _) = φ
-substitute(φ::Atom, σ) = haskey(σ, φ.name) ? σ[φ.name] : φ
+substitute(φ::Atom, σ) = haskey(σ, φ) ? σ[φ] : φ
 substitute(φ::Not, σ) = Not(substitute(φ.operand, σ))
 substitute(φ::And, σ) = And(substitute(φ.left, σ), substitute(φ.right, σ))
 substitute(φ::Or, σ) = Or(substitute(φ.left, σ), substitute(φ.right, σ))
@@ -24,19 +24,19 @@ substitute(φ::Diamond, σ) = Diamond(substitute(φ.operand, σ))
 # ── Propositional evaluation ──
 
 """
-    prop_eval(φ::Formula, assignment::Dict{Symbol,Bool}) -> Bool
+    prop_eval(φ::Formula, assignment::Dict{Atom,Bool}) -> Bool
 
 Evaluate a modal-free formula under a truth-value assignment.
 """
 function prop_eval end
 
-prop_eval(::Bottom, ::Dict{Symbol,Bool}) = false
-prop_eval(f::Atom, a::Dict{Symbol,Bool}) = a[f.name]
-prop_eval(f::Not, a::Dict{Symbol,Bool}) = !prop_eval(f.operand, a)
-prop_eval(f::And, a::Dict{Symbol,Bool}) = prop_eval(f.left, a) && prop_eval(f.right, a)
-prop_eval(f::Or, a::Dict{Symbol,Bool}) = prop_eval(f.left, a) || prop_eval(f.right, a)
-prop_eval(f::Implies, a::Dict{Symbol,Bool}) = !prop_eval(f.antecedent, a) || prop_eval(f.consequent, a)
-prop_eval(f::Iff, a::Dict{Symbol,Bool}) = prop_eval(f.left, a) == prop_eval(f.right, a)
+prop_eval(::Bottom, ::Dict{Atom,Bool}) = false
+prop_eval(f::Atom, a::Dict{Atom,Bool}) = a[f]
+prop_eval(f::Not, a::Dict{Atom,Bool}) = !prop_eval(f.operand, a)
+prop_eval(f::And, a::Dict{Atom,Bool}) = prop_eval(f.left, a) && prop_eval(f.right, a)
+prop_eval(f::Or, a::Dict{Atom,Bool}) = prop_eval(f.left, a) || prop_eval(f.right, a)
+prop_eval(f::Implies, a::Dict{Atom,Bool}) = !prop_eval(f.antecedent, a) || prop_eval(f.consequent, a)
+prop_eval(f::Iff, a::Dict{Atom,Bool}) = prop_eval(f.left, a) == prop_eval(f.right, a)
 
 # ── Tautology checking ──
 
@@ -52,7 +52,7 @@ function is_tautology(φ::Formula)
     vars = sort(collect(atoms(φ)))
     n = length(vars)
     for i in 0:(2^n - 1)
-        assignment = Dict{Symbol,Bool}()
+        assignment = Dict{Atom,Bool}()
         for (j, v) in enumerate(vars)
             assignment[v] = (i >> (j - 1)) & 1 == 1
         end

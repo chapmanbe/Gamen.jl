@@ -64,7 +64,7 @@ We check this semantically by enumerating frames up to `max_worlds` worlds.
 """
 function is_derivable_from(system::ModalSystem, Γ, φ::Formula; max_worlds::Int=4)
     frame_filter = _frame_filter(system)
-    all_atoms = Set{Symbol}()
+    all_atoms = Set{Atom}()
     for f in Γ
         union!(all_atoms, atoms(f))
     end
@@ -118,13 +118,13 @@ in the appropriate class with a world satisfying all formulas in Γ.
 """
 function is_consistent(system::ModalSystem, Γ; max_worlds::Int=4)
     frame_filter = _frame_filter(system)
-    all_atoms = Set{Symbol}()
+    all_atoms = Set{Atom}()
     for f in Γ
         union!(all_atoms, atoms(f))
     end
     vars = collect(all_atoms)
     if isempty(vars)
-        vars = [:_dummy]
+        vars = [Atom(:_dummy)]
     end
 
     for n in 1:max_worlds
@@ -317,13 +317,12 @@ function canonical_model(system::ModalSystem, language; max_worlds::Int=4)
     frame = KripkeFrame(Set{Symbol}(world_names), relation)
 
     # Build valuation: V^Σ(p) = {Δ : p ∈ Δ}
-    all_atoms_set = Set{Symbol}()
+    all_atoms_set = Set{Atom}()
     for φ in closed
         union!(all_atoms_set, atoms(φ))
     end
     valuation = Dict{Atom,Set{Symbol}}()
-    for p in all_atoms_set
-        atom_p = Atom(p)
+    for atom_p in all_atoms_set
         valuation[atom_p] = Set{Symbol}()
         for (i, Δ) in enumerate(worlds_sets)
             if atom_p ∈ Δ
@@ -403,7 +402,7 @@ function _enumerate_frames(worlds::Vector{Symbol})
 end
 
 """Lazily enumerate all valuations for the given worlds and variables."""
-function _enumerate_valuations(worlds::Vector{Symbol}, vars::Vector{Symbol})
+function _enumerate_valuations(worlds::Vector{Symbol}, vars::Vector{Atom})
     n = length(worlds)
     n_vals = length(vars)
     if n_vals == 0
@@ -416,7 +415,7 @@ function _enumerate_valuations(worlds::Vector{Symbol}, vars::Vector{Symbol})
         for v in vars
             bits = remainder & ((BigInt(1) << n) - 1)
             remainder >>= n
-            val[Atom(v)] = Set{Symbol}(worlds[j] for j in 1:n if (bits >> (j - 1)) & 1 == 1)
+            val[v] = Set{Symbol}(worlds[j] for j in 1:n if (bits >> (j - 1)) & 1 == 1)
         end
         val
     end for i in BigInt(0):(total - 1))

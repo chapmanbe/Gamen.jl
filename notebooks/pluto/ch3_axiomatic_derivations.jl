@@ -63,7 +63,7 @@ begin
 	q = Atom(:q)
 	r = Atom(:r)
 
-	σ = Dict(:p => □(r), :q => ◇(q))
+	σ = Dict(p => □(r), q => ◇(q))
 	original = Implies(p, Implies(q, p))
 	substituted = substitute(original, σ)
 
@@ -77,7 +77,7 @@ Substitution distributes through all connectives and modal operators:
 
 # ╔═╡ 3a3b3c3d-0006-0006-0006-000000000006
 begin
-	σ2 = Dict(:p => □(q), :q => ◇(r))
+	σ2 = Dict(p => □(q), q => ◇(r))
 
 	(and = substitute(And(p, q), σ2),
 	 box = substitute(□(p), σ2),
@@ -90,7 +90,7 @@ md"""
 
 **1.** What is the result of applying the substitution {p ↦ ◇q, q ↦ p} to the formula □(p → q)?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"□(◇q → p). The substitution replaces p with ◇q and q with p inside the scope of □, giving □(◇q → p). Try it: `substitute(□(Implies(p, q)), Dict(:p => ◇(q), :q => p))`"])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"□(◇q → p). The substitution replaces p with ◇q and q with p inside the scope of □, giving □(◇q → p). Try it: `substitute(□(Implies(p, q)), Dict(p => ◇(q), q => p))`"])))
 
 **2.** Can a substitution change a tautology into a non-tautology?
 

@@ -163,6 +163,7 @@ end
 
 # HA: M,t ⊩ HA iff M,t' ⊩ A for every t' with t' ≺ t
 function satisfies(model::TemporalModel, t::Symbol, f::PastBox)
+    t in model.frame.worlds || throw(ArgumentError("World :$t is not in model"))
     all(model.frame.worlds) do t_prime
         !(t in accessible(model.frame, t_prime)) || satisfies(model, t_prime, f.operand)
     end
@@ -175,6 +176,7 @@ end
 
 # GA: M,t ⊩ GA iff M,t' ⊩ A for every t' with t ≺ t'
 function satisfies(model::TemporalModel, t::Symbol, f::FutureBox)
+    t in model.frame.worlds || throw(ArgumentError("World :$t is not in model"))
     all(t_prime -> satisfies(model, t_prime, f.operand), accessible(model.frame, t))
 end
 

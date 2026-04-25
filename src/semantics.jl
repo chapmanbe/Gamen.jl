@@ -7,12 +7,14 @@ M, w ⊩ A in the book (Definition 1.7, B&D).
 function satisfies end
 
 # 1. A ≡ ⊥: Never M, w ⊩ ⊥.
-function satisfies(::KripkeModel, ::Symbol, ::Bottom)
+function satisfies(model::KripkeModel, world::Symbol, ::Bottom)
+    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
     false
 end
 
 # 2. M, w ⊩ p iff w ∈ V(p).
 function satisfies(model::KripkeModel, world::Symbol, f::Atom)
+    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
     world in get(model.valuation, f, Set{Symbol}())
 end
 
@@ -45,11 +47,13 @@ end
 
 # 7. A ≡ □B: M, w ⊩ A iff M, w' ⊩ B for all w' ∈ W with Rww'.
 function satisfies(model::KripkeModel, world::Symbol, f::Box)
+    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
     all(w -> satisfies(model, w, f.operand), accessible(model.frame, world))
 end
 
 # 8. A ≡ ◇B: M, w ⊩ A iff M, w' ⊩ B for at least one w' ∈ W with Rww'.
 function satisfies(model::KripkeModel, world::Symbol, f::Diamond)
+    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
     any(w -> satisfies(model, w, f.operand), accessible(model.frame, world))
 end
 

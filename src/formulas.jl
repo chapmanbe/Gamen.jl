@@ -24,6 +24,8 @@ end
 
 Atom(i::Integer) = Atom(Symbol("p", i))
 
+Base.isless(a::Atom, b::Atom) = isless(a.name, b.name)
+
 """
     Not <: Formula
 

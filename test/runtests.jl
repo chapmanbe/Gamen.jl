@@ -33,6 +33,17 @@ using Test
         @test is_modal_free(Implies(p, Diamond(p))) == false
     end
 
+    @testset "World existence check (Issue #3)" begin
+        frame = KripkeFrame([:a, :b], [:a => :b])
+        model = KripkeModel(frame, [:p => [:a]])
+        p = Atom(:p)
+        @test_throws ArgumentError satisfies(model, :c, p)
+        @test_throws ArgumentError satisfies(model, :c, Bottom())
+        @test_throws ArgumentError satisfies(model, :c, Box(p))
+        @test_throws ArgumentError satisfies(model, :c, Diamond(p))
+        @test_throws ArgumentError satisfies(model, :c, Implies(Or(p, p), p))
+    end
+
     @testset "Figure 1.1 model (B&D)" begin
         # W = {w1, w2, w3}, R = {⟨w1,w2⟩, ⟨w1,w3⟩}
         # V(p) = {w1, w2}, V(q) = {w2}
@@ -120,10 +131,10 @@ using Test
         q = Atom(:q)
 
         @testset "atoms (helper)" begin
-            @test atoms(Bottom()) == Set{Symbol}()
-            @test atoms(p) == Set([:p])
-            @test atoms(And(p, Or(q, Not(p)))) == Set([:p, :q])
-            @test atoms(Box(Diamond(p))) == Set([:p])
+            @test atoms(Bottom()) == Set{Atom}()
+            @test atoms(p) == Set([Atom(:p)])
+            @test atoms(And(p, Or(q, Not(p)))) == Set([Atom(:p), Atom(:q)])
+            @test atoms(Box(Diamond(p))) == Set([Atom(:p)])
         end
 
         @testset "Frame property predicates (Def 2.3)" begin
@@ -500,7 +511,7 @@ using Test
         end
 
         @testset "Substitution" begin
-            σ = Dict(:p => Box(q), :q => Diamond(r))
+            σ = Dict(p => Box(q), q => Diamond(r))
             @test substitute(p, σ) == Box(q)
             @test substitute(q, σ) == Diamond(r)
             @test substitute(r, σ) == r
