@@ -164,7 +164,7 @@ true
 julia> is_tautological_instance(Implies(Box(p), Implies(Diamond(q), Box(p))))
 true
 
-julia> substitute(Implies(p, q), Dict(:p => Box(p), :q => Diamond(q)))
+julia> substitute(Implies(p, q), Dict(Atom(:p) => Box(p), Atom(:q) => Diamond(q)))
 (□p → ◇q)
 ```
 

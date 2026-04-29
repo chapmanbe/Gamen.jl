@@ -143,10 +143,10 @@ subformulas
 formula_closure
 ```
 
-### Derivability and Consistency
+### Entailment and Consistency
 
 ```@docs
-is_derivable_from
+is_entailed_by
 is_consistent
 is_complete_consistent
 ```

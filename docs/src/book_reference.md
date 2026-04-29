@@ -58,7 +58,7 @@ to their implementations in Gamen.jl.
 
 | B&D Reference | Description | Gamen.jl |
 |:---|:---|:---|
-| Definition 3.36 | Derivability from a set Γ ⊢_Σ A | [`is_derivable_from`](@ref) |
+| Definition 3.36 | Semantic entailment Γ ⊨_Σ A | [`is_entailed_by`](@ref) |
 | Definition 3.39 | Σ-consistency | [`is_consistent`](@ref) |
 | Definition 4.1 | Complete Σ-consistent sets | [`is_complete_consistent`](@ref) |
 | Proposition 4.2 | Properties of complete consistent sets | Verified in tests |
