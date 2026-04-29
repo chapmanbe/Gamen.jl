@@ -570,11 +570,12 @@ using Test
 
             @test is_instance(Implies(p, q), SchemaK()) == false
 
-            # Schema Dual: ◇A ↔ ¬□¬A
+            # Schema Dual: ◇A ↔ ¬□¬A (either ordering of the iff)
             @test is_instance(Iff(Diamond(p), Not(Box(Not(p)))), SchemaDual()) == true
             @test is_instance(
                 Iff(Diamond(And(p, q)), Not(Box(Not(And(p, q))))),
                 SchemaDual()) == true
+            @test is_instance(Iff(Not(Box(Not(p))), Diamond(p)), SchemaDual()) == true
             @test is_instance(Iff(Diamond(p), Not(Box(Not(q)))), SchemaDual()) == false
 
             # Schema T: □A → A
@@ -824,29 +825,29 @@ using Test
 
         @testset "Derivability from a set (Def 3.36)" begin
             # Γ = {p} ⊢_K p (reflexivity)
-            @test is_derivable_from(SYSTEM_K, [p], p; max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_K, [p], p; max_worlds=2) == true
 
             # Γ = {p, p→q} ⊢_K q (modus ponens)
-            @test is_derivable_from(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2) == true
 
             # Γ = {} ⊢_K p→p (tautology)
-            @test is_derivable_from(SYSTEM_K, Formula[], Implies(p, p); max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_K, Formula[], Implies(p, p); max_worlds=2) == true
 
             # K proves □(p→p) — necessitation of a tautology
-            @test is_derivable_from(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2) == true
 
             # K does NOT prove □p→p (that's T)
-            @test is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
 
             # KT proves □p→p
-            @test is_derivable_from(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2) == true
 
             # {p} does not derive □p in K
-            @test is_derivable_from(SYSTEM_K, [p], Box(p); max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_K, [p], Box(p); max_worlds=2) == false
 
             # Monotonicity (Prop 3.37): Γ ⊢ A and Γ ⊆ Δ implies Δ ⊢ A
-            @test is_derivable_from(SYSTEM_K, [p], p; max_worlds=2) == true
-            @test is_derivable_from(SYSTEM_K, [p, q], p; max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_K, [p], p; max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_K, [p, q], p; max_worlds=2) == true
         end
 
         @testset "Complete consistent sets (Def 4.1)" begin
@@ -1006,7 +1007,7 @@ using Test
                 Or(p, Not(p)),
             ]
             for φ in k_valid
-                @test is_derivable_from(SYSTEM_K, Formula[], φ; max_worlds=2) == true
+                @test is_entailed_by(SYSTEM_K, Formula[], φ; max_worlds=2) == true
             end
 
             # Some K-valid modal formulas
@@ -1015,23 +1016,23 @@ using Test
                 Box(Implies(p, p)),  # Nec of tautology
             ]
             for φ in k_modal_valid
-                @test is_derivable_from(SYSTEM_K, Formula[], φ; max_worlds=2) == true
+                @test is_entailed_by(SYSTEM_K, Formula[], φ; max_worlds=2) == true
             end
 
             # Non-valid in K
-            @test is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
-            @test is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), Diamond(p)); max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), Diamond(p)); max_worlds=2) == false
         end
 
         @testset "System distinctness via completeness (Props 3.32-3.35)" begin
             # KD ⊊ KT: □p→p is KT-valid but not KD-valid
             t_schema = Implies(Box(p), p)
-            @test is_derivable_from(SYSTEM_KT, Formula[], t_schema; max_worlds=2) == true
-            @test is_derivable_from(SYSTEM_KD, Formula[], t_schema; max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_KT, Formula[], t_schema; max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_KD, Formula[], t_schema; max_worlds=2) == false
 
             # KB ≠ K4: Schema 4 not valid in KB
             four_schema = Implies(Box(p), Box(Box(p)))
-            @test is_derivable_from(SYSTEM_KB, Formula[], four_schema; max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_KB, Formula[], four_schema; max_worlds=2) == false
         end
 
         @testset "Determination (Def 4.13)" begin

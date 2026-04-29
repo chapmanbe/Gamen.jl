@@ -231,14 +231,19 @@ function is_instance(φ::Formula, ::SchemaK)
     return φ.consequent.antecedent.operand == a && φ.consequent.consequent.operand == b
 end
 
-# Dual: ◇A ↔ ¬□¬A
+# Dual: ◇A ↔ ¬□¬A  (either ordering of the iff is accepted)
 function is_instance(φ::Formula, ::SchemaDual)
     φ isa Iff || return false
-    φ.left isa Diamond || return false
-    φ.right isa Not || return false
-    φ.right.operand isa Box || return false
-    φ.right.operand.operand isa Not || return false
-    return φ.left.operand == φ.right.operand.operand.operand
+    _dual_pair(φ.left, φ.right) || _dual_pair(φ.right, φ.left)
+end
+
+# True iff left = ◇A and right = ¬□¬A for the same A
+function _dual_pair(left, right)
+    left isa Diamond || return false
+    right isa Not || return false
+    right.operand isa Box || return false
+    right.operand.operand isa Not || return false
+    left.operand == right.operand.operand.operand
 end
 
 # T: □A → A

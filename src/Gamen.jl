@@ -38,7 +38,7 @@ export dual
 
 # Completeness and canonical models (Chapter 4)
 export subformulas, formula_closure
-export is_derivable_from, is_consistent
+export is_entailed_by, is_derivable_from, is_consistent
 export is_complete_consistent
 export box_set, diamond_set, box_inverse, diamond_inverse
 export lindenbaum_extend

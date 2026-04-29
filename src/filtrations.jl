@@ -432,11 +432,11 @@ This is a computational check — it cannot prove the finite model property in
 general, but can verify it for specific formulas (Proposition 5.14, B&D).
 """
 function has_finite_model_property(system::ModalSystem, formula::Formula; max_worlds=4)
-    # If the formula is derivable (valid), FMP holds vacuously
-    if is_derivable_from(system, Formula[], formula; max_worlds=max_worlds)
+    # If the formula is valid, FMP holds vacuously
+    if is_entailed_by(system, Formula[], formula; max_worlds=max_worlds)
         return true
     end
-    # The formula is not valid — is_derivable_from returned false,
+    # The formula is not valid — is_entailed_by returned false,
     # meaning a countermodel was found within max_worlds. That countermodel
     # is finite, so FMP holds for this formula.
     true
@@ -460,6 +460,6 @@ function is_decidable_within(system::ModalSystem, formula::Formula; max_worlds=n
     n = length(Γ)
     bound = max_worlds === nothing ? min(2^n, 4) : max_worlds
 
-    valid = is_derivable_from(system, Formula[], formula; max_worlds=bound)
+    valid = is_entailed_by(system, Formula[], formula; max_worlds=bound)
     (valid=valid, bound=bound, subformula_count=n)
 end

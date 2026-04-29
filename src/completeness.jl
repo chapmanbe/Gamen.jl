@@ -50,19 +50,16 @@ end
 # ── Derivability from a set (Definition 3.36) ──
 
 """
-    is_derivable_from(system::ModalSystem, Γ, φ::Formula; max_worlds=4) -> Bool
+    is_entailed_by(system::ModalSystem, Γ, φ::Formula; max_worlds=4) -> Bool
 
-Check whether `φ` is derivable from the set of formulas `Γ` in the modal
-system `system` (Definition 3.36, B&D).
+Check whether `φ` is semantically entailed by the set of formulas `Γ` in the
+modal system `system` (Definition 3.36, B&D).
 
-Γ ⊢_Σ A iff there exist B₁, …, Bₙ ∈ Γ such that
-Σ ⊢ B₁ → (B₂ → ⋯ (Bₙ → A) ⋯).
-
-By soundness and completeness, this is equivalent to: A holds at every
-world of every model in the appropriate class where all formulas of Γ hold.
-We check this semantically by enumerating frames up to `max_worlds` worlds.
+Γ ⊨_Σ φ iff at every world of every Σ-model where all formulas of Γ hold,
+φ also holds. We check this by enumerating frames up to `max_worlds` worlds.
+By soundness and completeness this coincides with syntactic derivability.
 """
-function is_derivable_from(system::ModalSystem, Γ, φ::Formula; max_worlds::Int=4)
+function is_entailed_by(system::ModalSystem, Γ, φ::Formula; max_worlds::Int=4)
     frame_filter = _frame_filter(system)
     all_atoms = Set{Atom}()
     for f in Γ
@@ -89,12 +86,12 @@ function is_derivable_from(system::ModalSystem, Γ, φ::Formula; max_worlds::Int
 end
 
 """
-    is_derivable_from(system::ModalSystem, Γ, φ::Formula, models) -> Bool
+    is_entailed_by(system::ModalSystem, Γ, φ::Formula, models) -> Bool
 
-Check derivability semantically against a specific collection of models.
+Check semantic entailment against a specific collection of models.
 Returns true iff at every world of every model where all of Γ hold, φ also holds.
 """
-function is_derivable_from(system::ModalSystem, Γ, φ::Formula, models)
+function is_entailed_by(system::ModalSystem, Γ, φ::Formula, models)
     for model in models
         for w in model.frame.worlds
             if all(f -> satisfies(model, w, f), Γ) && !satisfies(model, w, φ)
@@ -103,6 +100,12 @@ function is_derivable_from(system::ModalSystem, Γ, φ::Formula, models)
         end
     end
     return true
+end
+
+# Deprecated alias — will be removed in a future breaking release
+function is_derivable_from(args...; kwargs...)
+    Base.depwarn("`is_derivable_from` is deprecated; use `is_entailed_by` instead.", :is_derivable_from)
+    is_entailed_by(args...; kwargs...)
 end
 
 # ── Consistency (Definition 3.39) ──
@@ -348,7 +351,7 @@ Uses semantic checking for derivability.
 function determines(model::KripkeModel, system::ModalSystem, language; max_worlds::Int=4)
     for φ in language
         valid_in_model = is_true_in(model, φ)
-        derivable = is_derivable_from(system, Formula[], φ; max_worlds=max_worlds)
+        derivable = is_entailed_by(system, Formula[], φ; max_worlds=max_worlds)
         valid_in_model == derivable || return false
     end
     return true
