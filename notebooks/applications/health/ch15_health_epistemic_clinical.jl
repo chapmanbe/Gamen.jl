@@ -20,24 +20,49 @@ end
 md"""
 # Epistemic Logic in Clinical Settings
 
-This notebook parallels [Chapter 15 of Boxes and Diamonds](https://bd.openlogicproject.org) but applies **epistemic logic** to healthcare scenarios -- clinical knowledge, information asymmetry, and patient safety.
+*Health track parallel to Chapter 15, Boxes and Diamonds*
 
-**Key insight**: Healthcare involves multiple agents with different knowledge -- the attending physician, the consulting specialist, the nurse, the patient, the EHR system. Epistemic logic formalizes "who knows what" and "what is common knowledge." When these knowledge states diverge, patient safety is at risk.
+---
 
-### Why This Matters
+## The Clinical Problem
 
-The Joint Commission identifies **communication failures** as the leading root cause of sentinel events. Handoff errors, unread chart notes, and siloed information are epistemic problems: they arise when one agent lacks knowledge that another agent has. Formalizing clinical knowledge with epistemic logic lets us reason precisely about:
+A patient arrives at the emergency department. The triage nurse documents a **penicillin allergy** in the EHR. Two hours later, the on-call physician orders amoxicillin — a penicillin-class antibiotic. Near-miss averted only because the pharmacist catches it before dispensing.
 
-- What each member of the care team knows
-- What information is lost during handoffs
-- When a public announcement (safety briefing, chart review) resolves a knowledge gap
-- Whether a critical fact is truly **common knowledge** across the team
+Was this an *information* failure or a *knowledge* failure? The allergy was recorded — the EHR "knew" it. But the physician did not know it. These are different epistemic states, and conflating them costs lives.
+
+**The Joint Commission** identifies communication failures as the leading root cause of sentinel events. These are not simply "missing data" problems — they are problems of *who knows what*, and whether critical facts are truly shared. Epistemic logic gives us the mathematical tools to reason about these distinctions precisely.
+
+---
+
+## Why Formal Logic?
+
+"Can't the EHR just send an alert?" Yes — and it does. But:
+
+- Alert fatigue means clinicians override 95% of alerts without reading them (Ancker et al., 2017). The *EHR* knows; the *clinician* does not.
+- During a handoff, the outgoing nurse *believes* she communicated fall risk; the incoming nurse *believes* she received it. Both are wrong. Shared belief is not the same as common knowledge.
+- A consultant documents a critical finding. The ordering physician has "access" to the note. Does she *know* the finding? Access ≠ knowledge.
+
+Epistemic logic formalizes these distinctions: K\_a A ("agent a knows A"), group knowledge E\_{G} A ("everyone in team G knows A"), and common knowledge C\_{G} A ("A is known by all, known to be known by all, etc.").
+
+---
+
+## Learning Outcomes
+
+By the end of this notebook you will be able to:
+
+1. Build multi-agent epistemic models (EpistemicFrame, EpistemicModel) for clinical scenarios
+2. Evaluate K\_a A formulas to identify which agents know which clinical facts
+3. Reason about higher-order knowledge ("the physician knows the nurse doesn't know")
+4. Model clinical handoffs and chart reviews as public announcements that update knowledge states
+5. Distinguish group knowledge from common knowledge and explain why the difference matters for team coordination
+6. Identify which epistemic frame conditions (T, 4, 5) are appropriate for clinical knowledge vs belief
 """
 
 # ╔═╡ 4a1b3c4d-0002-0002-0002-000000000002
 begin
 	using Gamen
 	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ 4a1b3c4d-0003-0003-0003-000000000003
@@ -102,6 +127,24 @@ begin
 	println("Nurse sees from w1:     ", sort(collect(accessible(allergy_frame, :nurse, :w1))))
 end
 
+# ╔═╡ 4a1b3c4d-0035-0035-0035-000000000035
+md"""
+### Visualizing the Epistemic Model
+
+Each accessibility arrow represents what worlds an agent considers possible. A narrow relation (few arrows) means the agent has more information; a wide relation means more uncertainty.
+"""
+
+# ╔═╡ 4a1b3c4d-0036-0036-0036-000000000036
+begin
+	# Visualize each agent's accessibility relation as a separate KripkeModel.
+	# KripkeFrame struct constructor takes (Set{Symbol}, Dict{Symbol,Set{Symbol}}).
+	# Physician: narrow relation (only sees w1 from w1) → well-informed
+	phys_rel_dict = get(allergy_frame.relations, :physician, Dict{Symbol,Set{Symbol}}())
+	phys_frame = KripkeFrame(allergy_frame.worlds, phys_rel_dict)
+	phys_kripke = KripkeModel(phys_frame, allergy_model.valuation)
+	visualize_model(phys_kripke)
+end
+
 # ╔═╡ 4a1b3c4d-0006-0006-0006-000000000006
 md"""
 ### Reading the Model
@@ -109,6 +152,11 @@ md"""
 The physician's accessibility relation from w1 is {w1} -- the physician can only "see" the actual world. This means the physician has complete information: any fact true at w1 is known by the physician.
 
 The nurse's accessibility relation from w1 is {w1, w2, w3} -- the nurse cannot distinguish the actual world from two alternative worlds. The nurse's knowledge is limited to facts that hold across *all three* worlds.
+"""
+
+# ╔═╡ 4a1b3c4d-0037-0037-0037-000000000037
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens — Role 1: Surrogate", [md"Davis, Shrobe & Szolovits (1993) describe a knowledge representation as first and foremost a *surrogate* — a stand-in for things in the external world that allows an agent to reason about those things. Our EpistemicModel is a surrogate for the clinical information environment. Like all surrogates, it is imperfect: we decide which worlds to include, which valuations to assign, and which accessibility pairs to model. A real nurse's knowledge state cannot be fully captured by a set of world-pairs — but the model makes our assumptions explicit and checkable. Davis et al.: 'perfect fidelity is impossible; the question is whether the surrogate is good enough for the intended use.' For guideline validation, a coarse model (three worlds, two agents) may be good enough to detect a dangerous knowledge gap."])))
 """
 
 # ╔═╡ 4a1b3c4d-0007-0007-0007-000000000007
@@ -145,6 +193,23 @@ begin
 	The nurse does **not** know the allergy status -- exactly because the nurse has not checked the chart and cannot rule out w3 (the world where there is no allergy). This is the epistemic formalization of an information gap.
 	"""
 end
+
+# ╔═╡ 4a1b3c4d-0038-0038-0038-000000000038
+md"""
+**Exercise 1.** Translate the following clinical sentences into epistemic formulas using K\_a, ¬, and ∧. Then check whether each formula holds at w1 in `allergy_model`.
+
+**(a)** "The physician knows the allergy is documented."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (a)", [md"K[physician](documented). Evaluated as: physician sees only {w1}; documented is true at w1. Result: **true**. Verify: `satisfies(allergy_model, :w1, Knowledge(:physician, documented))`"])))
+
+**(b)** "The nurse does not know whether the allergy is documented."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (b)", [md"¬K[nurse](documented) ∧ ¬K[nurse](¬documented). This says the nurse can neither confirm nor rule out documentation — a state of genuine uncertainty. Evaluate both conjuncts: nurse sees {w1,w2,w3}; documented is false at w2 and w3, so K[nurse](documented) = false; ¬documented is false at w1, so K[nurse](¬documented) = false. Both conjuncts are true at w1."])))
+
+**(c)** "The physician knows the nurse does not know about the allergy."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (c)", [md"K[physician](¬K[nurse](allergy)). Physician sees only {w1}; at w1 the nurse does not know allergy (shown in cell above). So this formula is true at w1. This is higher-order knowledge — the physician is aware of the nurse's epistemic gap."])))
+"""
 
 # ╔═╡ 4a1b3c4d-0009-0009-0009-000000000009
 md"""
@@ -230,6 +295,11 @@ When the nurse checks the chart and learns the allergy, the restricted model eli
 Without this "announcement" (chart check), the nurse might administer a penicillin-class antibiotic, causing an adverse drug event. The epistemic model makes the risk visible: an information gap (K\_nurse(allergy) = false) is a precondition for the error.
 """
 
+# ╔═╡ 4a1b3c4d-0039-0039-0039-000000000039
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens — Role 5: Human Expression", [md"Davis et al. describe a fifth role for knowledge representations: *a medium of human expression* — a language for communicating knowledge between humans and systems. Epistemic logic plays this role when we write K[physician](diagnosis) vs K[ehr](diagnosis). These are not the same, even if both are 'true.' The physician's knowledge is intentional and actionable; the EHR's is stored and retrievable. Formalizing the distinction forces us to ask: when we say 'the information is in the chart,' do we mean the EHR has a record (K[ehr]) or that a responsible clinician has reviewed and integrated it (K[clinician])? This is the Lomotan et al. (2010) ambiguity problem applied to epistemic operators: 'should' in guidelines is ambiguous; 'knows' in clinical practice is equally so."])))
+"""
+
 # ╔═╡ 4a1b3c4d-0015-0015-0015-000000000015
 md"""
 ## Group Knowledge and Common Knowledge (Definitions 15.3 and 15.6)
@@ -295,6 +365,23 @@ begin
 	**Why common knowledge matters for safety**: During a code blue, the team must coordinate without pausing to confirm what each member knows. If the allergy is common knowledge, any team member can object to penicillin without first asking "does the nurse know?" Common knowledge is the epistemic foundation of coordinated action.
 	"""
 end
+
+# ╔═╡ 4a1b3c4d-0040-0040-0040-000000000040
+md"""
+**Exercise 2.** Consider the following scenario: a three-agent team (physician, nurse, pharmacist). After a safety huddle, the physician and nurse both know the allergy, but the pharmacist has not been informed. Answer these questions *before* running any code.
+
+**(a)** Does group knowledge E\_{team}(allergy) hold?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (a)", [md"No. Group knowledge requires *every* member of the team to know the fact. The pharmacist does not know allergy, so E[physician,nurse,pharmacist](allergy) is false. It would be true only for the subgroup {physician, nurse}."])))
+
+**(b)** Does common knowledge C\_{team}(allergy) hold?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (b)", [md"No. Common knowledge requires group knowledge as a prerequisite. Since group knowledge fails (pharmacist does not know), common knowledge also fails. Common knowledge is stronger than group knowledge — it additionally requires each agent to know that the others know, ad infinitum."])))
+
+**(c)** After the pharmacist checks the patient chart, which formula becomes true?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (c)", [md"After the announcement [allergy]K[pharmacist](allergy), the pharmacist now knows. Then: (1) group knowledge E[team](allergy) becomes true — all three agents individually know; (2) if each agent's accessibility relation collapses to only the actual world (all three checked independently), common knowledge C[team](allergy) also holds."])))
+"""
 
 # ╔═╡ 4a1b3c4d-0018-0018-0018-000000000018
 md"""
@@ -577,6 +664,23 @@ begin
 	println("anything the physician 'knows' is actually true.")
 end
 
+# ╔═╡ 4a1b3c4d-0041-0041-0041-000000000041
+md"""
+**Exercise 3.** The veridicality axiom (T) says: K\_a A → A. In epistemic logic, this distinguishes *knowledge* (factive — implies truth) from *belief* (non-factive — may be false).
+
+**(a)** A clinician is highly confident that a patient's chest pain is musculoskeletal and documents "patient knows chest pain is non-cardiac." The pain is actually cardiac. Is K[clinician](non\_cardiac) well-formed under the T axiom?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (a)", [md"No. Under veridicality (T axiom), K[clinician](non_cardiac) → non_cardiac. If non_cardiac is actually false (it IS cardiac), then K[clinician](non_cardiac) cannot be true in a reflexive model. The clinician has a *false belief*, not knowledge. Epistemic S5 with veridicality is appropriate for factive clinical knowledge. For fallible clinical belief, we would need a doxastic logic (system KD45) without the T axiom."])))
+
+**(b)** Build a two-world model where the clinician believes non\_cardiac but non\_cardiac is false at the actual world. Show that veridicality fails in this model.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (b)", [md"Let w1 = actual world (chest pain IS cardiac), w2 = believed world (non-cardiac). Clinician's relation: w1 → w2 (reflexivity missing — clinician does not consider w1 possible). Model: non_cardiac true at w2 only. Then K[clinician](non_cardiac) at w1 = true (sees only w2, non_cardiac true there). But non_cardiac at w1 = false. So K[clinician](non_cardiac) → non_cardiac fails at w1. This is a non-reflexive frame — the K axiom without T."])))
+
+**(c)** What does the frame condition for veridicality require, and why does it matter for clinical decision support?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (c)", [md"Veridicality requires the accessibility relation to be *reflexive*: every world must see itself (wRw for all w). This means an agent always considers the actual world possible. For CDS: if we model clinician knowledge as S5 (with T), our model assumes clinicians only 'know' facts that are actually true. This is normative — it captures what sound clinical knowledge should be, not what clinicians sometimes mistakenly believe. Choosing the right frame conditions is a design decision with clinical consequences."])))
+"""
+
 # ╔═╡ 4a1b3c4d-0034-0034-0034-000000000034
 md"""
 ## Summary: B&D Epistemic Concepts in Clinical Practice
@@ -603,24 +707,43 @@ md"""
 4. **Asymmetry is the default**: In multi-agent clinical settings, different agents start with different information. Safety protocols exist to drive the system toward common knowledge.
 """
 
+# ╔═╡ 4a1b3c4d-0042-0042-0042-000000000042
+md"""
+## What's Next
+
+This notebook covered single-snapshot epistemic reasoning: who knows what *at a moment in time*. Clinical reasoning is also deeply temporal — knowledge changes as lab results arrive, consultants respond, and handoffs occur.
+
+- **Combined temporal-epistemic reasoning**: Combine K\_a A with temporal operators G (always) and F (eventually) to ask questions like "will the on-call physician eventually know the troponin result?" or "has the allergy always been known to someone on the team?" This requires merging the temporal frames from Ch 14 with the multi-agent epistemic frames here.
+
+- **Deontic-epistemic interaction**: Obligations may depend on knowledge — "if the physician *knows* the patient has atrial fibrillation, the physician *must* prescribe anticoagulation." This is the conditional obligation pattern K\_physician(afib) → O(anticoag), combining deontic (Ch 1–3 health) and epistemic (Ch 15 health) operators.
+
+- **Extended multi-agent simulation**: The `guideline-cds-simulation` project uses Gamen.jl to model populations of patient-agents with evolving clinical states. Each agent has a knowledge state that updates as CDS alerts fire, lab results arrive, and clinicians interact. The epistemic primitives here are the foundation for that work.
+"""
+
 # ╔═╡ Cell order:
 # ╟─4a1b3c4d-0001-0001-0001-000000000001
 # ╟─4a1b3c4d-0002-0002-0002-000000000002
 # ╟─4a1b3c4d-0003-0003-0003-000000000003
 # ╟─4a1b3c4d-0004-0004-0004-000000000004
 # ╟─4a1b3c4d-0005-0005-0005-000000000005
+# ╟─4a1b3c4d-0035-0035-0035-000000000035
+# ╟─4a1b3c4d-0036-0036-0036-000000000036
 # ╟─4a1b3c4d-0006-0006-0006-000000000006
+# ╟─4a1b3c4d-0037-0037-0037-000000000037
 # ╟─4a1b3c4d-0007-0007-0007-000000000007
 # ╟─4a1b3c4d-0008-0008-0008-000000000008
+# ╟─4a1b3c4d-0038-0038-0038-000000000038
 # ╟─4a1b3c4d-0009-0009-0009-000000000009
 # ╟─4a1b3c4d-0010-0010-0010-000000000010
 # ╟─4a1b3c4d-0011-0011-0011-000000000011
 # ╟─4a1b3c4d-0012-0012-0012-000000000012
 # ╟─4a1b3c4d-0013-0013-0013-000000000013
 # ╟─4a1b3c4d-0014-0014-0014-000000000014
+# ╟─4a1b3c4d-0039-0039-0039-000000000039
 # ╟─4a1b3c4d-0015-0015-0015-000000000015
 # ╟─4a1b3c4d-0016-0016-0016-000000000016
 # ╟─4a1b3c4d-0017-0017-0017-000000000017
+# ╟─4a1b3c4d-0040-0040-0040-000000000040
 # ╟─4a1b3c4d-0018-0018-0018-000000000018
 # ╟─4a1b3c4d-0019-0019-0019-000000000019
 # ╟─4a1b3c4d-0020-0020-0020-000000000020
@@ -637,4 +760,6 @@ md"""
 # ╟─4a1b3c4d-0031-0031-0031-000000000031
 # ╟─4a1b3c4d-0032-0032-0032-000000000032
 # ╟─4a1b3c4d-0033-0033-0033-000000000033
+# ╟─4a1b3c4d-0041-0041-0041-000000000041
 # ╟─4a1b3c4d-0034-0034-0034-000000000034
+# ╟─4a1b3c4d-0042-0042-0042-000000000042
