@@ -16,8 +16,8 @@ We cover:
 - Axiom schemas (K, Dual, T, D, B, 4, 5) and instance matching
 - Modal systems (K, KT, S4, S5, ...)
 - Hilbert-style derivations and proof checking
-- Dual formulas (Definition 3.26)
-- Soundness (Theorem 3.31)
+- Dual formulas
+- Soundness
 """
 
 # ╔═╡ 3a3b3c3d-0002-0002-0002-000000000002
@@ -51,8 +51,8 @@ md"""
 
 A *substitution* replaces propositional variables with arbitrary formulas.
 This is the mechanism by which axiom *schemas* generate their *instances*:
-a schema like p → (q → p) becomes □r → (◇s → □r)
-by substituting □r for p and ◇s for q.
+a schema like p → (q → p) becomes □r → (◇q → □r)
+by substituting □r for p and ◇q for q.
 """
 
 # ╔═╡ 3a3b3c3d-0004-0004-0004-000000000004
@@ -458,7 +458,7 @@ md"""
 
 **1.** What is the dual of ◇(p → q)?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Since p → q is ¬p ∨ q, the dual swaps ◇ to □ and ∨ to ∧, and negates atoms: □(p ∧ ¬q). Verify with `dual(◇(Implies(p, q)))`. Note that implication is first expanded before the dual is computed."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The raw output is □(¬¬p ∧ ¬q). Tracing `dual`: `dual(◇(Implies(p,q)))` = `□(dual(Implies(p,q)))` = `□(And(Not(dual(p)), dual(q)))` = `□(¬¬p ∧ ¬q)`. The `dual` function does not simplify double negations — it produces `Not(Not(p))` for an atom. Classically ¬¬p ↔ p, so the formula is classically equivalent to □(p ∧ ¬q), but the raw Julia value retains the double negation. Verify with `dual(◇(Implies(p, q)))`."])))
 
 **2.** If a formula A is valid, what can we say about dual(A)?
 
