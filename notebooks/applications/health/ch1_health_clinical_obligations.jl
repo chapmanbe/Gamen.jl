@@ -20,36 +20,65 @@ end
 begin
 	using Gamen
 	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ 2a1b3c4d-0001-0001-0001-000000000001
 md"""
 # Clinical Obligations and Modal Logic
 
-This notebook parallels [Chapter 1 of Boxes and Diamonds](https://bd.openlogicproject.org) but uses **clinical guideline examples** instead of abstract propositions. It shows how the same modal logic concepts -- formulas, Kripke models, truth, and entailment -- formalize the deontic language of clinical practice guidelines.
+You are an emergency physician. Your hospital's CDS fires: *"This patient **should** receive aspirin."* A colleague at another institution describes the same guideline as: *"Patients with chest pain **must** receive aspirin within 10 minutes."* Your EHR treats "should" as a hard stop; theirs uses it as a dismissible reminder.
 
-**Key insight**: When a guideline says "must," "should," or "may," it is making a *modal* claim about what is obligatory, recommended, or permitted across possible clinical scenarios. Modal logic makes these claims precise.
+**Same guideline. Two institutions. Two different clinical behaviors.**
 
-### Background
+Lomotan et al. (2010) documented this systematically: when guidelines use deontic terms — *must*, *should*, *may*, *must not* — clinicians and EHR developers interpret them with widely varying obligation levels. The ambiguity is not accidental; natural language was never designed to specify the precise obligations of a clinical protocol.
 
-Lomotan et al. (2010) found that clinicians interpret deontic terms ("must," "should," "may") with widely varying obligation levels. When EHR systems implement guidelines as clinical decision support, this ambiguity produces inconsistent behavior -- one vendor implements "should" as a hard stop, another as a soft reminder.
+**Modal logic** gives these terms a precise mathematical definition. By the end of this notebook, you will be able to:
 
-Formalizing guidelines in deontic logic resolves this ambiguity.
+- Translate clinical guideline statements ("must," "may," "must not if...") into formal logic formulas
+- Build a Kripke model representing a clinical scenario and its acceptable pathways
+- Check whether a set of guidelines is satisfied in that model
+- Detect when two guidelines conflict — even *conditionally*, for specific patient states
+
+**Two terms used throughout:**
+- *Modal*: pertaining to modes of truth — necessary, possible, obligatory, permitted — as opposed to simply true or false
+- *Deontic*: pertaining to obligation and permission (from Greek *deon*, duty); deontic logic applies modal reasoning to normative statements like guidelines
 """
 
 # ╔═╡ 2a1b3c4d-0003-0003-0003-000000000003
 md"""
 ## From Clinical Language to Modal Logic
 
-Clinical guidelines use three levels of deontic strength:
+Before any formalism: what does it mean to say a guideline is *obligatory*? Think of "must obtain consent" — it means that in **every** acceptable clinical scenario, consent is obtained. There are no acceptable pathways where consent is skipped. "May use clinical judgment" means that **some** acceptable pathway permits it, but it is not required in all of them.
+
+This distinction — *every* vs *some* — is exactly what the two modal operators capture:
 
 | Clinical Term | Deontic Meaning | Modal Operator | Gamen.jl |
 |:-------------|:----------------|:---------------|:---------|
-| "must," "is required" | **Obligation** | $\square p$ (in all acceptable scenarios, $p$ holds) | `Box(p)` |
-| "may," "is acceptable" | **Permission** | $\diamond p$ (in some acceptable scenario, $p$ holds) | `Diamond(p)` |
-| "must not," "is contraindicated" | **Prohibition** | $\square \lnot p$ (in all acceptable scenarios, $p$ does not hold) | `Box(Not(p))` |
+| "must," "is required" | **Obligation** | □p — in all acceptable scenarios, p holds | `Box(p)` |
+| "may," "is acceptable" | **Permission** | ◇p — in some acceptable scenario, p holds | `Diamond(p)` |
+| "must not," "is contraindicated" | **Prohibition** | □¬p — in all acceptable scenarios, p does not hold | `Box(Not(p))` |
 
-The "worlds" in a Kripke model represent possible clinical scenarios -- different patient states, different treatment decisions, different outcomes. The accessibility relation connects the current state to states that are **deontically acceptable** (compliant with guidelines).
+The "acceptable scenarios" are represented by a *Kripke model* — a structure with worlds (possible patient states), an accessibility relation (which states count as deontically acceptable next steps), and a valuation (which facts hold in which states). You will build one in the next section.
+"""
+
+# ╔═╡ 2a1b3c4d-0034-0034-0034-000000000034
+md"""
+### Exercise: Classify Clinical Statements
+
+Before moving on, classify each of the following as an obligation (□), permission (◇), or prohibition (□¬). Then check your answers.
+
+**a.** "Patients admitted with community-acquired pneumonia *must* receive antibiotics within 4 hours."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (a)", [md"**□(antibiotics_4hr)** — Obligation. 'Must' means in *all* acceptable scenarios, antibiotics are given. There is no acceptable pathway where this is skipped."])))
+
+**b.** "Clinicians *may* substitute a generic statin for a brand-name equivalent."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (b)", [md"**◇(substitute_generic)** — Permission. 'May' means substitution is permitted in *some* acceptable scenario — neither required in all nor prohibited in all."])))
+
+**c.** "Thrombolytics *must not* be administered to patients with recent intracranial surgery."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer (c)", [md"**□(¬thrombolytic)** i.e. `Box(Not(thrombolytic))` — Prohibition. 'Must not' means in *all* acceptable scenarios, thrombolytics are absent."])))
 """
 
 # ╔═╡ 2a1b3c4d-0004-0004-0004-000000000004
@@ -139,7 +168,7 @@ end
 md"""
 ### The Formula
 
-Here is the formal representation:
+The formula for the selected guideline is shown below. **Try all five guidelines** — G3 ("may") maps to ◇ while G1, G2, and G5 ("must"/"should") all map to □. What does this pattern tell you about how clinical obligation strength is encoded in basic modal logic?
 """
 
 # ╔═╡ 2a1b3c4d-0008-0008-0008-000000000008
@@ -179,6 +208,17 @@ begin
 	])
 end
 
+# ╔═╡ 2a1b3c4d-0035-0035-0035-000000000035
+visualize_model(clinical_model,
+	positions = Dict(
+		:w1 => (0.0, 0.0),
+		:w2 => (3.0, 1.0),
+		:w3 => (3.0, -1.0),
+		:w4 => (5.0, 0.0),
+	),
+	title = "Clinical Scenario: ED Patient with Chest Pain"
+)
+
 # ╔═╡ 2a1b3c4d-0011-0011-0011-000000000011
 md"""
 ### Evaluating Guidelines in the Model
@@ -195,7 +235,7 @@ begin
 			satisfies(clinical_model, :w1, Box(blood_cultures)),
 		"G3: ◇(adjust_duration) — may adjust" =>
 			satisfies(clinical_model, :w1, Diamond(adjust_duration)),
-		"G4: bleeding → □(¬thrombolytic)" =>
+		"G4: active_bleeding → □(¬thrombolytic)" =>
 			satisfies(clinical_model, :w1,
 				Implies(active_bleeding, Box(Not(thrombolytic)))),
 		"G5: □(discharge_plan) — should plan discharge" =>
@@ -210,10 +250,28 @@ md"""
 - **G1 (consent): true** — consent is obtained in both accessible worlds (w2, w3)
 - **G2 (blood cultures): false** — blood cultures are drawn in w2 but not w3. Since □ requires truth in *all* accessible worlds, the obligation is violated.
 - **G3 (adjust duration): false** — adjusting duration doesn't happen in any accessible world. Permission (◇) requires truth in *at least one* accessible world.
-- **G4 (conditional prohibition): true** — at w1, active bleeding is false, so the implication is vacuously true. The prohibition only applies when the condition holds.
+- **G4 (conditional prohibition): true** — at w1, active bleeding is false, so the condition does not apply and the implication holds trivially. The prohibition only activates when the condition holds.
 - **G5 (discharge plan): false** — discharge planning happens in w2 but not w3.
 
 This illustrates a key insight: **a model satisfying all guidelines simultaneously requires every accessible world to comply with every obligation**. Clinical reality is that different pathways satisfy different guidelines — which is why consistency checking matters.
+"""
+
+# ╔═╡ 2a1b3c4d-0036-0036-0036-000000000036
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify five roles a knowledge representation must play. **Role 5** is *a medium of human expression* — a language for communicating knowledge between humans and between humans and systems. The Lomotan problem is precisely a failure of natural language as a knowledge representation medium: 'should' means different things to different clinicians and different EHR vendors. Modal logic is a more precise medium — □ and ◇ are unambiguous. Buchanan (2006) adds: 'making assumptions explicit is valuable, whether or not the system is correct.' Formalizing a guideline makes its deontic commitment explicit and auditable, regardless of whether the formula is perfect."])))
+"""
+
+# ╔═╡ 2a1b3c4d-0037-0037-0037-000000000037
+md"""
+### Exercise: Predict Before You Run
+
+Look at the clinical model above — four worlds, accessibility w1→w2 and w1→w3. **Before scrolling back to the results**, predict:
+
+1. Which of G1–G5 are satisfied at w1? Which are violated?
+2. Why is G1 (consent) satisfied but G2 (blood cultures) violated?
+3. What is the *minimum* change to the model that would make all five satisfied at w1?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"G1 ✓ consent at both w2 and w3. G2 ✗ blood_cultures only at w2, missing from w3 — □ requires truth in ALL accessible worlds. G3 ✗ adjust_duration absent from both accessible worlds — ◇ needs at least one. G4 ✓ active_bleeding false at w1, so the conditional holds trivially. G5 ✗ discharge_plan only at w2. Minimum fix: add blood_cultures and discharge_plan to w3's valuation, and add adjust_duration to at least one of w2 or w3."])))
 """
 
 # ╔═╡ 2a1b3c4d-0014-0014-0014-000000000014
@@ -270,6 +328,15 @@ md"""
 This is a well-known feature of standard deontic logic: at a world with no acceptable alternatives, *everything* is obligatory (even contradictions). This is related to the problem of **moral dilemmas** and is one reason why the **D axiom** (□p → ◇p: if something is obligatory, it must be permitted) is important for deontic reasoning — it rules out dead-end worlds. We'll explore this in Chapter 3.
 """
 
+# ╔═╡ 2a1b3c4d-0038-0038-0038-000000000038
+md"""
+### Reflection: Dead Ends in Clinical Practice
+
+A world with no acceptable successors makes every □ formula vacuously true — including contradictions. **What does a clinical dead-end world represent?** Think of a patient state where no guideline-compliant action is possible: perhaps a patient with a contraindication to every available treatment. In standard modal logic, all obligations are trivially satisfied there.
+
+This is why the **D axiom** — □p → ◇p, "if something is obligatory, it must at least be permitted" — matters for clinical reasoning: it rules out dead-end worlds by requiring every state to have at least one acceptable successor. We explore this in Chapter 3.
+"""
+
 # ╔═╡ 2a1b3c4d-0019-0019-0019-000000000019
 md"""
 ## Interactive Exploration: Build Your Own Scenario
@@ -283,10 +350,7 @@ md"""
 """
 
 # ╔═╡ 2a1b3c4d-0021-0021-0021-000000000021
-begin
-	@bind w2_consent CheckBox(default=true)
-	md"Consent obtained: $(@bind w2_consent CheckBox(default=true))"
-end
+md"Consent obtained: $(@bind w2_consent CheckBox(default=true))"
 
 # ╔═╡ 2a1b3c4d-0022-0022-0022-000000000022
 md"Blood cultures drawn: $(@bind w2_cultures CheckBox(default=true))"
@@ -421,6 +485,38 @@ begin
 	"""
 end
 
+# ╔═╡ 2a1b3c4d-0039-0039-0039-000000000039
+begin
+	# Now show the CONFLICTING case: patient has BOTH STEMI and active bleeding
+	conflict_g4g7_frame = KripkeFrame([:w1, :w2], [:w1 => :w2])
+	conflict_g4g7_model = KripkeModel(conflict_g4g7_frame, [
+		:thrombolytic    => [:w2],   # G7 requires this
+		:active_bleeding => [:w1],   # the critical condition holds at w1
+	])
+
+	md"""
+	**When active\_bleeding is TRUE at w1** (patient has STEMI *and* active bleeding):
+	- G4: $(satisfies(conflict_g4g7_model, :w1, g4_formula)) — bleeding is present, so □(¬thrombolytic) must hold; but thrombolytic is true at w2
+	- G7: $(satisfies(conflict_g4g7_model, :w1, g7_formula)) — thrombolytics must be given
+
+	**Genuine conflict for this patient state.** No valuation of thrombolytic can satisfy both G4 and G7 simultaneously when active\_bleeding is true. This is exactly the edge case that informal guideline review often misses and formal logic detects automatically.
+	"""
+end
+
+# ╔═╡ 2a1b3c4d-0040-0040-0040-000000000040
+md"""
+### Exercise: Conditional vs Unconditional Conflicts
+
+Consider two more guidelines:
+
+- **G8**: "Patients with sepsis *must* receive IV fluids within 1 hour" → `Implies(sepsis, Box(iv_fluids))`
+- **G9**: "Patients with fluid overload *must not* receive IV fluids" → `Implies(fluid_overload, Box(Not(iv_fluids)))`
+
+**Are G8 and G9 unconditionally conflicting (like G5 vs G6), or conditionally conflicting (like G4 vs G7)?** For which patient states do they conflict?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Conditionally conflicting** — they only conflict for patients who have *both* sepsis and fluid overload. A patient with sepsis alone: G8 applies, G9 does not (fluid_overload is false). A patient with fluid overload alone: G9 applies, G8 does not. Only the patient with both conditions faces a genuine conflict. This mirrors the G4/G7 pattern — recognizing conditional vs unconditional conflicts is one of the key practical benefits of formal guideline analysis."])))
+"""
+
 # ╔═╡ 2a1b3c4d-0033-0033-0033-000000000033
 md"""
 ## Summary
@@ -448,11 +544,17 @@ md"""
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Gamen = "d58aead4-12fe-4bc4-9bd9-a7dede724567"
+GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
-Gamen = "~0.1.0"
+CairoMakie = "0.15"
+Gamen = "~0.2"
+GraphMakie = "0.6"
+Graphs = "1"
 PlutoUI = "~0.7.80"
 """
 
@@ -739,6 +841,7 @@ version = "17.7.0+0"
 # ╟─2a1b3c4d-0001-0001-0001-000000000001
 # ╟─2a1b3c4d-0002-0002-0002-000000000002
 # ╟─2a1b3c4d-0003-0003-0003-000000000003
+# ╟─2a1b3c4d-0034-0034-0034-000000000034
 # ╟─2a1b3c4d-0004-0004-0004-000000000004
 # ╟─2a1b3c4d-0005-0005-0005-000000000005
 # ╟─2a1b3c4d-0006-0006-0006-000000000006
@@ -746,14 +849,18 @@ version = "17.7.0+0"
 # ╟─2a1b3c4d-0008-0008-0008-000000000008
 # ╟─2a1b3c4d-0009-0009-0009-000000000009
 # ╟─2a1b3c4d-0010-0010-0010-000000000010
+# ╟─2a1b3c4d-0035-0035-0035-000000000035
 # ╟─2a1b3c4d-0011-0011-0011-000000000011
 # ╟─2a1b3c4d-0012-0012-0012-000000000012
 # ╟─2a1b3c4d-0013-0013-0013-000000000013
+# ╟─2a1b3c4d-0036-0036-0036-000000000036
+# ╟─2a1b3c4d-0037-0037-0037-000000000037
 # ╟─2a1b3c4d-0014-0014-0014-000000000014
 # ╟─2a1b3c4d-0015-0015-0015-000000000015
 # ╟─2a1b3c4d-0016-0016-0016-000000000016
 # ╟─2a1b3c4d-0017-0017-0017-000000000017
 # ╟─2a1b3c4d-0018-0018-0018-000000000018
+# ╟─2a1b3c4d-0038-0038-0038-000000000038
 # ╟─2a1b3c4d-0019-0019-0019-000000000019
 # ╟─2a1b3c4d-0020-0020-0020-000000000020
 # ╟─2a1b3c4d-0021-0021-0021-000000000021
@@ -768,6 +875,8 @@ version = "17.7.0+0"
 # ╟─2a1b3c4d-0030-0030-0030-000000000030
 # ╟─2a1b3c4d-0031-0031-0031-000000000031
 # ╟─2a1b3c4d-0032-0032-0032-000000000032
+# ╟─2a1b3c4d-0039-0039-0039-000000000039
+# ╟─2a1b3c4d-0040-0040-0040-000000000040
 # ╟─2a1b3c4d-0033-0033-0033-000000000033
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
