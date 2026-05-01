@@ -37,7 +37,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: pluto_state_cache
-          key: ${{ runner.os }}-pluto-v3-${{ hashFiles('notebooks/Project.toml', 'src/**') }}-${{ hashFiles('notebooks/pluto/**/*.jl', 'notebooks/health/**/*.jl') }}
+          key: ${{ runner.os }}-pluto-v3-${{ hashFiles('notebooks/Project.toml', 'src/**') }}-${{ hashFiles('notebooks/theory/pluto/**/*.jl', 'notebooks/applications/health/**/*.jl') }}
           restore-keys: |
             ${{ runner.os }}-pluto-v3-${{ hashFiles('notebooks/Project.toml', 'src/**') }}
 
@@ -59,8 +59,8 @@ jobs:
             import PlutoSliderServer
 
             # Export B&D track notebooks
-            PlutoSliderServer.export_directory("notebooks/pluto";
-              Export_output_dir="notebook_html/pluto",
+            PlutoSliderServer.export_directory("notebooks/theory/pluto";
+              Export_output_dir="notebook_html/theory",
               Export_cache_dir="pluto_state_cache",
               Export_baked_state=true,
               Export_baked_notebookfile=true,
@@ -71,7 +71,7 @@ jobs:
             )
 
             # Export health track notebooks
-            PlutoSliderServer.export_directory("notebooks/health";
+            PlutoSliderServer.export_directory("notebooks/applications/health";
               Export_output_dir="notebook_html/health",
               Export_cache_dir="pluto_state_cache",
               Export_baked_state=true,

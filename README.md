@@ -196,16 +196,18 @@ test/
 docs/                   # Documenter.jl documentation
 notebooks/
   Project.toml          # Notebook environment (includes visualization deps)
-  pluto/                # B&D textbook companion notebooks
-  health/               # Health application notebooks
-  jupyter/              # Jupyter notebook versions
+  theory/
+    pluto/              # B&D textbook companion notebooks (source)
+    jupyter/            # Jupyter versions (generated)
+  applications/
+    health/             # Health application notebooks
 ```
 
 ## Notebooks
 
 Two parallel tracks of interactive notebooks:
 
-### B&D Textbook Companion (`notebooks/pluto/`)
+### B&D Textbook Companion (`notebooks/theory/pluto/`)
 
 | Notebook | Topic |
 |:---------|:------|
@@ -216,8 +218,11 @@ Two parallel tracks of interactive notebooks:
 | `ch4_completeness` | Canonical models and completeness |
 | `ch5_filtrations` | Filtrations, FMP, and decidability |
 | `ch6_tableaux` | Modal tableaux and proof search |
+| `ch14_temporal_logics` | Temporal logic (G, F, H, P operators) |
+| `ch15_epistemic_logics` | Epistemic logic and multi-agent knowledge |
+| `ext_deontic_temporal` | Combined deontic–temporal reasoning |
 
-### Health Applications (`notebooks/health/`)
+### Health Applications (`notebooks/applications/health/`)
 
 | Notebook | Topic |
 |:---------|:------|
@@ -228,15 +233,18 @@ Two parallel tracks of interactive notebooks:
 | `ch4_health_completeness` | Trusting consistency results |
 | `ch5_health_decidability` | Decidability for guideline checking |
 | `ch6_health_conflict_detection` | Automated guideline conflict detection |
+| `ch14_health_temporal_clinical` | Temporal sequencing in clinical protocols |
+| `ch15_health_epistemic_clinical` | Clinician knowledge and information asymmetry |
+| `ext_health_guideline_conflicts` | Multi-guideline conflict detection |
 
 Open with [Pluto.jl](https://github.com/fonsp/Pluto.jl):
 
 ```julia
 using Pluto
-Pluto.run(notebook="notebooks/pluto/ch5_filtrations.jl")
+Pluto.run(notebook="notebooks/theory/pluto/ch5_filtrations.jl")
 ```
 
-Or use the Jupyter versions in `notebooks/jupyter/`.
+Or use the Jupyter versions in `notebooks/theory/jupyter/`.
 
 ## Acknowledgment
 
