@@ -23,6 +23,42 @@ We cover:
 **No prior logic background is assumed.**
 """
 
+# ╔═╡ 0a0b0c0d-0051-0051-0051-000000000051
+md"""
+## Why Bother? A Logic Puzzle to Start
+
+Before we write a single formula, here is a puzzle:
+
+> Four students — Alice, Bob, Carol, and Dana — each made exactly one statement about who broke the classroom projector:
+> - Alice: "It was Bob."
+> - Bob: "It was Carol."
+> - Carol: "It was not me."
+> - Dana: "It was Bob."
+>
+> Exactly one student told the truth. Who broke the projector?
+
+Take a moment to work through it. You will find that you are already reasoning about combinations of true/false statements — **that is propositional logic**. The formal machinery in this notebook just makes that reasoning *checkable by a computer*.
+
+---
+
+### "Can't an LLM just do this?"
+
+Large language models are impressive, but they are fundamentally pattern matchers: they predict plausible next tokens based on training data. They cannot *guarantee* the correctness of a logical derivation, detect an inconsistency in a rule set, or prove that no counterexample exists. Propositional logic — and the modal logic it leads to — gives you a **verified reasoning engine**: when `is_tautology` returns `true`, it is not a guess.
+
+For clinical decision support, this matters: a CDS alert that fires because an LLM found it "plausible" is very different from one that fires because a formal proof says the conditions are met.
+
+---
+
+### Learning Outcomes
+
+By the end of this notebook you will be able to:
+1. Identify propositions and distinguish them from commands and questions
+2. Build compound formulas using ¬, ∧, ∨, →, ↔ in Gamen.jl
+3. Evaluate truth using single-world Kripke models
+4. Recognize tautologies and contradictions via `is_tautology`
+5. Explain why propositional logic cannot express modality — and why that matters for Chapter 1
+"""
+
 # ╔═╡ 0a0b0c0d-0002-0002-0002-000000000002
 begin
 	using Gamen
@@ -46,6 +82,11 @@ not neither.
 Propositions are the **atoms** of formal logic. We represent them with variables like p ("It is raining") and q ("The ground is wet"), and build complex statements by combining them with logical connectives.
 
 In Gamen.jl, we create atomic propositions with `Atom`:
+"""
+
+# ╔═╡ 0a0b0c0d-0055-0055-0055-000000000055
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens: Logic as a Language", [md"Davis, Shrobe & Szolovits (1993) identify five roles of a knowledge representation. **Role 5** is human expression: a KR is 'a medium for human expression — a language in which we say things about the world' (Davis et al. 1993, p. 17). Propositional logic is the simplest such language. Every formula is a statement a human can write down and a system can verify. In clinical informatics, this matters: translating a guideline's 'if-then' rule into a propositional formula makes the rule's meaning explicit and testable — something a natural-language narrative can never fully guarantee."])))
 """
 
 # ╔═╡ 0a0b0c0d-0004-0004-0004-000000000004
@@ -126,6 +167,17 @@ is only broken if it rains and you don't bring an umbrella.
 # ╔═╡ 0a0b0c0d-0013-0013-0013-000000000013
 p_implies_q = Implies(p, q)
 
+# ╔═╡ 0a0b0c0d-0052-0052-0052-000000000052
+md"""
+**Exercise 1: Translate to a Formula**
+
+Let p = "the patient has a fever" and q = "the patient is prescribed ibuprofen".
+
+Translate: "The patient is prescribed ibuprofen only if they have a fever."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"This is p → q read backwards: q is true only when p is true, i.e. `Implies(q, p)`. (If prescribed ibuprofen, then fever must hold.) A common mistake is writing Implies(p, q) — that says 'fever implies prescription', which is a different claim."])))
+"""
+
 # ╔═╡ 0a0b0c0d-0040-0040-0040-000000000040
 md"""
 ### Biconditional: p ↔ q — "p if and only if q"
@@ -147,7 +199,7 @@ and evaluating. In Gamen.jl, we use **Kripke models** for this — even for
 propositional formulas. A single world with no accessibility relation is
 equivalent to a truth assignment.
 
-Let's evaluate $p \land q$ under different assignments:
+Let's evaluate p ∧ q under different assignments:
 """
 
 # ╔═╡ 0a0b0c0d-0015-0015-0015-000000000015
@@ -186,7 +238,7 @@ md"""
 | F | T | $(satisfies(w_ft, :w, p_implies_q) ? "T" : "F") |
 | F | F | $(satisfies(w_ff, :w, p_implies_q) ? "T" : "F") |
 
-Note: when $p$ is false, $p \to q$ is **always true**. This is *vacuous truth* —
+Note: when p is false, p → q is **always true**. This is *vacuous truth* —
 the promise is not broken because the condition was never triggered.
 """
 
@@ -258,15 +310,26 @@ begin
 	"""
 end
 
+# ╔═╡ 0a0b0c0d-0053-0053-0053-000000000053
+md"""
+**Exercise 2: Tautology or Contradiction?**
+
+Consider the formula: (p → q) ↔ (¬p ∨ q)
+
+Is this a tautology, a contradiction, or neither? Work it out by hand for all four truth assignments (TT, TF, FT, FF) before checking.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"It is a **tautology**. This is the *material conditional equivalence*: p → q is logically equivalent to ¬p ∨ q under classical logic. In Julia: `is_tautology(Iff(Implies(p,q), Or(Not(p),q)))` returns `true`. This equivalence is important: it shows that implication has no hidden meaning beyond 'false antecedent or true consequent'."])))
+"""
+
 # ╔═╡ 0a0b0c0d-0022-0022-0022-000000000022
 md"""
 ## Building Complex Arguments
 
 We can chain implications to build multi-step arguments. Consider:
 
-1. If it is raining, the ground is wet. ($p \to q$)
-2. If the ground is wet, the road is slippery. ($q \to r$)
-3. Therefore: if it is raining, the road is slippery. ($p \to r$)
+1. If it is raining, the ground is wet. (p → q)
+2. If the ground is wet, the road is slippery. (q → r)
+3. Therefore: if it is raining, the road is slippery. (p → r)
 
 This pattern is called **hypothetical syllogism** (chain rule). Is it a tautology?
 """
@@ -281,6 +344,15 @@ end
 # ╔═╡ 0a0b0c0d-0024-0024-0024-000000000024
 md"""
 Yes! The chain rule is valid. This is how complex reasoning works — each conclusion becomes a premise for the next step, and the chain is logically sound. Sherlock Holmes, tax law, medical diagnosis — any domain where conclusions feed into further reasoning relies on this pattern.
+"""
+
+# ╔═╡ 0a0b0c0d-0054-0054-0054-000000000054
+md"""
+**Exercise 3: Peirce's Law**
+
+Is ((p → q) → p) → p a tautology? This is called **Peirce's law**. It is not intuitively obvious — work through the cases where p is false before checking.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Yes, it is a tautology. When p is false: the inner (p → q) is true (vacuously), so (p → q) → p simplifies to true → false = false. Then false → p = false → false = true. When p is true: the outer implication is true → true = true regardless of the inner part. Check: `is_tautology(Implies(Implies(Implies(p,q),p),p))` returns `true`. Peirce's law holds in classical logic but fails in intuitionistic logic — a reminder that the tautologies depend on which logical system you adopt."])))
 """
 
 # ╔═╡ 0a0b0c0d-0025-0025-0025-000000000025
@@ -310,8 +382,11 @@ It **cannot** express:
 - "In **all** guideline-compliant scenarios, the patient is on aspirin" (necessity)
 
 This is why we need **modal logic** — the subject of Chapter 1 and beyond.
+"""
 
-$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) argue that every knowledge representation is a *surrogate* — a stand-in for the real thing inside a reasoning system. Propositional formulas are surrogates for facts about the world, and like all surrogates, they are imperfect. The gap we just identified — propositional logic can't express obligation, possibility, or knowledge — is a gap in the *surrogate's* fidelity. Modal logic narrows this gap by adding operators that capture more of how we actually reason. But no surrogate is ever perfect: even modal logic can't represent everything about clinical reasoning. The question is always whether the surrogate is *good enough* for the reasoning task at hand."])))
+# ╔═╡ 0a0b0c0d-0050-0050-0050-000000000050
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens: Propositions as Surrogates", [md"Davis, Shrobe & Szolovits (1993) argue that every knowledge representation is a *surrogate* — a stand-in for the real thing inside a reasoning system (Role 1). Propositional formulas are surrogates for facts about the world, and like all surrogates, they are imperfect. The gap we just identified — propositional logic can't express obligation, possibility, or knowledge — is a gap in the surrogate's fidelity. Modal logic narrows this gap by adding operators that capture more of how we actually reason. But no surrogate is ever perfect: even modal logic can't represent everything about clinical reasoning. The question is always whether the surrogate is *good enough* for the reasoning task at hand."])))
 """
 
 # ╔═╡ 0a0b0c0d-0026-0026-0026-000000000026
@@ -357,23 +432,34 @@ That is the subject of **Chapter 1: Syntax and Semantics**.
 
 # ╔═╡ 0a0b0c0d-0029-0029-0029-000000000029
 md"""
-### Exercises
+**Exercise 4 (Challenge): Formalise a Clinical Rule**
 
-1. Build the formula $(p \lor q) \to (q \lor p)$ and check whether it is a tautology. Why should it be?
+Let:
+- allergy = "patient has a penicillin allergy"
+- strep = "patient has a strep infection"
+- erythro = "prescribe erythromycin"
 
-2. Is ((p → q) → p) → p a tautology? This is **Peirce's law** — try to figure out *why* it is (or isn't) true before checking with `is_tautology`.
+Translate: "If the patient has a penicillin allergy AND a strep infection, then prescribe erythromycin." Build this as a Gamen.jl formula and check whether its contrapositive is logically equivalent.
 
-3. Build a formula that is a **contradiction** (false under every assignment) and verify it with `is_tautology(Not(your_formula))`.
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The rule is `Implies(And(allergy, strep), erythro)`. The contrapositive is `Implies(Not(erythro), Or(Not(allergy), Not(strep)))` — by De Morgan, ¬(allergy ∧ strep) = ¬allergy ∨ ¬strep. Check equivalence: `is_tautology(Iff(Implies(And(allergy,strep),erythro), Implies(Not(erythro),Or(Not(allergy),Not(strep)))))` returns `true`. The contrapositive always holds in classical logic — this is why clinicians sometimes reason backwards from absent treatments to infer absent indications."])))
 
-4. **Challenge**: Express the following clinical rule as a propositional formula and check it:
-   - "If the patient has a penicillin allergy AND the patient has a strep infection, THEN prescribe erythromycin."
-   - Is the contrapositive also a tautology?
+---
+
+### What you have learned
+
+1. **Propositions** are statements that are true or false
+2. **Connectives** (¬, ∧, ∨, →, ↔) build complex formulas from atoms
+3. **Modus ponens** is the inference engine behind rule-based systems
+4. **Tautologies** are formulas true under every assignment — verified by `is_tautology`
+5. Propositional logic cannot express **possibility, obligation, knowledge, or time** — for these, Chapter 1 introduces modal logic and Kripke semantics
 """
 
 # ╔═╡ Cell order:
 # ╟─0a0b0c0d-0001-0001-0001-000000000001
+# ╟─0a0b0c0d-0051-0051-0051-000000000051
 # ╟─0a0b0c0d-0002-0002-0002-000000000002
 # ╟─0a0b0c0d-0003-0003-0003-000000000003
+# ╟─0a0b0c0d-0055-0055-0055-000000000055
 # ╟─0a0b0c0d-0004-0004-0004-000000000004
 # ╟─0a0b0c0d-0005-0005-0005-000000000005
 # ╟─0a0b0c0d-0006-0006-0006-000000000006
@@ -384,6 +470,7 @@ md"""
 # ╟─0a0b0c0d-0011-0011-0011-000000000011
 # ╟─0a0b0c0d-0012-0012-0012-000000000012
 # ╟─0a0b0c0d-0013-0013-0013-000000000013
+# ╟─0a0b0c0d-0052-0052-0052-000000000052
 # ╟─0a0b0c0d-0040-0040-0040-000000000040
 # ╟─0a0b0c0d-0041-0041-0041-000000000041
 # ╟─0a0b0c0d-0014-0014-0014-000000000014
@@ -394,10 +481,13 @@ md"""
 # ╟─0a0b0c0d-0019-0019-0019-000000000019
 # ╟─0a0b0c0d-0020-0020-0020-000000000020
 # ╟─0a0b0c0d-0021-0021-0021-000000000021
+# ╟─0a0b0c0d-0053-0053-0053-000000000053
 # ╟─0a0b0c0d-0022-0022-0022-000000000022
 # ╟─0a0b0c0d-0023-0023-0023-000000000023
 # ╟─0a0b0c0d-0024-0024-0024-000000000024
+# ╟─0a0b0c0d-0054-0054-0054-000000000054
 # ╟─0a0b0c0d-0025-0025-0025-000000000025
+# ╟─0a0b0c0d-0050-0050-0050-000000000050
 # ╟─0a0b0c0d-0026-0026-0026-000000000026
 # ╟─0a0b0c0d-0027-0027-0027-000000000027
 # ╟─0a0b0c0d-0028-0028-0028-000000000028
