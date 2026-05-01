@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gamen.jl — B&amp;D Companion Notebooks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { font-size: 16px; }
+    body {
+      font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+      font-size: 1.2rem;
+      line-height: 1.7;
+      color: #111;
+      background: #fffff8;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 2rem 5rem;
+    }
+    a { color: #2c5f8a; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+    .site-header img { height: 40px; }
+    .site-crumb { font-size: 1rem; color: #888; }
+    .site-crumb a { color: #888; }
+    .site-crumb a:hover { color: #2c5f8a; text-decoration: underline; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin: 2rem 0 0.3rem;
+      letter-spacing: -0.01em;
+    }
+    .intro {
+      color: #555;
+      font-style: italic;
+      margin: 0 0 2.5rem;
+      font-size: 1.1rem;
+    }
+    .intro a { color: #2c5f8a; font-style: normal; }
+
+    h2 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #999;
+      margin: 2.5rem 0 0.6rem;
+      border-bottom: 1px solid #e0e0d8;
+      padding-bottom: 0.4rem;
+    }
+
+    ol.notebooks {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    ol.notebooks li {
+      display: grid;
+      grid-template-columns: 2.8rem 1fr;
+      gap: 0 1rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid #eeeee6;
+      align-items: baseline;
+    }
+    .ch-num {
+      color: #ccc;
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      padding-top: 0.15rem;
+    }
+    .nb-title {
+      display: block;
+      color: #2c5f8a;
+    }
+    .nb-title:hover { text-decoration: underline; }
+    .nb-desc {
+      display: block;
+      font-size: 0.95rem;
+      color: #888;
+      font-style: italic;
+      margin-top: 0.1rem;
+    }
+
+    .track-link {
+      display: inline-block;
+      margin-top: 2.5rem;
+      padding: 0.5rem 1rem;
+      background: #f0f4f8;
+      border-radius: 4px;
+      font-size: 1rem;
+      color: #2c5f8a;
+    }
+
+    footer {
+      margin-top: 4rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e0e0d8;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    footer a { color: #aaa; }
+    footer a:hover { color: #2c5f8a; }
+  </style>
+</head>
+<body>
+
+  <div class="site-header">
+    <img src="https://chapmanbe.github.io/Gamen.jl/assets/logo.svg" alt="Gamen.jl logo">
+    <span class="site-crumb">
+      <a href="https://chapmanbe.github.io/Gamen.jl/">Gamen.jl</a> / Notebooks
+    </span>
+  </div>
+
+  <h1>B&amp;D Companion Notebooks</h1>
+  <p class="intro">
+    Interactive <a href="https://plutojl.org">Pluto</a> notebooks following
+    <em>Boxes and Diamonds</em> (Zach 2025). Each notebook makes the textbook's
+    definitions and exercises live — modify a formula or model and see all results
+    update immediately. Use <a href="https://mybinder.org/v2/gh/chapmanbe/Gamen.jl/main?urlpath=pluto">Binder</a>
+    to run them interactively, or browse the static versions below.
+  </p>
+
+  <h2>Chapters</h2>
+  <ol class="notebooks">
+    <li>
+      <span class="ch-num">Ch 0</span>
+      <span>
+        <a class="nb-title" href="ch0_propositional_logic.html">Propositional Logic</a>
+        <span class="nb-desc">Connectives, implications, tautologies, and the limits of propositional reasoning</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 1</span>
+      <span>
+        <a class="nb-title" href="ch1_syntax_and_semantics.html">Syntax and Semantics</a>
+        <span class="nb-desc">Modal formulas, Kripke models, truth at a world, satisfiability and validity</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 2</span>
+      <span>
+        <a class="nb-title" href="ch2_frame_definability.html">Frame Definability</a>
+        <span class="nb-desc">Reflexivity, symmetry, transitivity, seriality, euclideanness, and the T/B/4/D/5 schemas</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 3</span>
+      <span>
+        <a class="nb-title" href="ch3_axiomatic_derivations.html">Axiomatic Derivations</a>
+        <span class="nb-desc">Hilbert-style proof systems, modal axioms, substitution, and derivability</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 4</span>
+      <span>
+        <a class="nb-title" href="ch4_completeness.html">Completeness</a>
+        <span class="nb-desc">Canonical models, the Truth Lemma, Lindenbaum's Lemma, and completeness of K</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 5</span>
+      <span>
+        <a class="nb-title" href="ch5_filtrations.html">Filtrations and Decidability</a>
+        <span class="nb-desc">Filtrations, the finite model property, and decidability of modal logics</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 6</span>
+      <span>
+        <a class="nb-title" href="ch6_tableaux.html">Modal Tableaux</a>
+        <span class="nb-desc">Prefixed signed tableaux, automated proof search, consistency checking</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 14</span>
+      <span>
+        <a class="nb-title" href="ch14_temporal_logics.html">Temporal Logics</a>
+        <span class="nb-desc">Always (𝐆), eventually (𝐅), historically (𝐇), previously (𝐏); linear frames and temporal validity</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 15</span>
+      <span>
+        <a class="nb-title" href="ch15_epistemic_logics.html">Epistemic Logics</a>
+        <span class="nb-desc">Knowledge operators K<sub>a</sub>, S5 axioms, multi-agent knowledge, public announcements</span>
+      </span>
+    </li>
+  </ol>
+
+  <h2>Extension</h2>
+  <ol class="notebooks">
+    <li>
+      <span class="ch-num">Ext</span>
+      <span>
+        <a class="nb-title" href="ext_deontic_temporal.html">Combined Deontic–Temporal Logic</a>
+        <span class="nb-desc">Obligations over time; the KDt system; combining deontic seriality with temporal operators</span>
+      </span>
+    </li>
+  </ol>
+
+  <a class="track-link" href="../health/">→ Health Application Notebooks</a>
+
+  <footer>
+    <a href="https://chapmanbe.github.io/Gamen.jl/">Gamen.jl docs</a> ·
+    <a href="https://bd.openlogicproject.org">Boxes and Diamonds</a> ·
+    <a href="https://github.com/chapmanbe/Gamen.jl">GitHub</a>
+  </footer>
+
+</body>
+</html>

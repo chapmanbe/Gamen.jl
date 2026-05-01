@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gamen.jl — Health Application Notebooks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { font-size: 16px; }
+    body {
+      font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+      font-size: 1.2rem;
+      line-height: 1.7;
+      color: #111;
+      background: #fffff8;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 2rem 5rem;
+    }
+    a { color: #2c5f8a; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+    .site-header img { height: 40px; }
+    .site-crumb { font-size: 1rem; color: #888; }
+    .site-crumb a { color: #888; }
+    .site-crumb a:hover { color: #2c5f8a; text-decoration: underline; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin: 2rem 0 0.3rem;
+      letter-spacing: -0.01em;
+    }
+    .intro {
+      color: #555;
+      font-style: italic;
+      margin: 0 0 2.5rem;
+      font-size: 1.1rem;
+    }
+    .intro a { color: #2c5f8a; font-style: normal; }
+
+    h2 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #999;
+      margin: 2.5rem 0 0.6rem;
+      border-bottom: 1px solid #e0e0d8;
+      padding-bottom: 0.4rem;
+    }
+
+    ol.notebooks {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    ol.notebooks li {
+      display: grid;
+      grid-template-columns: 2.8rem 1fr;
+      gap: 0 1rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid #eeeee6;
+      align-items: baseline;
+    }
+    .ch-num {
+      color: #ccc;
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      padding-top: 0.15rem;
+    }
+    .nb-title {
+      display: block;
+      color: #2c5f8a;
+    }
+    .nb-title:hover { text-decoration: underline; }
+    .nb-desc {
+      display: block;
+      font-size: 0.95rem;
+      color: #888;
+      font-style: italic;
+      margin-top: 0.1rem;
+    }
+
+    .track-link {
+      display: inline-block;
+      margin-top: 2.5rem;
+      padding: 0.5rem 1rem;
+      background: #f0f4f8;
+      border-radius: 4px;
+      font-size: 1rem;
+      color: #2c5f8a;
+    }
+
+    footer {
+      margin-top: 4rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e0e0d8;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    footer a { color: #aaa; }
+    footer a:hover { color: #2c5f8a; }
+  </style>
+</head>
+<body>
+
+  <div class="site-header">
+    <img src="https://chapmanbe.github.io/Gamen.jl/assets/logo.svg" alt="Gamen.jl logo">
+    <span class="site-crumb">
+      <a href="https://chapmanbe.github.io/Gamen.jl/">Gamen.jl</a> / Notebooks
+    </span>
+  </div>
+
+  <h1>Health Application Notebooks</h1>
+  <p class="intro">
+    Clinical applications of modal logic for health informatics graduate students.
+    Each notebook parallels a B&amp;D chapter but uses guideline formalization,
+    deontic obligations, and automated conflict detection as the running examples.
+    No prior logic background assumed. Browse below or run interactively on
+    <a href="https://mybinder.org/v2/gh/chapmanbe/Gamen.jl/main?urlpath=pluto">Binder</a>.
+  </p>
+
+  <h2>Chapters</h2>
+  <ol class="notebooks">
+    <li>
+      <span class="ch-num">Ch 0</span>
+      <span>
+        <a class="nb-title" href="ch0_health_clinical_rules.html">Clinical Rules and Propositional Logic</a>
+        <span class="nb-desc">MYCIN production rules, IF-THEN reasoning, and why propositional logic falls short for guidelines</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 1</span>
+      <span>
+        <a class="nb-title" href="ch1_health_clinical_obligations.html">Clinical Obligations</a>
+        <span class="nb-desc">Formalizing "must," "may," and "must not" as □ and ◇; guideline obligations as Kripke models</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 2</span>
+      <span>
+        <a class="nb-title" href="ch2_health_guideline_properties.html">Guideline Properties</a>
+        <span class="nb-desc">Seriality (achievable obligations), reflexivity, transitivity — choosing frame properties for clinical norms</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 3</span>
+      <span>
+        <a class="nb-title" href="ch3_health_deontic_systems.html">Deontic Systems for Guidelines</a>
+        <span class="nb-desc">KD as the logic of clinical guidelines; why K alone is insufficient; the D axiom and "ought implies can"</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 4</span>
+      <span>
+        <a class="nb-title" href="ch4_health_completeness.html">Completeness and Consistency</a>
+        <span class="nb-desc">What it means for a guideline set to be provably consistent; soundness, completeness, and CDS guarantees</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 5</span>
+      <span>
+        <a class="nb-title" href="ch5_health_decidability.html">Decidability for Guideline Checking</a>
+        <span class="nb-desc">Filtrations make automated guideline checking tractable; decidability as a computational guarantee</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 6</span>
+      <span>
+        <a class="nb-title" href="ch6_health_conflict_detection.html">Guideline Conflict Detection</a>
+        <span class="nb-desc">Automated detection of conflicts between clinical guidelines using modal tableaux</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 14</span>
+      <span>
+        <a class="nb-title" href="ch14_health_temporal_clinical.html">Temporal Clinical Protocols</a>
+        <span class="nb-desc">"Blood cultures before antibiotics," "reassess at 48 hours" — temporal operators in clinical sequencing</span>
+      </span>
+    </li>
+    <li>
+      <span class="ch-num">Ch 15</span>
+      <span>
+        <a class="nb-title" href="ch15_health_epistemic_clinical.html">Clinician Knowledge and Information Asymmetry</a>
+        <span class="nb-desc">What the attending knows vs. what the EHR records; K<sub>a</sub> operators for multi-agent clinical reasoning</span>
+      </span>
+    </li>
+  </ol>
+
+  <h2>Extension</h2>
+  <ol class="notebooks">
+    <li>
+      <span class="ch-num">Ext</span>
+      <span>
+        <a class="nb-title" href="ext_health_guideline_conflicts.html">Multi-Guideline Conflict Detection</a>
+        <span class="nb-desc">Detecting conflicts across full guideline sets; why pairwise checking is insufficient; the 60–30–10 challenge</span>
+      </span>
+    </li>
+  </ol>
+
+  <a class="track-link" href="../theory/">→ B&amp;D Companion Notebooks</a>
+
+  <footer>
+    <a href="https://chapmanbe.github.io/Gamen.jl/">Gamen.jl docs</a> ·
+    <a href="https://bd.openlogicproject.org">Boxes and Diamonds</a> ·
+    <a href="https://github.com/chapmanbe/Gamen.jl">GitHub</a>
+  </footer>
+
+</body>
+</html>

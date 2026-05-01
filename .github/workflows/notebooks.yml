@@ -67,7 +67,7 @@ jobs:
               Export_offer_binder=true,
               Export_binder_url="https://mybinder.org/v2/gh/chapmanbe/Gamen.jl/main",
               Export_disable_ui=true,
-              Export_create_index=true,
+              Export_create_index=false,
             )
 
             # Export health track notebooks
@@ -79,9 +79,14 @@ jobs:
               Export_offer_binder=true,
               Export_binder_url="https://mybinder.org/v2/gh/chapmanbe/Gamen.jl/main",
               Export_disable_ui=true,
-              Export_create_index=true,
+              Export_create_index=false,
             )'
         timeout-minutes: 60
+
+      - name: Copy custom index pages
+        run: |
+          cp notebooks/index_theory.html notebook_html/theory/index.html
+          cp notebooks/index_health.html notebook_html/health/index.html
 
       - name: Deploy notebooks to gh-pages
         uses: JamesIves/github-pages-deploy-action@v4
