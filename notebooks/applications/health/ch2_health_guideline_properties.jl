@@ -20,15 +20,27 @@ end
 md"""
 # Frame Properties of Clinical Guideline Systems
 
-This notebook parallels [Chapter 2 of Boxes and Diamonds](https://bd.openlogicproject.org) (Frame Definability) but interprets frame properties through the lens of **clinical practice guidelines**.
+## A Clinical Decision Support Alert Gone Wrong
 
-**Key insight**: Different clinical contexts impose different structural properties on what counts as "acceptable." A guideline system that requires every clinical state to have at least one acceptable next step (seriality) behaves very differently from one where obligations automatically hold in the current state (reflexivity). These structural choices map directly to frame properties in Kripke semantics.
+Imagine a patient in the ICU whose care plan has reached a **dead-end state** — every available action has been ruled out by competing contraindications. An EHR-embedded CDS system, built on a naively-specified guideline logic, fires an alert: *"You must prescribe a statin."* The alert is technically correct within its logic: there are no future states to check, so the obligation is vacuously satisfied. The clinician has no compliant path forward — but the system says nothing is wrong.
+
+This is not a software bug. It is a **logical structure** problem. The guideline was formalized using a modal logic that permits dead-end worlds. Fixing it requires choosing a different *frame property* — and that choice has a name: **seriality**.
+
+This notebook parallels [Chapter 2 of Boxes and Diamonds](https://bd.openlogicproject.org) (Frame Definability) and asks: what structural properties must a clinical guideline logic satisfy to behave correctly? By the end, you will be able to:
+
+- Identify which frame properties (seriality, reflexivity, transitivity, symmetry) correspond to which clinical requirements
+- Explain why **KD** (K + seriality) is the minimal logic for clinical obligations
+- Build Kripke frames that satisfy or violate each property and verify axiom schemas computationally
+- Distinguish contexts where additional properties (transitivity, symmetry) are clinically justified from those where they are not
+
+**Key insight**: Choosing a logic for clinical guidelines is an act of *ontological commitment* — you are deciding, in precise structural terms, what kind of world your guideline assumes it operates in.
 """
 
 # ╔═╡ 7a1b3c4d-0002-0002-0002-000000000002
 begin
 	using Gamen
 	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ 7a1b3c4d-0003-0003-0003-000000000003
@@ -98,6 +110,18 @@ begin
 	"""
 end
 
+# ╔═╡ 7a1b3c4d-0024-0024-0024-000000000024
+begin
+	visualize_model(nonserial_model)
+end
+
+# ╔═╡ 7a1b3c4d-0025-0025-0025-000000000025
+md"""
+**Exercise 1.** A hospital protocol states: *"A patient admitted for sepsis must receive blood cultures before antibiotics."* A colleague proposes modeling sepsis care states with a Kripke frame where every world has at least one successor.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The colleague is proposing a **serial** frame, which enforces the **D axiom** (□p → ◇p). This is the right choice for clinical obligations: it guarantees that for any obligatory action (draw cultures), there exists at least one reachable state where that action is possible. A non-serial frame would allow a dead-end care state where drawing cultures is simultaneously 'obligatory' and 'impossible' — a logically inconsistent protocol."])))
+"""
+
 # ╔═╡ 7a1b3c4d-0008-0008-0008-000000000008
 md"""
 ## 2. Reflexivity and the T Axiom: Current State Satisfies All Obligations
@@ -147,6 +171,18 @@ begin
 	This is exactly what we want: the obligation motivates a change from the current state.
 	"""
 end
+
+# ╔═╡ 7a1b3c4d-0026-0026-0026-000000000026
+begin
+	visualize_model(deontic_model)
+end
+
+# ╔═╡ 7a1b3c4d-0027-0027-0027-000000000027
+md"""
+**Exercise 2.** A clinical informatics team proposes formalizing the guideline *"A patient on an ACE inhibitor has their kidney function monitored"* using a **reflexive** frame — the T axiom (□p → p) holds. Is this appropriate?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"No. If the frame is reflexive, then □(monitored) → monitored: the obligation entails the patient is *already* being monitored. But the whole point of the guideline is to *direct* clinicians to monitor patients who are not yet being monitored. Reflexivity collapses the gap between obligation and fulfillment, stripping the guideline of its prescriptive force. A **serial (KD) frame** is appropriate: the obligation □(monitored) can be true at a world where monitoring has not yet occurred, directing action toward a reachable world where it does."])))
+"""
 
 # ╔═╡ 7a1b3c4d-0011-0011-0011-000000000011
 md"""
@@ -220,6 +256,19 @@ begin
 	The surgery frame fails symmetry because `:pre_op` can reach `:post_op` but not vice versa. Once surgery is performed, the pre-operative state is no longer accessible — a fact that the frame structure correctly captures.
 	"""
 end
+
+# ╔═╡ 7a1b3c4d-0028-0028-0028-000000000028
+md"""
+**Exercise 3.** For each clinical scenario below, decide whether a **symmetric** frame is appropriate (B axiom: p → □◇p). Justify your answer in terms of what symmetry requires structurally.
+
+(a) A patient starts warfarin therapy. If side effects develop, the clinician stops warfarin and returns to the pre-anticoagulation state.
+
+(b) A patient undergoes a below-knee amputation following diabetic foot osteomyelitis.
+
+(c) A clinician escalates an ICU patient from low-flow oxygen to non-invasive positive pressure ventilation (NIPPV). The patient may later be stepped down back to low-flow oxygen if they improve.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"(a) **Symmetric**: starting and stopping warfarin are both reachable from each other — a reversible medication decision. (b) **Not symmetric**: amputation is irreversible; the pre-operative state is not accessible from the post-operative state. The surgery frame with :pre_op => :post_op but no :post_op => :pre_op edge correctly models this. (c) **Symmetric**: escalation and de-escalation of respiratory support are clinically reversible. Both states can reach each other, justifying the B axiom for this specific part of the protocol."])))
+"""
 
 # ╔═╡ 7a1b3c4d-0015-0015-0015-000000000015
 md"""
@@ -401,6 +450,11 @@ md"""
 **The takeaway**: KD (K + seriality) is the minimal logic that prevents pathological guideline behavior. It ensures obligations are always achievable without making the overly strong assumption that obligations are already fulfilled. More properties can be added when the clinical context warrants them — transitivity for chronic disease management, symmetry for reversible medication decisions — but seriality is the non-negotiable foundation.
 """
 
+# ╔═╡ 7a1b3c4d-0023-0023-0023-000000000023
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify five roles a knowledge representation must play. Role 2 is **ontological commitment**: a representation is 'a set of commitments about how and what to think about' the domain. Choosing frame properties for a clinical guideline logic is exactly this kind of commitment. When you choose a serial frame (D axiom), you commit to the view that clinical obligations are always achievable — there are no dead-end care states. When you reject reflexivity (the T axiom), you commit to the view that obligations and current facts are distinct, preserving the prescriptive force of guidelines. When you add transitivity (the 4 axiom), you commit to persistent obligations across follow-up visits. Each frame property answers a question: *In what terms should I think about clinical care?* Getting the ontological commitment wrong — for example, choosing a reflexive frame for prescriptive guidelines — produces a representation that is formally consistent but clinically misleading. Buchanan (2006) observes that 'making assumptions explicit is valuable, whether or not the system is correct.' Frame properties are exactly those assumptions, made explicit and machine-checkable."])))
+"""
+
 # ╔═╡ Cell order:
 # ╟─7a1b3c4d-0001-0001-0001-000000000001
 # ╟─7a1b3c4d-0002-0002-0002-000000000002
@@ -409,13 +463,18 @@ md"""
 # ╟─7a1b3c4d-0005-0005-0005-000000000005
 # ╟─7a1b3c4d-0006-0006-0006-000000000006
 # ╟─7a1b3c4d-0007-0007-0007-000000000007
+# ╟─7a1b3c4d-0024-0024-0024-000000000024
+# ╟─7a1b3c4d-0025-0025-0025-000000000025
 # ╟─7a1b3c4d-0008-0008-0008-000000000008
 # ╟─7a1b3c4d-0009-0009-0009-000000000009
 # ╟─7a1b3c4d-0010-0010-0010-000000000010
+# ╟─7a1b3c4d-0026-0026-0026-000000000026
+# ╟─7a1b3c4d-0027-0027-0027-000000000027
 # ╟─7a1b3c4d-0011-0011-0011-000000000011
 # ╟─7a1b3c4d-0012-0012-0012-000000000012
 # ╟─7a1b3c4d-0013-0013-0013-000000000013
 # ╟─7a1b3c4d-0014-0014-0014-000000000014
+# ╟─7a1b3c4d-0028-0028-0028-000000000028
 # ╟─7a1b3c4d-0015-0015-0015-000000000015
 # ╟─7a1b3c4d-0016-0016-0016-000000000016
 # ╟─7a1b3c4d-0017-0017-0017-000000000017
@@ -424,3 +483,4 @@ md"""
 # ╟─7a1b3c4d-0020-0020-0020-000000000020
 # ╟─7a1b3c4d-0021-0021-0021-000000000021
 # ╟─7a1b3c4d-0022-0022-0022-000000000022
+# ╟─7a1b3c4d-0023-0023-0023-000000000023
