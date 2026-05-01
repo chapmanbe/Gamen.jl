@@ -20,6 +20,13 @@ We cover:
 - K and S5 have the finite model property (Proposition 5.14, Corollary 5.16)
 - S5 is decidable (Theorem 5.17)
 - Filtrations and frame properties (Theorem 5.18)
+
+**By the end of this notebook, you will be able to:**
+- Compute the subformula closure of any formula and determine whether a set is closed under subformulas or modally closed
+- Partition a model's worlds into Γ-equivalence classes and explain why the number of classes is bounded by 2^|Γ|
+- Construct finest and coarsest filtrations of a Kripke model and verify that the Filtration Lemma holds
+- Explain the finite model property for K and S5 and why it implies decidability
+- Identify which filtration construction preserves each frame property (symmetry, transitivity)
 """
 
 # ╔═╡ 5a5b5c5d-0002-0002-0002-000000000002
@@ -549,6 +556,8 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"You need a filtra
 
 # ╔═╡ 5a5b5c5d-0072-0072-0072-000000000072
 md"""
+The fact that filtrations preserve frame properties is not just a technical convenience — it means the decidability argument applies equally to S4, S5, and KB, not only to K. Every major modal logic used in practice inherits the finite model property through an appropriate filtration construction.
+
 $(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"The finite model property connects to a deeper point from Davis et al. (1993): a knowledge representation must be *computationally tractable*, not just expressively adequate. An infinite Kripke model can represent anything — but you cannot compute with it. Filtrations show that modal logic representations are inherently tractable: the finite model property guarantees that every question about validity can be answered by examining only finite structures. This is not an accident of implementation but a mathematical property of the logic itself. Buchanan (2006) makes a related point: 'making assumptions explicit is valuable, whether or not the system is correct.' The explicit subformula set Γ makes precise which distinctions matter and which can be collapsed."])))
 """
 
@@ -573,6 +582,12 @@ Chapter 5 establishes **decidability** for modal logics via filtrations:
 The practical consequence: automated reasoning over modal logics (including
 clinical guideline consistency checking) is **guaranteed to terminate**. This
 is the mathematical foundation that makes tools like Gamen.jl possible.
+
+**Looking ahead:** Chapter 5 guarantees that validity checking *can* terminate;
+Chapter 6 (Tableaux) shows *how* — by building a systematic proof-search tree
+that either finds a proof or extracts a finite countermodel. The two chapters
+together give you both the theoretical guarantee (this chapter) and the
+practical algorithm (the next).
 """
 
 # ╔═╡ Cell order:
