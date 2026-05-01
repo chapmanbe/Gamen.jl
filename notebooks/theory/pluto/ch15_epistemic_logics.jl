@@ -22,9 +22,39 @@ We cover:
 - Public Announcement Logic (Definitions 15.9–15.11)
 """
 
+# ╔═╡ f1f2f3f4-0028-0028-0028-000000000028
+md"""
+## Why Epistemic Logic?
+
+Consider a hospital handoff. An attending physician has just reviewed the overnight
+labs. A resident who was off shift has not. Both are about to walk into the same
+patient's room — but they carry *different knowledge states*. The attending knows the
+potassium is dangerously low. The resident does not.
+
+Classical propositional logic has no way to represent this asymmetry. "The potassium
+is low" is either true or false — and both physicians would evaluate it the same way.
+**Epistemic logic** gives us the tools to say: K_attending(K low) ∧ ¬K_resident(K low).
+
+This matters whenever reasoning involves multiple agents with different information:
+- **Clinical decision support**: What does the EHR *know* vs what the clinician *knows*?
+- **Security protocols**: Does the attacker know the key? Does the defender know the attacker knows?
+- **Multi-party consent**: Do all parties know the terms? Does each party know the others know?
+
+By the end of this notebook you will be able to:
+1. Construct multi-agent Kripke models with `EpistemicFrame` and `EpistemicModel`.
+2. Evaluate knowledge formulas K_a A, group knowledge, and common knowledge.
+3. Identify which frame properties (reflexivity, transitivity, Euclideanness) correspond to which epistemic principles.
+4. Apply Public Announcement Logic to model the effect of a shared revelation.
+5. Check bisimulation between two epistemic models.
+
+*Note: In code, `Knowledge(:a, p)` represents K_a p. The notation K[a] in Julia output means the same thing.*
+"""
+
 # ╔═╡ f1f2f3f4-0002-0002-0002-000000000002
 begin
 	using Gamen
+	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ f1f2f3f4-0003-0003-0003-000000000003
@@ -47,7 +77,7 @@ Key examples:
 - ∀a ∈ G: K_a (a year has 12 months)
 
 Multi-agent epistemic logic tracks the knowledge of multiple agents simultaneously.
-Each agent a has their own accessibility relation R_a — when R_a ww' holds, world
+Each agent a has their own accessibility relation R_a — when wR_aw' holds, world
 w' is *consistent with a's information at w*.
 """
 
@@ -73,6 +103,19 @@ begin
 	println("is_modal_free(K[a]p): ", is_modal_free(ka_p))
 end
 
+# ╔═╡ f1f2f3f4-0029-0029-0029-000000000029
+md"""
+**Exercise 1.** For each formula below, decide (a) whether it is modal-free, and
+(b) what it says in English. Then check with `is_modal_free`.
+
+1. `p` — the propositional variable p alone
+2. `Knowledge(:a, p)` — K_a p
+3. `Not(Knowledge(:b, q))` — ¬K_b q
+4. `Knowledge(:a, Not(Knowledge(:b, p)))` — K_a(¬K_b p)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answers", [md"1. `p` is modal-free (no K operators). 'p holds.' 2. `K[a]p` is NOT modal-free. 'Agent a knows p.' 3. `¬K[b]q` is NOT modal-free. 'Agent b does not know q.' 4. `K[a](¬K[b]p)` is NOT modal-free. 'Agent a knows that agent b does not know p.' — a higher-order knowledge claim."])))
+"""
+
 # ╔═╡ f1f2f3f4-0007-0007-0007-000000000007
 md"""
 ## Relational Models
@@ -81,7 +124,7 @@ A *multi-agent model* M = ⟨W, R, V⟩ where:
 2. R = {R_a : a ∈ G} is a family of accessibility relations, one per agent
 3. V(p) ⊆ W is the set of worlds where propositional variable p is true
 
-When R_a ww' holds, w' is *accessible by a from w* — agent a cannot distinguish
+When wR_aw' holds, w' is *accessible by a from w* — agent a cannot distinguish
 w from w'.
 """
 
@@ -112,7 +155,7 @@ md"""
 ## Truth Conditions
 Truth for K_a is exactly like □ in normal modal logic, but using R_a:
 
-M, w ⊩ K_a B  iff  for all w' ∈ W with R_a ww': M, w' ⊩ B
+M, w ⊩ K_a B  iff  for all w' ∈ W with wR_aw': M, w' ⊩ B
 
 If agent a has no accessible worlds from w, K_a B is vacuously true at w.
 This is the same issue as with □ in normal modal logic — to avoid vacuous
@@ -140,8 +183,21 @@ begin
 	# Higher-order: does a know that b doesn't know p?
 	b_doesnt_know = Not(Knowledge(:b, p))
 	println("K[a](¬K[b]p) at w1: ", satisfies(model, :w1, Knowledge(:a, b_doesnt_know)))
-	# a sees w2; at w2, b sees w2 (p there) → K[b]p true at w2 → ¬K[b]p false at w2 → false
+	# a sees w2; at w2, b sees only w2 (p there) → K[b]p true at w2 → ¬K[b]p false at w2
+	# → K[a](¬K[b]p) false at w1
 end
+
+# ╔═╡ f1f2f3f4-0030-0030-0030-000000000030
+md"""
+**Exercise 2.** Using the model from above (p true only at w2; a: w1→w2, b: w1→w3),
+evaluate the following by hand, then verify with `satisfies`:
+
+1. K[a]p at w2 — does a know p from world w2?
+2. K[b]q at w1 — does b know q from w1? (q is true only at w2; b sees w3 from w1)
+3. K[a](K[b]p) at w1 — does a know that b knows p?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answers", [md"1. At w2, a's successors = {w2} (a sees only itself). p is true at w2. So K[a]p = true at w2. 2. At w1, b's successors = {w3}. q is false at w3. So K[b]q = false. 3. At w1, a's successors = {w2}. At w2, b's successors = {w2} (reflexive). p is true at w2. So K[b]p = true at w2. Therefore K[a](K[b]p) = true at w1."])))
+"""
 
 # ╔═╡ f1f2f3f4-0012-0012-0012-000000000012
 md"""
@@ -194,6 +250,22 @@ begin
 	println("  (veridicality fails without reflexivity)")
 end
 
+# ╔═╡ f1f2f3f4-0031-0031-0031-000000000031
+md"""
+**Exercise 3.** S5 is the "gold standard" epistemic system, requiring that the
+accessibility relation be an *equivalence relation* (reflexive, transitive, Euclidean).
+
+(a) The **positive introspection** principle says: if K_a p, then K_a K_a p.
+What frame property does this require?
+
+(b) The **negative introspection** principle says: if ¬K_a p, then K_a ¬K_a p.
+What frame property does this require?
+
+(c) Why might S5 be *too strong* for modelling a human clinician's knowledge?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answers", [md"(a) Transitivity: if wR_av and vR_au, then wR_au. If a knows p at w, then K[a]K[a]p holds because every world v a can reach also has p in all its successors. (b) Euclideanness: if wR_av and wR_au, then vR_au. (c) S5 commits to 'perfect introspection' — agents always know exactly what they know and don't know. Real clinicians have *bounded awareness*: they may not know whether they know a fact, and may be unaware of what they don't know. KT (reflexivity only) or S4 (no Euclidean) may be more realistic."])))
+"""
+
 # ╔═╡ f1f2f3f4-0015-0015-0015-000000000015
 md"""
 ## Group and Common Knowledge
@@ -233,6 +305,30 @@ begin
 		group_knows(ck_model, :w3, [:a, :b], p))
 end
 
+# ╔═╡ f1f2f3f4-0032-0032-0032-000000000032
+md"""
+**Exercise 4.** The distinction between group knowledge and common knowledge is
+crucial in *coordinated action*. Consider a fire alarm: if the alarm sounds (p),
+and every person in the building hears it (group knowledge), is that enough for
+*coordinated evacuation*?
+
+(a) In the model above, is p common knowledge at w1? What does the BFS over the
+transitive closure of R_a ∪ R_b visit from w1?
+
+(b) Now suppose we add a world w4 to the model where p is false, and both
+agents can reach w4 from w2. Would p still be common knowledge at w1?
+
+(c) Why does coordinated action typically require *common* knowledge rather
+than just group knowledge?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answers", [md"(a) Yes, p is common knowledge at w1. BFS from w1: visit w1 (p true), then w2 via a and b (p true), then w2 again (already visited). All reachable worlds have p. (b) No. Adding w4 (p false) reachable from w2 means the BFS visits w4, where p is false. Common knowledge fails. (c) Group knowledge ('everyone knows') doesn't guarantee 'everyone knows everyone knows' — agents may be uncertain whether others have heard the alarm. Common knowledge closes this regress. Coordinated action requires agents to rely on each other acting, which requires knowing that others know, knowing that others know others know, etc."])))
+"""
+
+# ╔═╡ f1f2f3f4-0033-0033-0033-000000000033
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify five roles a knowledge representation plays. Epistemic models are a vivid illustration of at least two: **Role 1 (Surrogate)**: an epistemic model is a *formal surrogate* for an agent's knowledge state. The model captures what an agent can and cannot distinguish — but, as Davis et al. warn, 'perfect fidelity is impossible.' The model for the attending physician omits their tacit clinical experience; the model for the EHR omits its data latency. **Role 2 (Ontological Commitment)**: choosing S5 over KT is an ontological commitment. S5 says agents have *perfect introspection* — they always know exactly what they know and what they don't. That commits us to a world where no clinician suffers diagnostic uncertainty or knowledge gaps. KT (reflexivity only) is a weaker, more realistic commitment: known things are true, but agents may not know all of their own knowledge. The choice of modal system is not just a technical detail — it is a claim about the nature of the agents being modelled."])))
+"""
+
 # ╔═╡ f1f2f3f4-0017-0017-0017-000000000017
 md"""
 ## Bisimulations
@@ -240,8 +336,8 @@ A **bisimulation** ℛ ⊆ W₁ × W₂ between two models M₁ and M₂ satisfi
 for every ⟨w₁, w₂⟩ ∈ ℛ:
 
 1. **Atomic agreement**: w₁ ∈ V₁(p) iff w₂ ∈ V₂(p) for all propositional variables p.
-2. **Forth**: for each agent a and every v₁ with R_{a,1} w₁v₁, there exists v₂ with R_{a,2} w₂v₂ and ⟨v₁,v₂⟩ ∈ ℛ.
-3. **Back**: for each agent a and every v₂ with R_{a,2} w₂v₂, there exists v₁ with R_{a,1} w₁v₁ and ⟨v₁,v₂⟩ ∈ ℛ.
+2. **Forth**: for each agent a and every v₁ with w₁R_{a,1}v₁, there exists v₂ with w₂R_{a,2}v₂ and ⟨v₁,v₂⟩ ∈ ℛ.
+3. **Back**: for each agent a and every v₂ with w₂R_{a,2}v₂, there exists v₁ with w₁R_{a,1}v₁ and ⟨v₁,v₂⟩ ∈ ℛ.
 
 **Theorem 15.8**: If ⟨M₁,w₁⟩ ⟺ ⟨M₂,w₂⟩ (linked by bisimulation), then
 for every formula A: M₁,w₁ ⊩ A iff M₂,w₂ ⊩ A.
@@ -294,7 +390,7 @@ end
 
 # ╔═╡ f1f2f3f4-0020-0020-0020-000000000020
 md"""
-## 15.7–15.8 Public Announcement Logic (Definitions 15.9–15.11)
+## Public Announcement Logic
 
 **Public Announcement Logic (PAL)** extends epistemic logic with the
 *public announcement operator* [B]C:
@@ -309,6 +405,8 @@ where the *restricted model* M|B = ⟨W', R', V'⟩ is:
 Reading: "After B is truthfully announced, C holds."
 
 If B is false at w, [B]C holds vacuously (announcement of a falsehood can't occur).
+
+(Definitions 15.9–15.11, B&D)
 """
 
 # ╔═╡ f1f2f3f4-0021-0021-0021-000000000021
@@ -385,6 +483,26 @@ begin
 	end
 end
 
+# ╔═╡ f1f2f3f4-0034-0034-0034-000000000034
+md"""
+## Visualizing an Epistemic Model
+
+The model below is the two-agent model from the Introduction (Figure 15.1 style).
+Agent a's accessibility arrows are shown; the visualization uses the underlying
+KripkeModel structure for a single agent.
+"""
+
+# ╔═╡ f1f2f3f4-0035-0035-0035-000000000035
+begin
+	# Visualize agent a's accessibility relation as a KripkeModel
+	vis_frame_a = KripkeFrame(
+		[:w1, :w2, :w3],
+		[:w1 => :w2, :w2 => :w2, :w3 => :w3]
+	)
+	vis_model_a = KripkeModel(vis_frame_a, [:p => [:w2], :q => [:w2]])
+	visualize_model(vis_model_a)
+end
+
 # ╔═╡ f1f2f3f4-0027-0027-0027-000000000027
 md"""
 ## Summary
@@ -411,21 +529,27 @@ S5 (reflexive+transitive+euclidean = equivalence relation).
 
 # ╔═╡ Cell order:
 # ╟─f1f2f3f4-0001-0001-0001-000000000001
+# ╟─f1f2f3f4-0028-0028-0028-000000000028
 # ╟─f1f2f3f4-0002-0002-0002-000000000002
 # ╟─f1f2f3f4-0003-0003-0003-000000000003
 # ╟─f1f2f3f4-0004-0004-0004-000000000004
 # ╟─f1f2f3f4-0005-0005-0005-000000000005
 # ╟─f1f2f3f4-0006-0006-0006-000000000006
+# ╟─f1f2f3f4-0029-0029-0029-000000000029
 # ╟─f1f2f3f4-0007-0007-0007-000000000007
 # ╟─f1f2f3f4-0008-0008-0008-000000000008
 # ╟─f1f2f3f4-0009-0009-0009-000000000009
 # ╟─f1f2f3f4-0010-0010-0010-000000000010
 # ╟─f1f2f3f4-0011-0011-0011-000000000011
+# ╟─f1f2f3f4-0030-0030-0030-000000000030
 # ╟─f1f2f3f4-0012-0012-0012-000000000012
 # ╟─f1f2f3f4-0013-0013-0013-000000000013
 # ╟─f1f2f3f4-0014-0014-0014-000000000014
+# ╟─f1f2f3f4-0031-0031-0031-000000000031
 # ╟─f1f2f3f4-0015-0015-0015-000000000015
 # ╟─f1f2f3f4-0016-0016-0016-000000000016
+# ╟─f1f2f3f4-0032-0032-0032-000000000032
+# ╟─f1f2f3f4-0033-0033-0033-000000000033
 # ╟─f1f2f3f4-0017-0017-0017-000000000017
 # ╟─f1f2f3f4-0018-0018-0018-000000000018
 # ╟─f1f2f3f4-0019-0019-0019-000000000019
@@ -436,4 +560,6 @@ S5 (reflexive+transitive+euclidean = equivalence relation).
 # ╟─f1f2f3f4-0024-0024-0024-000000000024
 # ╟─f1f2f3f4-0025-0025-0025-000000000025
 # ╟─f1f2f3f4-0026-0026-0026-000000000026
+# ╟─f1f2f3f4-0034-0034-0034-000000000034
+# ╟─f1f2f3f4-0035-0035-0035-000000000035
 # ╟─f1f2f3f4-0027-0027-0027-000000000027
