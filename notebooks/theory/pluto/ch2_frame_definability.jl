@@ -16,6 +16,13 @@ We cover:
 - Frame properties: reflexivity, symmetry, transitivity, seriality, euclideanness (Definition 2.3)
 - The correspondence between modal schemas and frame properties
 - Normal modal logics: K, T, S4, S5, KD
+
+**By the end of this notebook you will be able to:**
+1. Explain what it means for a formula to be valid on a frame (vs. true in a model).
+2. Identify whether a given frame satisfies each of the five standard properties.
+3. State the schema that corresponds to each property (T↔reflexive, D↔serial, B↔symmetric, 4↔transitive, 5↔euclidean) and explain *why* the correspondence holds.
+4. Choose the right modal logic (K, KD, T, K4, S4, S5) for a given application domain and justify the choice in terms of frame properties.
+5. Use Gamen.jl to build frames, check properties, and verify schema validity computationally.
 """
 
 # ╔═╡ 2a2b3c4d-0002-0002-0002-000000000002
@@ -27,6 +34,14 @@ end
 # ╔═╡ 2a2b3c4d-0050-0050-0050-000000000050
 md"""
 ## Why Frame Properties Matter
+
+Consider two scenarios:
+
+**Doctor's orders:** A physician writes "the patient *must* take this medication." Does that mean the patient *is* taking it? No — obligation and actuality are different. The world where the obligation holds need not be the world where it is satisfied.
+
+**Reliable knowledge:** A radiologist reads an X-ray and says "I *know* there is a fracture." Does that mean a fracture exists? Yes — knowledge is *factive*. You cannot know something false. The world as the radiologist sees it must include the fracture.
+
+These two scenarios have different *logical structures* — and those structures show up in the **shape of the accessibility relation**. In the deontic case, the current world does not need to access itself (I'm not obligated because I'm already doing it). In the epistemic case, it must (I know only what is actually true).
 
 In Chapter 1, we saw that the truth of a modal formula depends on the **structure** of the accessibility relation — which worlds can see which. But we treated each model individually. Chapter 2 asks a deeper question:
 
@@ -81,7 +96,7 @@ begin
 	model_simple = KripkeModel(frame_simple, [:p => [:w1]])
 	visualize_model(model_simple,
 		positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
-		title = "Non-reflexive frame: w₁ → w₂")
+		title = "Non-reflexive model (w₁Rw₂, p true at w₁)")
 end
 
 # ╔═╡ 2a2b3c4d-0006-0006-0006-000000000006
@@ -138,7 +153,7 @@ begin
 	preorder_model = KripkeModel(preorder, [:p => [:w1, :w2], :q => [:w2, :w3]])
 	visualize_model(preorder_model,
 		positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0), :w3 => (4.0, 0.0)),
-		title = "Preorder (reflexive + transitive)")
+		title = "Preorder model (reflexive + transitive, S4 frame)")
 end
 
 # ╔═╡ 2a2b3c4d-0053-0053-0053-000000000053
@@ -162,7 +177,7 @@ begin
 	equiv_model = KripkeModel(equiv, [:p => [:w1], :q => [:w2, :w3]])
 	visualize_model(equiv_model,
 		positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 1.0), :w3 => (2.0, -1.0)),
-		title = "Equivalence relation (S5 frame)")
+		title = "Equivalence relation model (S5 frame)")
 end
 
 # ╔═╡ 2a2b3c4d-0054-0054-0054-000000000054
@@ -242,12 +257,12 @@ end
 # ╔═╡ 2a2b3c4d-0056-0056-0056-000000000056
 visualize_model(refl_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
-	title = "Reflexive frame: □p → p is valid")
+	title = "Reflexive model: □p → p is valid (p true at w₁)")
 
 # ╔═╡ 2a2b3c4d-0057-0057-0057-000000000057
 visualize_model(non_refl_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
-	title = "Non-reflexive frame: □p → p fails at w₂")
+	title = "Non-reflexive model: □p → p fails at w₂ (p true at w₁)")
 
 # ╔═╡ 2a2b3c4d-0015-0015-0015-000000000015
 md"""
@@ -279,12 +294,12 @@ end
 # ╔═╡ 2a2b3c4d-0058-0058-0058-000000000058
 visualize_model(serial_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
-	title = "Serial frame: □p → ◇p is valid")
+	title = "Serial model: □p → ◇p is valid (p true at w₁)")
 
 # ╔═╡ 2a2b3c4d-0059-0059-0059-000000000059
 visualize_model(non_serial_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
-	title = "Non-serial frame: □p → ◇p fails at w₂ (dead end)")
+	title = "Non-serial model: □p → ◇p fails at w₂ (dead end, p true at w₁)")
 
 # ╔═╡ 2a2b3c4d-0017-0017-0017-000000000017
 md"""
@@ -311,7 +326,12 @@ end
 # ╔═╡ 2a2b3c4d-0060-0060-0060-000000000060
 visualize_model(sym_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
-	title = "Symmetric frame: p → □◇p is valid")
+	title = "Symmetric model: p → □◇p is valid (p true at w₁)")
+
+# ╔═╡ 2a2b3c4d-0068-0068-0068-000000000068
+visualize_model(non_sym_model,
+	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0)),
+	title = "Non-symmetric model: p → □◇p fails (w₁Rw₂ but w₂↛w₁, p true at w₁)")
 
 # ╔═╡ 2a2b3c4d-0019-0019-0019-000000000019
 md"""
@@ -339,12 +359,12 @@ end
 # ╔═╡ 2a2b3c4d-0061-0061-0061-000000000061
 visualize_model(trans_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0), :w3 => (4.0, 0.0)),
-	title = "Transitive frame: □p → □□p is valid")
+	title = "Transitive model: □p → □□p is valid (p true at w₂, w₃)")
 
 # ╔═╡ 2a2b3c4d-0062-0062-0062-000000000062
 visualize_model(non_trans_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 0.0), :w3 => (4.0, 0.0)),
-	title = "Non-transitive: w₁ can't directly see w₃")
+	title = "Non-transitive model: w₁Rw₂Rw₃ but w₁↛w₃ — □p → □□p fails")
 
 # ╔═╡ 2a2b3c4d-0021-0021-0021-000000000021
 md"""
@@ -372,7 +392,12 @@ end
 # ╔═╡ 2a2b3c4d-0063-0063-0063-000000000063
 visualize_model(euc_model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 1.0), :w3 => (2.0, -1.0)),
-	title = "Euclidean frame: ◇p → □◇p is valid")
+	title = "Euclidean model: ◇p → □◇p is valid (p true at w₂)")
+
+# ╔═╡ 2a2b3c4d-0069-0069-0069-000000000069
+visualize_model(non_euc_model,
+	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 1.0), :w3 => (2.0, -1.0)),
+	title = "Non-euclidean model: ◇p → □◇p fails (w₁Rw₂, w₁Rw₃ but w₃↛w₂, p true at w₂)")
 
 # ╔═╡ 2a2b3c4d-0064-0064-0064-000000000064
 md"""
@@ -510,6 +535,17 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Yes! Try `KripkeF
 
 """
 
+# ╔═╡ 2a2b3c4d-0070-0070-0070-000000000070
+md"""
+## What Comes Next
+
+Frame definability gives us the *semantic* side of the story: frame properties determine which schemas are valid. **Chapter 3** (Axiomatic Derivations) gives us the *syntactic* side: Hilbert-style axiom systems that can *prove* the same schemas without consulting any model.
+
+The deep theorem connecting the two — **soundness and completeness** — says that what you can prove in a Hilbert system (using schemas like T, D, B, 4, 5) is exactly what is valid on the corresponding class of frames. This is proved in Chapter 4 via canonical models.
+
+From a knowledge representation perspective (Davis et al. Role 3): the Hilbert proofs in Ch3 tell you which inferences are *sanctioned*; the frame properties in Ch2 tell you *why* those sanctions are appropriate. Together they give you the full picture of what a modal logic commits you to believing and inferring.
+"""
+
 # ╔═╡ Cell order:
 # ╟─2a2b3c4d-0001-0001-0001-000000000001
 # ╟─2a2b3c4d-0002-0002-0002-000000000002
@@ -538,6 +574,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Yes! Try `KripkeF
 # ╟─2a2b3c4d-0017-0017-0017-000000000017
 # ╟─2a2b3c4d-0018-0018-0018-000000000018
 # ╟─2a2b3c4d-0060-0060-0060-000000000060
+# ╟─2a2b3c4d-0068-0068-0068-000000000068
 # ╟─2a2b3c4d-0019-0019-0019-000000000019
 # ╟─2a2b3c4d-0020-0020-0020-000000000020
 # ╟─2a2b3c4d-0061-0061-0061-000000000061
@@ -545,6 +582,7 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Yes! Try `KripkeF
 # ╟─2a2b3c4d-0021-0021-0021-000000000021
 # ╟─2a2b3c4d-0022-0022-0022-000000000022
 # ╟─2a2b3c4d-0063-0063-0063-000000000063
+# ╟─2a2b3c4d-0069-0069-0069-000000000069
 # ╟─2a2b3c4d-0064-0064-0064-000000000064
 # ╟─2a2b3c4d-0023-0023-0023-000000000023
 # ╟─2a2b3c4d-0024-0024-0024-000000000024
@@ -553,3 +591,4 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Yes! Try `KripkeF
 # ╟─2a2b3c4d-0066-0066-0066-000000000066
 # ╟─2a2b3c4d-0067-0067-0067-000000000067
 # ╟─2a2b3c4d-0027-0027-0027-000000000027
+# ╟─2a2b3c4d-0070-0070-0070-000000000070
