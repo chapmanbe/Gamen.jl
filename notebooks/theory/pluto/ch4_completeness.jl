@@ -21,6 +21,13 @@ We cover:
 - The Truth Lemma (Proposition 4.12)
 - Determination and completeness (Theorem 4.14, Corollary 4.15)
 - Frame completeness (Theorem 4.16)
+
+**By the end of this notebook you will be able to:**
+1. Explain why completeness matters and how it differs from soundness.
+2. Define a complete Σ-consistent set and apply Lindenbaum's Lemma to extend consistent sets.
+3. Construct the canonical model for a given modal system and verify the Truth Lemma holds.
+4. Identify which frame properties the canonical model inherits from each modal system's axioms.
+5. Use Gamen.jl to build canonical models, verify truth lemma, and confirm system distinctness computationally.
 """
 
 # ╔═╡ 4a4b4c4d-0002-0002-0002-000000000002
@@ -109,10 +116,10 @@ $(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The subformulas o
 md"""
 ## Derivability and Consistency
 
-**Derivability from a set** (Definition 3.36): Γ ⊢\_Σ A means A is derivable
-from premises in Γ within system Σ. By soundness and completeness, we
-can check this *semantically*: A holds at every world where all of Γ hold,
-in every model of the appropriate class.
+**Derivability from a set** (Definition 3.36): Γ ⊢_Σ A means A is derivable
+from premises in Γ within system Σ. By the completeness theorem (which we will prove
+in this chapter), this coincides with the *semantic* characterization: A holds at every world
+where all of Γ hold, in every model of the appropriate class.
 """
 
 # ╔═╡ 4a4b4c4d-0010-0010-0010-000000000010
@@ -543,7 +550,7 @@ determines(cm_k.model, SYSTEM_K, [p]; max_worlds=3)
 
 # ╔═╡ 4a4b4c4d-0053-0053-0053-000000000053
 md"""
-$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify a key role of knowledge representations: they serve as a *theory of intelligent reasoning* by defining which inferences are sanctioned. Completeness tells us exactly when a proof system's sanctioned inferences match the semantic truth. Without completeness, your representation might silently *miss* valid inferences. With it, you know the axioms capture everything the frame properties force. As Buchanan (2006) put it, 'making assumptions explicit is valuable, whether or not the system is correct.' Completeness goes further: it guarantees that those explicit assumptions are *sufficient*."])))
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify two roles of knowledge representations that converge here. As a *theory of intelligent reasoning* (Role 3), completeness tells us exactly which inferences are sanctioned: proof-theoretic derivability matches semantic truth, nothing more and nothing less. Without completeness, your representation might silently *miss* valid inferences. With it, the axioms capture everything the frame properties force. As a *medium for computation* (Role 4), the canonical model construction is itself an algorithm: given a finite formula closure, enumerate all complete consistent sets and build the model explicitly — which is exactly what `canonical_model` does. This constructiveness is not incidental: completeness works *because* we can compute the canonical model. As Buchanan (2006) put it, 'making assumptions explicit is valuable, whether or not the system is correct.' Completeness guarantees those explicit assumptions are both necessary and sufficient."])))
 """
 
 # ╔═╡ 4a4b4c4d-0054-0054-0054-000000000054
