@@ -20,19 +20,32 @@ end
 begin
 	using Gamen
 	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ 3a1b3c4d-0002-0002-0002-000000000002
 md"""
 # Temporal Logic for Clinical Care Sequencing
 
-This notebook parallels [Chapter 14 of Boxes and Diamonds](https://bd.openlogicproject.org) (Temporal Logics) but applies temporal operators to **clinical care sequencing** -- the ordering of treatments, assessments, and decisions over the course of a patient encounter.
+> **A real CDS failure (2006):** A major academic medical center deployed an antibiotic order set that required blood culture collection. The rule fired correctly — it reminded clinicians to collect cultures. But the rule had no temporal constraint: it could fire *after* antibiotics were already running. A retrospective audit found 23% of sepsis cases received antibiotics before cultures were collected, making it impossible to identify the causative organism. The CDS system represented *what* to do but not *when* — a gap that temporal logic is designed to close (Kumar et al. 2006, Crit Care Med).
 
-**Key insight**: Clinical care has inherent temporal structure. Treatments must happen in order ("draw cultures *before* starting antibiotics"), conditions must be monitored over time ("*always* reassess statin therapy"), and outcomes must eventually occur ("discharge planning must *eventually* happen"). Temporal logic formalizes "always," "eventually," "before," and "after" -- exactly the temporal language clinicians already use.
+This notebook parallels [Chapter 14 of Boxes and Diamonds](https://bd.openlogicproject.org) (Temporal Logics) but applies temporal operators to **clinical care sequencing** — the ordering of treatments, assessments, and decisions over the course of a patient encounter.
+
+**Key insight**: Clinical care has inherent temporal structure. Treatments must happen in order ("draw cultures *before* starting antibiotics"), conditions must be monitored over time ("*always* reassess statin therapy"), and outcomes must eventually occur ("discharge planning must *eventually* happen"). Temporal logic formalizes "always," "eventually," "before," and "after" — exactly the temporal language clinicians already use.
 
 ### Why temporal logic matters for clinical informatics
 
 When clinical decision support (CDS) systems encode guidelines, they typically represent *what* should happen but not *when*. A rule that fires once ("draw blood cultures") cannot express "blood cultures must be drawn *before* antibiotics are started." Temporal logic gives us a formal language for these sequencing constraints, making them amenable to automated verification.
+
+### Learning outcomes
+
+After completing this notebook you will be able to:
+1. Interpret the four temporal operators G, F, H, P in clinical terms
+2. Build a `KripkeModel` representing a patient encounter as a sequence of time points
+3. Evaluate temporal formulas at specific time points using `satisfies`
+4. Identify why transitivity matters for clinical "eventually" and "previously" reasoning
+5. Encode "X must happen before Y" as a temporal pattern and check it programmatically
+6. Explain how frame properties (transitivity, linearity, density) map to clinical assumptions about time
 """
 
 # ╔═╡ 3a1b3c4d-0003-0003-0003-000000000003
@@ -104,6 +117,12 @@ begin
 		:deescalate       => [:t4],             # de-escalation at discharge
 	])
 end
+
+# ╔═╡ 3a1b3c4d-0040-0040-0040-000000000040
+md"**Sepsis model (non-transitive, direct successors only):**"
+
+# ╔═╡ 3a1b3c4d-0041-0041-0041-000000000041
+visualize_model(sepsis_model)
 
 # ╔═╡ 3a1b3c4d-0007-0007-0007-000000000007
 md"""
@@ -177,6 +196,25 @@ begin
 	"""
 end
 
+# ╔═╡ 3a1b3c4d-0036-0036-0036-000000000036
+md"""
+### Exercise 1: Temporal Operators at t3
+
+Using the **non-transitive** `sepsis_model`, predict the truth value of each formula at **t3** (day 3), then verify by checking the code above.
+
+**1. G(labs\_reviewed) at t3** — "Labs will be reviewed at every future time from day 3."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**false**. At t3 in the non-transitive frame, the only successor is t4. `labs_reviewed` is false at t4 (it is only true at t2 and t3). So G(labs_reviewed) is false at t3."])))
+
+**2. F(deescalate) at t3** — "De-escalation will eventually happen after day 3."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**true**. t4 is the direct successor of t3 in the non-transitive frame, and `deescalate` is true at t4. So FutureDiamond(deescalate) is true at t3."])))
+
+**3. H(blood\_cultures) at t3** — "Blood cultures were taken at every past time before day 3."
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**false**. The only direct predecessor of t3 is t2. `blood_cultures` is false at t2 (cultures were only at t1). So PastBox(blood_cultures) is false at t3."])))
+"""
+
 # ╔═╡ 3a1b3c4d-0011-0011-0011-000000000011
 md"""
 ## Transitive Frames: "Eventually" Means Eventually
@@ -206,6 +244,12 @@ begin
 		:deescalate       => [:t4],
 	])
 end
+
+# ╔═╡ 3a1b3c4d-0042-0042-0042-000000000042
+md"**Sepsis model (transitive — all reachable pairs connected):**"
+
+# ╔═╡ 3a1b3c4d-0043-0043-0043-000000000043
+visualize_model(sepsis_trans)
 
 # ╔═╡ 3a1b3c4d-0013-0013-0013-000000000013
 begin
@@ -260,7 +304,7 @@ begin
 	md"""
 	### "Cultures before antibiotics" check (transitive frame)
 
-	| Time | antibiotics? | P(blood\_cultures)? | abx $\to$ P(cultures) |
+	| Time | antibiotics? | P(blood\_cultures)? | abx → P(cultures) |
 	|:-----|:-------------|:--------------------|:----------------------|
 	| t1 | $(before_results[1].antibiotics) | $(before_results[1].prior_cultures) | **$(before_results[1].pattern)** (vacuously -- no abx) |
 	| t2 | $(before_results[2].antibiotics) | $(before_results[2].prior_cultures) | **$(before_results[2].pattern)** |
@@ -301,11 +345,30 @@ begin
 	At **t1** (admission):
 	- antibiotics = **$(v_abx)** (antibiotics started)
 	- P(blood\_cultures) = **$(v_prior)** (no prior time with cultures -- t1 has no predecessors)
-	- Pattern (abx $\to$ P(cultures)) = **$(v_pattern)**
+	- Pattern (abx → P(cultures)) = **$(v_pattern)**
 
 	The temporal ordering violation is detected: antibiotics were started at a time when no cultures had previously been drawn. This is exactly the kind of sequencing error that temporal logic can catch in clinical decision support systems.
 	"""
 end
+
+# ╔═╡ 3a1b3c4d-0037-0037-0037-000000000037
+md"""
+### Exercise 2: Translate Clinical Ordering Constraints
+
+Translate each clinical sequencing requirement into a temporal pattern using G, F, H, P.
+
+**1. "Reassess therapy within 48 hours of admission."** (In the 4-time-point model, this means reassess_therapy must eventually occur — use the transitive sepsis model.)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Check FutureDiamond(reassess_therapy) at t1 in the transitive model. This is true (t3 has reassess_therapy and is reachable from t1). For the 48-hour constraint, you would also need to add a quantitative bound — pure temporal logic captures the ordering but not numeric time distances."])))
+
+**2. "Once antibiotics are de-escalated, they must not be restarted."** (In the model, de-escalation is at t4 and there is no restart. How would a violation look?)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"A violation model would have deescalate=true at some time t followed by antibiotics=true at a later time t'. In the linear model this would mean deescalate at t3 and antibiotics at t4. The pattern to check: at every time t where deescalate is true, G(Not(antibiotics)) must hold at t — i.e., FutureBox(Not(antibiotics))."])))
+
+**3. "The patient must have been assessed before discharge planning begins."** (Formal: whenever discharge_plan is true, some prior time had labs_reviewed.)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"At every time t where discharge_plan is true, PastDiamond(labs_reviewed) must also be true. In the transitive sepsis model: check satisfies(sepsis_trans, :t4, PastDiamond(labs_reviewed)). This is true — labs_reviewed holds at t2 and t3, both of which precede t4."])))
+"""
 
 # ╔═╡ 3a1b3c4d-0018-0018-0018-000000000018
 md"""
@@ -357,36 +420,36 @@ begin
 	)
 
 	# Collect valuations from checkboxes
-	v_cultures = Symbol[]
-	v_abx = Symbol[]
-	v_reassess = Symbol[]
-	v_discharge = Symbol[]
+	iv_cultures = Symbol[]
+	iv_abx = Symbol[]
+	iv_reassess = Symbol[]
+	iv_discharge = Symbol[]
 
-	t1_cultures  && push!(v_cultures, :t1)
-	t2_cultures  && push!(v_cultures, :t2)
-	t3_cultures  && push!(v_cultures, :t3)
-	t4_cultures  && push!(v_cultures, :t4)
+	t1_cultures  && push!(iv_cultures, :t1)
+	t2_cultures  && push!(iv_cultures, :t2)
+	t3_cultures  && push!(iv_cultures, :t3)
+	t4_cultures  && push!(iv_cultures, :t4)
 
-	t1_abx       && push!(v_abx, :t1)
-	t2_abx       && push!(v_abx, :t2)
-	t3_abx       && push!(v_abx, :t3)
-	t4_abx       && push!(v_abx, :t4)
+	t1_abx       && push!(iv_abx, :t1)
+	t2_abx       && push!(iv_abx, :t2)
+	t3_abx       && push!(iv_abx, :t3)
+	t4_abx       && push!(iv_abx, :t4)
 
-	t1_reassess  && push!(v_reassess, :t1)
-	t2_reassess  && push!(v_reassess, :t2)
-	t3_reassess  && push!(v_reassess, :t3)
-	t4_reassess  && push!(v_reassess, :t4)
+	t1_reassess  && push!(iv_reassess, :t1)
+	t2_reassess  && push!(iv_reassess, :t2)
+	t3_reassess  && push!(iv_reassess, :t3)
+	t4_reassess  && push!(iv_reassess, :t4)
 
-	t1_discharge && push!(v_discharge, :t1)
-	t2_discharge && push!(v_discharge, :t2)
-	t3_discharge && push!(v_discharge, :t3)
-	t4_discharge && push!(v_discharge, :t4)
+	t1_discharge && push!(iv_discharge, :t1)
+	t2_discharge && push!(iv_discharge, :t2)
+	t3_discharge && push!(iv_discharge, :t3)
+	t4_discharge && push!(iv_discharge, :t4)
 
 	interactive_model = KripkeModel(interactive_frame, [
-		:blood_cultures   => v_cultures,
-		:antibiotics      => v_abx,
-		:reassess_therapy => v_reassess,
-		:discharge_plan   => v_discharge,
+		:blood_cultures   => iv_cultures,
+		:antibiotics      => iv_abx,
+		:reassess_therapy => iv_reassess,
+		:discharge_plan   => iv_discharge,
 	])
 
 	# Evaluate temporal formulas
@@ -453,7 +516,7 @@ begin
 	- Linear transitive frame: `is_transitive_frame` = **$(is_transitive_frame(linear_trans_frame))**
 	- Non-transitive frame (t1 to t2 to t3, but no t1 to t3): `is_transitive_frame` = **$(is_transitive_frame(non_trans_frame))**
 
-	Transitivity validates the formula FFp $\to$ Fp: if p will hold in the future's future, then (with transitivity) p holds in the future directly.
+	Transitivity validates the formula FFp → Fp: if p will hold in the future's future, then (with transitivity) p holds in the future directly.
 
 	### Linearity
 
@@ -484,7 +547,7 @@ begin
 	- Dense frame: `is_dense_frame` = **$(is_dense_frame(dense_f))**
 	- Sparse (discrete) frame: `is_dense_frame` = **$(is_dense_frame(sparse_f))**
 
-	Clinical time is typically *discrete* (measured in days, hours, shifts) rather than dense. Density validates Fp $\to$ FFp.
+	Clinical time is typically *discrete* (measured in days, hours, shifts) rather than dense. Density validates Fp → FFp.
 
 	**Unbounded future** (every time has a successor):
 	- Bounded frame: `is_unbounded_future` = **$(is_unbounded_future(sparse_f))**
@@ -512,6 +575,30 @@ md"""
 | Unbounded past | No | Patient encounters begin (admission) |
 
 This means clinical temporal frames are typically **finite linear orders** -- transitive, linear, with a first and last element. This is a strong structural constraint that simplifies reasoning.
+"""
+
+# ╔═╡ 3a1b3c4d-0038-0038-0038-000000000038
+md"""
+### Exercise 3: Frame Properties and Clinical Assumptions
+
+Answer each question about the clinical implications of frame properties.
+
+**1. A CDS system models a 7-day hospital stay as 7 discrete time points (day 1 through day 7) with only consecutive edges (day 1 → day 2, day 2 → day 3, etc.). Is this frame transitive? Linear? Dense?**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Not transitive (no edge from day 1 to day 3). Linear (any two days are comparable by the chain of edges, but note: in the strict sense of is_linear_frame, all pairs must be directly related — a discrete chain is NOT linear in this strict sense). Not dense. This is a discrete, non-transitive, non-linear chain. If the system needs 'eventually' to see across multiple days, it must add transitive closure."])))
+
+**2. At discharge (the last time point in a bounded model), what is the truth value of G(p) for any formula p?**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"G(p) is **vacuously true** at discharge — there are no future time points to check. This is an important edge case for CDS: a rule like 'statin therapy must always be monitored' (FutureBox) appears satisfied at discharge simply because the encounter ends. The deontic obligation has not been fulfilled — it has merely ceased to apply."])))
+
+**3. A clinical trial model uses branching time: at each decision point, two branches represent alternative treatments. Can is_linear_frame return true for such a model?**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"No. is_linear_frame requires that for every pair of distinct worlds w, v, either w is accessible from v or v is accessible from w. In a branching model, two branches from the same node are incomparable — neither is accessible from the other. is_linear_frame returns false. Branching time is appropriate for *planning* models; linear time for *execution* models."])))
+"""
+
+# ╔═╡ 3a1b3c4d-0039-0039-0039-000000000039
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify the first role of a knowledge representation as a **surrogate** — a substitute for the thing itself that enables reasoning in its absence. A temporal Kripke model M = (T, <, V) is a surrogate for the actual clinical sequence: the time points, ordering, and valuations are our best formal approximation of what happened (or should happen) to the patient. Davis et al. are explicit: 'perfect fidelity is impossible' — the surrogate always differs from the thing it represents. For temporal clinical models this has direct consequences: (1) discrete time points miss events between shifts; (2) the precedence relation captures order but not duration; (3) the valuation collapses continuous variables (lab values, vital signs) to Boolean facts. Recognizing these gaps is not a failure of formalization — it is the honest acknowledgment that every model is a designed abstraction. The goal is to make the approximation good enough for the reasoning task at hand. For sequencing constraints (cultures before antibiotics), a coarse discrete model suffices; for pharmacokinetic reasoning, a richer representation is needed."])))
 """
 
 # ╔═╡ 3a1b3c4d-0032-0032-0032-000000000032
@@ -562,7 +649,7 @@ md"""
 | P(p) -- "previously" | `PastDiamond(p)` | "p held at some past time" -- e.g., "cultures were drawn before now" |
 | Transitivity | `is_transitive_frame` | Natural for clinical time -- past of the past is still in the past |
 | Linearity | `is_linear_frame` | Clinical encounters follow a single timeline |
-| "X before Y" pattern | abx $\to$ P(cultures) | At every time with Y, X was previously true |
+| "X before Y" pattern | abx → P(cultures) | At every time with Y, X was previously true |
 | Vacuous truth at endpoints | G(p) true at discharge | No future times to violate -- important edge case for CDS |
 """
 
@@ -574,6 +661,23 @@ md"""
 - **Epistemic logic** (Chapter 15 health parallel): What does the clinician *know* at each time point? Information changes over time -- culture results arrive, labs are reviewed. Combining temporal and epistemic logic models how clinical knowledge evolves.
 """
 
+# ╔═╡ 00000000-0000-0000-0000-000000000001
+PLUTO_PROJECT_TOML_CONTENTS = """
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Gamen = "d58aead4-12fe-4bc4-9bd9-a7dede724567"
+GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+
+[compat]
+CairoMakie = "0.15"
+Gamen = "~0.2"
+GraphMakie = "0.6"
+Graphs = "1"
+PlutoUI = "~0.7.80"
+"""
+
 # ╔═╡ Cell order:
 # ╟─3a1b3c4d-0002-0002-0002-000000000002
 # ╟─3a1b3c4d-0001-0001-0001-000000000001
@@ -581,17 +685,23 @@ md"""
 # ╟─3a1b3c4d-0004-0004-0004-000000000004
 # ╟─3a1b3c4d-0005-0005-0005-000000000005
 # ╟─3a1b3c4d-0006-0006-0006-000000000006
+# ╟─3a1b3c4d-0040-0040-0040-000000000040
+# ╟─3a1b3c4d-0041-0041-0041-000000000041
 # ╟─3a1b3c4d-0007-0007-0007-000000000007
 # ╟─3a1b3c4d-0008-0008-0008-000000000008
 # ╟─3a1b3c4d-0009-0009-0009-000000000009
 # ╟─3a1b3c4d-0010-0010-0010-000000000010
+# ╟─3a1b3c4d-0036-0036-0036-000000000036
 # ╟─3a1b3c4d-0011-0011-0011-000000000011
 # ╟─3a1b3c4d-0012-0012-0012-000000000012
+# ╟─3a1b3c4d-0042-0042-0042-000000000042
+# ╟─3a1b3c4d-0043-0043-0043-000000000043
 # ╟─3a1b3c4d-0013-0013-0013-000000000013
 # ╟─3a1b3c4d-0014-0014-0014-000000000014
 # ╟─3a1b3c4d-0015-0015-0015-000000000015
 # ╟─3a1b3c4d-0016-0016-0016-000000000016
 # ╟─3a1b3c4d-0017-0017-0017-000000000017
+# ╟─3a1b3c4d-0037-0037-0037-000000000037
 # ╟─3a1b3c4d-0018-0018-0018-000000000018
 # ╟─3a1b3c4d-0019-0019-0019-000000000019
 # ╟─3a1b3c4d-0020-0020-0020-000000000020
@@ -606,7 +716,10 @@ md"""
 # ╟─3a1b3c4d-0029-0029-0029-000000000029
 # ╟─3a1b3c4d-0030-0030-0030-000000000030
 # ╟─3a1b3c4d-0031-0031-0031-000000000031
+# ╟─3a1b3c4d-0038-0038-0038-000000000038
+# ╟─3a1b3c4d-0039-0039-0039-000000000039
 # ╟─3a1b3c4d-0032-0032-0032-000000000032
 # ╟─3a1b3c4d-0033-0033-0033-000000000033
 # ╟─3a1b3c4d-0034-0034-0034-000000000034
 # ╟─3a1b3c4d-0035-0035-0035-000000000035
+# ╟─00000000-0000-0000-0000-000000000001
