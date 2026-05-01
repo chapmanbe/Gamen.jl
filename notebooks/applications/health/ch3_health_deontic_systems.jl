@@ -20,15 +20,26 @@ end
 md"""
 # Modal Systems and Clinical Reasoning
 
-This notebook parallels [Chapter 3 of Boxes and Diamonds](https://bd.openlogicproject.org) (Axiomatic Derivations) with a focus on **clinical guideline reasoning**. Different modal systems -- K, KD, KT, S4, S5 -- encode different assumptions about obligation. Which system is right for formalizing clinical guidelines?
+**A sepsis protocol reads**: "The clinician *must* draw blood cultures before administering antibiotics." An EHR alert fires this rule on every sepsis patient — but the hospital's ICU has a documented shortage of culture bottles. The rule fires. The bottles don't exist. Is the obligation still binding?
 
-**Key question**: When a guideline says "the clinician must obtain informed consent," what logical properties should the word "must" satisfy? The answer determines which modal system we need.
+This is not a rhetorical question. It is a formal one, and the answer depends entirely on which **modal system** underlies your clinical decision support logic. If your system permits "dead-end" states where an obligation holds but compliance is literally impossible, the alert is worse than useless — it is actively misleading.
+
+This notebook parallels [Chapter 3 of Boxes and Diamonds](https://bd.openlogicproject.org) (Axiomatic Derivations). We will work through the hierarchy of normal modal systems — K, KD, KT, S4, S5 — and show why **KD** is the minimal adequate logic for clinical guideline formalization. Every axiom corresponds to a structural assumption about clinical reality; getting that assumption wrong produces either an unsound system (one that proves false things) or an inadequate one (one that cannot prove true things).
+
+By the end of this notebook, you will be able to:
+
+- Explain what each standard axiom schema (K, D, T, 4, 5) means when Box is read as "is obligatory"
+- Verify that an axiom schema is satisfied on a specific Kripke frame
+- Identify why system K alone is insufficient for clinical obligations
+- Explain why the T axiom collapses obligation into truth and is inappropriate for deontic reasoning
+- Use Gamen.jl to check derivability of clinical inferences within different modal systems
 """
 
 # ╔═╡ 8a1b1c1d-0002-0002-0002-000000000002
 begin
 	using Gamen
 	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ 8a1b1c1d-0003-0003-0003-000000000003
@@ -90,12 +101,13 @@ end
 md"""
 ### Semantic Validity on Different Frame Classes
 
-Each axiom schema corresponds to a frame condition via the Sahlqvist correspondence. We can check whether a formula is valid on frames with specific properties:
+Each axiom schema corresponds to a **frame condition** via the Sahlqvist correspondence (a systematic translation between modal axioms and first-order properties of the accessibility relation). A *frame condition* is a structural constraint on which worlds can access which others. We can check whether a formula is valid on frames with specific properties:
 """
 
 # ╔═╡ 8a1b1c1d-0007-0007-0007-000000000007
 begin
-	# A serial frame (every world has a successor) -- validates D
+	# A serial frame -- every world has at least one successor (∀w ∃w' wRw')
+	# This models "no dead-end clinical states": there is always an achievable next step
 	serial_frame = KripkeFrame([:w1, :w2], [:w1 => :w2, :w2 => :w1])
 
 	# A non-serial frame (w2 is a dead end) -- D may fail
@@ -113,6 +125,13 @@ begin
 	 T_on_reflexive = is_valid_on_frame(reflexive_frame, t_axiom),
 	 T_on_serial = is_valid_on_frame(serial_frame, t_axiom))
 end
+
+# ╔═╡ 8a1b1c1d-0028-0028-0028-000000000028
+md"""
+**Exercise 1.** A clinical informaticist argues: *"Our ICU protocol for ventilator weaning requires that at every point in care, there is always some next action available — the protocol never puts the patient in a state with no options."* Which frame condition does this commit to, and which axiom schema does it validate?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"The commitment is to **seriality**: every world wRw' has at least one successor w'. This is exactly the frame condition for the **D axiom** (□A → ◇A). If there is always a next clinical state, then whenever an action is obligatory (□A), there exists a reachable state where it can be performed (◇A). The appropriate modal system is **KD**. If the informaticist had instead said 'the current care state always satisfies all active obligations,' that would be reflexivity and the T axiom — but that collapses obligation into current fact, which is too strong."])))
+"""
 
 # ╔═╡ 8a1b1c1d-0008-0008-0008-000000000008
 md"""
@@ -167,6 +186,9 @@ begin
 		□(And(consent, Not(consent)))))
 end
 
+# ╔═╡ 8a1b1c1d-0029-0029-0029-000000000029
+visualize_model(deadend_model)
+
 # ╔═╡ 8a1b1c1d-0012-0012-0012-000000000012
 md"""
 At w2 (the dead-end world):
@@ -197,6 +219,9 @@ begin
 	 frame_is_serial = is_serial(serial_clinical))
 end
 
+# ╔═╡ 8a1b1c1d-0030-0030-0030-000000000030
+visualize_model(serial_model)
+
 # ╔═╡ 8a1b1c1d-0014-0014-0014-000000000014
 md"""
 ### Why Not T? (Box(A) -> A)
@@ -223,11 +248,22 @@ md"""
 In a reflexive frame, Box(consent) at w1 requires consent to be true *at w1 itself*. This means we can never say "consent is obligatory but not yet obtained" -- the obligation would be false. For clinical deontic reasoning, we need obligation without presupposing fulfillment. **KD gives us exactly this.**
 """
 
+# ╔═╡ 8a1b1c1d-0031-0031-0031-000000000031
+md"""
+**Exercise 2.** A hospital's ethics committee drafts a policy: *"It is obligatory that every patient admitted for elective surgery has completed an advance directive."* They propose formalizing this as □(advance_directive) in a reflexive frame (system KT).
+
+(a) What does the T axiom say about this obligation?
+(b) Is system KT appropriate here? What clinical absurdity results if it is used?
+(c) Which system and frame condition should be used instead?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"(a) The T axiom says □A → A: if advance_directive is obligatory, it is *already true*. At every world, the obligation entails the fact. (b) KT is inappropriate. If we model the state of a patient just admitted (advance directive not yet completed), T would make □(advance_directive) false at that state — the obligation cannot even be stated about patients who have not yet fulfilled it. This defeats the purpose: a prescriptive obligation only matters when it has not yet been met. (c) System **KD** with a serial frame: □(advance_directive) can be true at a world where the directive is not yet complete, pointing to a reachable successor world where it is. The gap between obligation and current fact is exactly what KD preserves."])))
+"""
+
 # ╔═╡ 8a1b1c1d-0017-0017-0017-000000000017
 md"""
 ## Derivation in KD
 
-A Hilbert-style derivation shows that a formula follows from the axioms. Here we prove that in KD, if consent and cultures are both obligatory, then cultures are permitted:
+A **Hilbert-style derivation** is a finite sequence of formulas, each justified as either a tautological instance, an axiom instance of the system, or the result of applying Modus Ponens to two earlier lines (Definition 3.3, B&D). It shows that a formula follows from the axioms. Here we prove that in KD, if consent and cultures are both obligatory, then cultures are permitted:
 
 **Claim**: Box(consent) AND Box(cultures) -> Diamond(cultures) is derivable in KD.
 """
@@ -277,7 +313,7 @@ end
 md"""
 The proof is valid in **KD** but not in **K**, because it uses the D axiom (step 2). In system K, we cannot derive that obligations entail permissions -- dead-end worlds would be counterexamples.
 
-We can also verify this semantically with `is_derivable_from`:
+We can also verify this semantically with `is_entailed_by`:
 """
 
 # ╔═╡ 8a1b1c1d-0020-0020-0020-000000000020
@@ -285,8 +321,8 @@ begin
 	premises = [And(□(consent), □(cultures))]
 	goal = ◇(cultures)
 
-	(derivable_in_KD = is_derivable_from(SYSTEM_KD, premises, goal),
-	 derivable_in_K = is_derivable_from(SYSTEM_K, premises, goal))
+	(derivable_in_KD = is_entailed_by(SYSTEM_KD, premises, goal),
+	 derivable_in_K = is_entailed_by(SYSTEM_K, premises, goal))
 end
 
 # ╔═╡ 8a1b1c1d-0021-0021-0021-000000000021
@@ -334,7 +370,7 @@ begin
 	axiom_str = join(string.(sys.schemas), ", ")
 
 	results = map(test_formulas) do (formula_str, desc, formula)
-		deriv = is_derivable_from(sys, Formula[], formula)
+		deriv = is_entailed_by(sys, Formula[], formula)
 		"| $(formula_str) | $(desc) | **$(deriv)** |"
 	end
 
@@ -358,6 +394,11 @@ md"""
 For KD, this means: **if we can prove a guideline consequence from the KD axioms, that consequence holds in every possible clinical scenario whose obligation structure is serial** (every state has at least one acceptable successor).
 
 This is exactly what we want. Seriality is a minimal sanity condition -- it says obligations are achievable. Any clinical scenario that violates seriality (a state with no acceptable next step) is itself pathological. Soundness guarantees that our formal proofs respect all non-pathological scenarios.
+"""
+
+# ╔═╡ 8a1b1c1d-0032-0032-0032-000000000032
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify five roles a knowledge representation must play. Role 3 is the **theory of reasoning**: the representation sanctions certain inferences and not others. In Gamen.jl, the modal system plays exactly this role — it determines which inferences are formally valid. Choosing KD over K sanctions the inference 'if consent is obligatory, then consent is achievable' (the D axiom). Choosing KT would additionally sanction 'if consent is obligatory, consent is already obtained' — a clinically false inference in any state where the obligation has not yet been fulfilled. Choosing K alone leaves dead-end worlds possible, sanctioning the inference 'everything is obligatory at impossible states' — which is logically consistent but clinically nonsensical. The choice of modal system is not merely technical: it reflects a commitment about which reasoning moves are permissible when formalizing clinical guidelines. Soundness (Theorem 3.31, B&D) gives this commitment teeth: every provable formula in KD is guaranteed true in all serial frames. This means EHR systems built on KD cannot derive false obligations from true premises, as long as the underlying clinical reality is serial (no impossible dead-end states)."])))
 """
 
 # ╔═╡ 8a1b1c1d-0025-0025-0025-000000000025
@@ -384,6 +425,19 @@ md"""
 The theorem holds on the serial frame (as soundness guarantees) but fails on the non-serial frame. At the dead-end world w2, Box(cultures) is vacuously true but Diamond(cultures) is false -- an obligation exists with no way to fulfill it.
 """
 
+# ╔═╡ 8a1b1c1d-0033-0033-0033-000000000033
+md"""
+**Exercise 3.** The ACC/AHA cholesterol guideline states: *"High-intensity statin therapy is recommended for patients aged 40–75 with diabetes and LDL ≥ 70 mg/dL."* A colleague translates this as □(statin_therapy) in system K.
+
+(a) Construct a Kripke model in system K where □(statin_therapy) is true at some world w but ◇(statin_therapy) is false at the same world. What does this mean clinically?
+
+(b) Why does moving to system KD eliminate this problem?
+
+(c) Is □(statin_therapy) → statin_therapy appropriate here? Which system would it correspond to, and why is it wrong for this guideline?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"(a) Let the frame have worlds {w, w2} with only w → w2, and let statin_therapy be false everywhere. At w2 (a dead-end), □(statin_therapy) is vacuously true but ◇(statin_therapy) is false — the guideline 'obligates' statin therapy even though no reachable state includes it. Clinically: the CDS alert fires, but no compliant care path exists. (b) KD adds seriality: every world has at least one successor. At any world where □(statin_therapy) is true, there must exist a reachable world where statin_therapy holds. The obligation implies achievability. (c) □(statin_therapy) → statin_therapy is the T axiom, corresponding to system KT (reflexive frames). It is wrong here: a diabetic patient with LDL ≥ 70 may not yet be on a statin. The whole point of the guideline is to direct prescribing for patients who are *not yet* on statins. T would make the obligation false for every patient who hasn't started therapy — defeating its prescriptive purpose."])))
+"""
+
 # ╔═╡ 8a1b1c1d-0027-0027-0027-000000000027
 md"""
 ## Summary: Why KD for Clinical Guidelines
@@ -407,15 +461,19 @@ md"""
 # ╟─8a1b1c1d-0005-0005-0005-000000000005
 # ╟─8a1b1c1d-0006-0006-0006-000000000006
 # ╟─8a1b1c1d-0007-0007-0007-000000000007
+# ╟─8a1b1c1d-0028-0028-0028-000000000028
 # ╟─8a1b1c1d-0008-0008-0008-000000000008
 # ╟─8a1b1c1d-0009-0009-0009-000000000009
 # ╟─8a1b1c1d-0010-0010-0010-000000000010
 # ╟─8a1b1c1d-0011-0011-0011-000000000011
+# ╟─8a1b1c1d-0029-0029-0029-000000000029
 # ╟─8a1b1c1d-0012-0012-0012-000000000012
 # ╟─8a1b1c1d-0013-0013-0013-000000000013
+# ╟─8a1b1c1d-0030-0030-0030-000000000030
 # ╟─8a1b1c1d-0014-0014-0014-000000000014
 # ╟─8a1b1c1d-0015-0015-0015-000000000015
 # ╟─8a1b1c1d-0016-0016-0016-000000000016
+# ╟─8a1b1c1d-0031-0031-0031-000000000031
 # ╟─8a1b1c1d-0017-0017-0017-000000000017
 # ╟─8a1b1c1d-0018-0018-0018-000000000018
 # ╟─8a1b1c1d-0019-0019-0019-000000000019
@@ -424,6 +482,8 @@ md"""
 # ╟─8a1b1c1d-0022-0022-0022-000000000022
 # ╟─8a1b1c1d-0023-0023-0023-000000000023
 # ╟─8a1b1c1d-0024-0024-0024-000000000024
+# ╟─8a1b1c1d-0032-0032-0032-000000000032
 # ╟─8a1b1c1d-0025-0025-0025-000000000025
 # ╟─8a1b1c1d-0026-0026-0026-000000000026
+# ╟─8a1b1c1d-0033-0033-0033-000000000033
 # ╟─8a1b1c1d-0027-0027-0027-000000000027
