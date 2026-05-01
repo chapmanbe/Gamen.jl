@@ -18,8 +18,9 @@ Follow standard Julia package layout:
 - `ext/` — package extensions (e.g., `GamenMakieExt` for visualization)
 - `test/` — tests using the `Test` stdlib
 - `docs/` — documentation built with Documenter.jl
-- `notebooks/pluto/` — Pluto notebook demos
-- `notebooks/jupyter/` — Jupyter notebook demos
+- `notebooks/theory/pluto/` — Pluto notebook demos (B&D track, source)
+- `notebooks/theory/jupyter/` — Jupyter notebook demos (B&D track, generated)
+- `notebooks/applications/health/` — clinical application notebooks (health track)
 - `notebooks/Project.toml` — separate environment for notebooks (includes CairoMakie, GraphMakie, Graphs)
 
 ## Coding Conventions
@@ -100,13 +101,13 @@ References: Fitting (1983) Ch. 9 (loop checking), Wolper (1985) for temporal tab
 
 ## Notebooks
 
-- Two parallel tracks: `notebooks/pluto/` (B&D textbook companion) and `notebooks/health/` (clinical application parallels).
-- Both share the environment at `notebooks/Project.toml` and activate with `Pkg.activate(joinpath(@__DIR__, ".."))`.
+- Two parallel tracks: `notebooks/theory/pluto/` (B&D textbook companion) and `notebooks/applications/health/` (clinical application parallels).
+- Both share the environment at `notebooks/Project.toml` and activate with `Pkg.activate(joinpath(@__DIR__, "..", ".."))` (two levels up, since notebooks now live in `theory/<format>/` or `applications/<domain>/`).
 - See `notebooks/CLAUDE.md` for detailed notebook conventions (pedagogy, rendering rules, exercises, KR Lens thread).
 - Pluto cell IDs use the pattern `NaNbNcNd-XXXX-XXXX-XXXX-XXXXXXXXXXXX`.
 - Visualization requires `import CairoMakie, GraphMakie, Graphs` (**not** `using` — name collision with Gamen's `Box`/`Bottom`).
 - Use `/fact-check-notebook chN` to review a notebook for logical correctness, notation consistency, and pedagogical completeness. Reports are saved to `notebooks/reviews/` (gitignored).
-- Generate Jupyter notebooks using: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/<file>.jl`
+- Generate Jupyter notebooks using: `julia scripts/pluto_to_jupyter.jl notebooks/theory/pluto/<file>.jl` (output lands in `notebooks/theory/jupyter/`)
 
 ## Chapter Implementation Workflow
 
@@ -121,8 +122,8 @@ When implementing a new B&D chapter:
 7. Update `docs/src/tutorial.md` with examples
 8. Run doctests: `julia --project=docs docs/make.jl`
 9. Run tests: `julia --project -e 'using Test, Gamen; include("test/runtests.jl")'`
-10. Create Pluto notebook: `notebooks/pluto/chN_<name>.jl`
-11. Generate Jupyter notebook: `julia scripts/pluto_to_jupyter.jl notebooks/pluto/chN_<name>.jl`
+10. Create Pluto notebook: `notebooks/theory/pluto/chN_<name>.jl`
+11. Generate Jupyter notebook: `julia scripts/pluto_to_jupyter.jl notebooks/theory/pluto/chN_<name>.jl`
 12. Commit implementation first, then commit notebooks separately
 
 ## Key References

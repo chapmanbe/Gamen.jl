@@ -26,8 +26,6 @@ alert in a modern EHR is a descendant of these rules.
 
 # ╔═╡ 0b0b0c0d-0002-0002-0002-000000000002
 begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 end
 

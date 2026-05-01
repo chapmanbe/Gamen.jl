@@ -33,8 +33,6 @@ This notebook parallels [Chapter 5 of Boxes and Diamonds](https://bd.openlogicpr
 
 # ╔═╡ 10a1b3c4d-0002-0002-0002-000000000002
 begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 	using PlutoUI
 end

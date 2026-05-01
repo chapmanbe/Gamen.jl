@@ -22,8 +22,6 @@ We cover:
 
 # ╔═╡ 3a3b3c3d-0002-0002-0002-000000000002
 begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 	import CairoMakie, GraphMakie, Graphs
 end

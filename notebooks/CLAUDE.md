@@ -32,45 +32,62 @@ The two tracks live in separate directories under `notebooks/`, sharing the same
 
 ```
 notebooks/
-  Project.toml                          # Shared environment (Gamen, CairoMakie, etc.)
-  pluto/                                # B&D track — textbook companion notebooks
-    ch0_propositional_logic.jl
-    ch1_syntax_and_semantics.jl
-    ch2_frame_definability.jl
-    ...
-    ext_deontic_temporal.jl             # Extension: combined logics
-  health/                               # Health track — clinical application notebooks
-    ch0_health_clinical_rules.jl
-    ch1_health_clinical_obligations.jl
-    ch2_health_guideline_properties.jl
-    ...
-    ext_health_guideline_conflicts.jl   # Extension: guideline conflicts
+  Project.toml                              # Shared environment (Gamen, CairoMakie, etc.)
+  theory/
+    pluto/                                  # B&D track — textbook companion (source)
+      ch0_propositional_logic.jl
+      ch1_syntax_and_semantics.jl
+      ch2_frame_definability.jl
+      ...
+      ext_deontic_temporal.jl               # Extension: combined logics
+    jupyter/                                # B&D track — generated from pluto/ by scripts/pluto_to_jupyter.jl
+      ch1_syntax_and_semantics.ipynb
+      ...
+  applications/
+    health/                                 # Health track — clinical application notebooks
+      ch0_health_clinical_rules.jl
+      ch1_health_clinical_obligations.jl
+      ch2_health_guideline_properties.jl
+      ...
+      ext_health_guideline_conflicts.jl     # Extension: guideline conflicts
 ```
 
 ## Environment and Imports
 
-All notebooks activate the shared notebooks environment:
+### Pluto notebooks
+
+Gamen.jl is a registered package, so Pluto manages dependencies natively. Setup cells contain only `using` / `import` statements — no `Pkg.activate`:
 
 ```julia
 begin
-    using Pkg
-    Pkg.activate(joinpath(@__DIR__, ".."))
     using Gamen
 end
 ```
+
+Pluto embeds a private `[deps]`/`[compat]` section at the bottom of each `.jl` file and resolves packages automatically when students open the notebook. No repo clone or manual environment setup required.
 
 **CRITICAL: Use `import` not `using` for CairoMakie/GraphMakie/Graphs.** Both Gamen and Makie export `Box` and `Bottom`, causing ambiguity errors with `using`. `import` loads the packages (triggering the `GamenMakieExt` extension) without polluting the namespace:
 
 ```julia
 begin
-    using Pkg
-    Pkg.activate(joinpath(@__DIR__, ".."))
     using Gamen
     import CairoMakie, GraphMakie, Graphs
 end
 ```
 
-The `notebooks/Project.toml` includes Gamen.jl (via local path), CairoMakie, GraphMakie, and Graphs.
+For development (loading local `src/` instead of the registered version): use Pluto's package manager sidebar to run `Pkg.develop("Gamen")` once per notebook — do not add a `Pkg.activate` cell.
+
+### Jupyter notebooks
+
+Jupyter has no equivalent to Pluto's embedded dependency system, so Jupyter notebooks still activate the shared `notebooks/Project.toml` explicitly. Because Jupyter notebooks live two levels deep, the activate path goes up **two** levels:
+
+```julia
+using Pkg
+Pkg.activate(joinpath(@__DIR__, "..", ".."))
+using Gamen
+```
+
+The `notebooks/Project.toml` includes Gamen.jl (via local path), CairoMakie, GraphMakie, Graphs, and PlutoUI.
 
 ## Pluto Cell IDs
 

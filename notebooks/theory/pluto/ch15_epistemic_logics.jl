@@ -24,8 +24,6 @@ We cover:
 
 # ╔═╡ f1f2f3f4-0002-0002-0002-000000000002
 begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 end
 

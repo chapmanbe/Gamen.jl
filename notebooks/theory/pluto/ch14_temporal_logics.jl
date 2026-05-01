@@ -21,8 +21,6 @@ We cover:
 
 # ╔═╡ e1e2e3e4-0002-0002-0002-000000000002
 begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 end
 

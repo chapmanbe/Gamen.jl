@@ -23,8 +23,6 @@ We cover:
 
 # ╔═╡ 6a6b6c6d-0002-0002-0002-000000000002
 begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 	import CairoMakie, GraphMakie, Graphs
 end

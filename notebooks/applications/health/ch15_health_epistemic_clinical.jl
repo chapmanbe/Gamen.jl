@@ -36,8 +36,6 @@ The Joint Commission identifies **communication failures** as the leading root c
 
 # ╔═╡ 4a1b3c4d-0002-0002-0002-000000000002
 begin
-	using Pkg
-	Pkg.activate(joinpath(@__DIR__, ".."))
 	using Gamen
 	using PlutoUI
 end
