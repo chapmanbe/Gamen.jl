@@ -34,16 +34,46 @@ This notebook is the culmination of the teaching sequence. It brings together ev
 - **Deontic-temporal logic** — the combined system TABLEAU\_KDt
 
 We apply the combined deontic-temporal tableau system to a problem of real clinical significance: **automated detection of conflicts between clinical practice guidelines**.
+"""
 
-### The Problem
+# ╔═╡ 6a1b3c4d-0033-0033-0033-000000000033
+md"""
+## Why Does This Matter? A Case for Formal Conflict Detection
 
-When multiple clinical guidelines apply to the same patient, they may issue contradictory directives. A patient presenting with both **STEMI and active bleeding** faces contradictory obligations about thrombolytics: one guideline mandates them, another prohibits them. A patient needing **discharge planning** may face temporal conflicts about when to begin. These conflicts are not hypothetical — they arise routinely in complex patients and can cause harm when embedded in clinical decision support systems without formal checking.
+### The 60-30-10 Problem
 
-### Why Formal Logic?
+Braithwaite et al. (2020) documented what they called the "60-30-10 challenge": roughly 60% of care follows best evidence, 30% is waste or low-value care, and 10% causes active harm. A significant driver of that 30% and 10% is **guideline non-adherence** — and one underappreciated cause is guideline *conflict*: when two well-supported guidelines issue incompatible directives for the same patient.
 
-Lomotan et al. (2010) found that clinicians interpret deontic terms ("must," "should," "may") with widely varying obligation levels. When EHR systems implement guidelines as clinical decision support, this ambiguity produces inconsistent behavior. One vendor implements "should" as a hard stop, another as a soft reminder.
+### A Concrete Crisis
 
-Formalizing guidelines in deontic-temporal logic and running automated consistency checks resolves this ambiguity and detects conflicts *before* they reach patient care.
+It is 3 AM. A 67-year-old patient presents with chest pain and hematemesis. The ECG shows ST elevation in V1–V4: STEMI. The GI team reports active upper GI bleeding from a peptic ulcer.
+
+Two sets of guidelines activate simultaneously in the EHR:
+- **ACC/AHA STEMI guidelines**: Thrombolytics must be administered within 30 minutes.
+- **Bleeding management guidelines**: Thrombolytics are contraindicated in active GI bleeding.
+
+The CDS system fires two alerts. The attending must choose. But here is the problem: no one checked whether these guidelines were *logically compatible* before deploying both in the same EHR. The conflict was known clinically but had never been formally characterized.
+
+### Can't an LLM Just Flag These?
+
+Large language models can *describe* this conflict in natural language. But they cannot:
+- **Guarantee soundness**: a formal proof that {G4, G7, active_bleeding} is unsatisfiable in KDt is a mathematical certificate, not a probabilistic output
+- **Scale reliably**: checking all C(N,2) pairs across N=200 guidelines requires 19,900 consistency checks; LLMs will miss or hallucinate some
+- **Detect temporal conflicts**: that "always maintain therapy" logically contradicts "eventually discontinue therapy" requires reasoning about infinite temporal models, which tableaux handle via blocking rules
+
+Formal logic provides **sound and complete** conflict detection: if a conflict exists, the tableau finds it; if no conflict exists, we get a model witnessing compatibility.
+
+### Learning Outcomes
+
+After working through this notebook you will be able to:
+
+1. Formalize clinical obligations, prohibitions, and temporal requirements in deontic-temporal logic
+2. Use `tableau_consistent` to detect logical conflicts between guideline sets
+3. Distinguish conditional conflicts (patient-state-dependent) from unconditional conflicts (always incompatible)
+4. Map conflict types to appropriate clinical decision support alert tiers
+5. Articulate what formal conflict detection can and cannot do
+
+$(Markdown.MD(Markdown.Admonition("note", "Prerequisite notebooks", [md"This notebook builds on: ch1_health_clinical_obligations.jl (deontic formalization), ch6_health_conflict_detection.jl (tableau foundations), ch14_health_temporal_clinical.jl (temporal operators). Open those first if any concepts feel unfamiliar."])))
 """
 
 # ╔═╡ 6a1b3c4d-0003-0003-0003-000000000003
@@ -53,12 +83,12 @@ md"""
 We draw on five guidelines from our guideline-validation dataset. Each is a real clinical directive translated step by step into modal logic.
 
 The key mapping:
-- **"must" / "is required"** --> obligation --> `Box(p)` (in all acceptable scenarios, p holds)
-- **"must not" / "is contraindicated"** --> prohibition --> `Box(Not(p))`
-- **"always"** --> temporal persistence --> `FutureBox(p)` (at every future time)
-- **"eventually"** --> temporal liveness --> `FutureDiamond(p)` (at some future time)
+- **"must" / "is required"** → obligation → `Box(p)` (in all acceptable scenarios, p holds)
+- **"must not" / "is contraindicated"** → prohibition → `Box(Not(p))`
+- **"always"** → temporal persistence → `FutureBox(p)` (at every future time)
+- **"eventually"** → temporal liveness → `FutureDiamond(p)` (at some future time)
 
-Combined deontic-temporal formulas nest these: "must always reassess" becomes `FutureBox(Box(p))` -- at every future time, it is obligatory to reassess.
+Combined deontic-temporal formulas nest these: "must always reassess" becomes `FutureBox(Box(p))` — at every future time, it is obligatory to reassess.
 """
 
 # ╔═╡ 6a1b3c4d-0004-0004-0004-000000000004
@@ -100,6 +130,21 @@ begin
 	"""
 end
 
+# ╔═╡ 6a1b3c4d-0034-0034-0034-000000000034
+md"""
+### Exercise 1: Translate a Clinical Prohibition
+
+**"Patients with heart failure must not receive NSAIDs."**
+
+This is a conditional prohibition — the prohibition only activates when the patient has heart failure. Using the pattern from G4 above, write the Gamen.jl formula for this guideline. Use atoms `:heart_failure` and `:nsaid`.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"`Implies(Atom(:heart_failure), Box(Not(Atom(:nsaid))))` — The implication captures the conditional: when heart_failure is true, all deontically acceptable scenarios forbid NSAIDs. This is structurally identical to G4."])))
+
+**Bonus**: How would you write the *unconditional* prohibition "NSAIDs must never be given" (no condition)? Does this produce a stricter or weaker constraint than the conditional form?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal bonus answer", [md"`Box(Not(Atom(:nsaid)))` — stricter, because it applies even when the patient has no heart failure. The conditional form is satisfiable with nsaid=true (when heart_failure=false); the unconditional form is not."])))
+"""
+
 # ╔═╡ 6a1b3c4d-0005-0005-0005-000000000005
 md"""
 ### Inspecting the Formulas
@@ -114,7 +159,7 @@ Each formula is a first-class Julia object in Gamen.jl:
 md"""
 ## 2. Pairwise Consistency Checking
 
-The function `tableau_consistent(system, formulas)` returns `true` if there exists a model of the given system that satisfies all formulas simultaneously. If it returns `false`, the formulas are **jointly unsatisfiable** -- no matter what Kripke structure you build, you cannot make them all true at once.
+The function `tableau_consistent(system, formulas)` returns `true` if there exists a model of the given system that satisfies all formulas simultaneously. If it returns `false`, the formulas are **jointly unsatisfiable** — no matter what Kripke structure you build, you cannot make them all true at once.
 
 We start by checking every pair of our five guidelines.
 """
@@ -152,11 +197,31 @@ begin
 	"""
 end
 
+# ╔═╡ 6a1b3c4d-0035-0035-0035-000000000035
+md"""
+### Exercise 2: Predict Before You Run
+
+Before running the next code cell, predict the outcome:
+
+A new patient has **STEMI and is immunocompromised**. Consider these two guidelines:
+
+- **G7**: STEMI patients must receive thrombolytics → `Box(Atom(:thrombolytic))`
+- **G-imm**: Immunocompromised patients must not receive thrombolytics → `Implies(Atom(:immunocompromised), Box(Not(Atom(:thrombolytic))))`
+
+**Prediction task**: If we run `tableau_consistent(TABLEAU_KDt, [g7, g_imm, Atom(:immunocompromised)])`, will it return `true` or `false`? Why?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"false — CONFLICT. With immunocompromised=true, the conditional in G-imm fires: □(¬thrombolytic). Combined with G7's □(thrombolytic), the tableau closes. This has the same logical structure as the bleeding scenario: a triggered conditional prohibition plus an unconditional obligation over the same atom."])))
+
+**Extension**: If you add `Atom(:sepsis)` instead of `Atom(:immunocompromised)`, do G7 and G-imm conflict? Why or why not?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal extension answer", [md"No conflict. Sepsis does not trigger G-imm's antecedent (which requires :immunocompromised). The conditional prohibition is vacuously satisfied, leaving G7's obligation unchallenged. The tableau stays open."])))
+"""
+
 # ╔═╡ 6a1b3c4d-0009-0009-0009-000000000009
 md"""
 ### Adding Patient Conditions
 
-G4 says thrombolytics are prohibited *if* active bleeding. G7 says thrombolytics are obligatory. These are consistent when the patient has no active bleeding -- the conditional prohibition is vacuously satisfied.
+G4 says thrombolytics are prohibited *if* active bleeding. G7 says thrombolytics are obligatory. These are consistent when the patient has no active bleeding — the conditional prohibition is vacuously satisfied.
 
 But if the patient *does* have active bleeding:
 """
@@ -176,9 +241,9 @@ begin
 	| No bleeding | G4 + G7 | **$(no_bleeding)** |
 	| Active bleeding | G4 + G7 + active\_bleeding | **$(with_bleeding ? "yes" : "CONFLICT")** |
 
-	Adding `Atom(:active_bleeding)` as a fact triggers the conditional prohibition in G4, which now contradicts the obligation in G7. The tableau closes -- there is no model of KDt satisfying all three formulas.
+	Adding `Atom(:active_bleeding)` as a fact triggers the conditional prohibition in G4, which now contradicts the obligation in G7. The tableau closes — there is no model of KDt satisfying all three formulas.
 
-	This is a **conditional conflict**: the guidelines are compatible in general but incompatible for patients with active bleeding. This distinction -- conditional vs. unconditional conflict -- is clinically crucial.
+	This is a **conditional conflict**: the guidelines are compatible in general but incompatible for patients with active bleeding. This distinction — conditional vs. unconditional conflict — is clinically crucial.
 	"""
 end
 
@@ -208,7 +273,7 @@ begin
 
 	**Consistent?** $(temporal_conflict ? "yes" : "CONFLICT")
 
-	These conflict because if therapy is obligatory at *every* future time, there is no future time at which it can be absent. The temporal G operator (reflexive and transitive) covers all future moments, leaving no room for F(not therapy).
+	These conflict because if therapy is obligatory at *every* future time, there is no future time at which it can be absent. In `TABLEAU_KDt`, the deontic seriality axiom (D) ensures that every world has at least one deontically accessible successor — meaning obligations are not vacuous. The temporal G operator (reflexive and transitive on the temporal relation) then covers all future moments, leaving no room for F(¬therapy) to be satisfied. The combination of seriality and temporal persistence closes every branch of the tableau.
 
 	This pattern appears clinically when one guideline mandates indefinite therapy (e.g., lifelong anticoagulation) while another requires periodic reassessment with possible discontinuation.
 	"""
@@ -230,7 +295,7 @@ begin
 
 	These are consistent because they govern *different treatments*. Reassessing statins at every time point does not interfere with eventually de-escalating antibiotics. The tableau finds a model satisfying both.
 
-	Conflict detection is not just about finding *any* inconsistency -- it tells you precisely *which* guideline combinations are safe and which are not.
+	Conflict detection is not just about finding *any* inconsistency — it tells you precisely *which* guideline combinations are safe and which are not.
 	"""
 end
 
@@ -265,9 +330,9 @@ md"""
 
 # ╔═╡ 6a1b3c4d-0019-0019-0019-000000000019
 @bind selected_system Select([
-	"TABLEAU_K" => "K (basic modal logic -- no frame conditions)",
-	"TABLEAU_KD" => "KD (deontic -- seriality: obligations must be achievable)",
-	"TABLEAU_KDt" => "KDt (deontic-temporal -- seriality + reflexivity + transitivity)",
+	"TABLEAU_K" => "K (basic modal logic — no frame conditions)",
+	"TABLEAU_KD" => "KD (deontic — seriality: obligations must be achievable)",
+	"TABLEAU_KDt" => "KDt (deontic-temporal — seriality + reflexivity + transitivity)",
 ])
 
 # ╔═╡ 6a1b3c4d-0020-0020-0020-000000000020
@@ -331,7 +396,7 @@ begin
 		| **Guidelines** | $(guidelines_str) |
 		| **Patient conditions** | $(conditions_str) |
 		| **Tableau system** | $(selected_system) |
-		| **Consistent?** | **$(explorer_result ? "YES -- no conflict detected" : "CONFLICT DETECTED")** |
+		| **Consistent?** | **$(explorer_result ? "YES — no conflict detected" : "CONFLICT DETECTED")** |
 
 		$(explorer_result ?
 			"The tableau did not close. A model exists in which all selected guidelines and patient conditions are simultaneously satisfiable." :
@@ -343,9 +408,9 @@ end
 # ╔═╡ 6a1b3c4d-0023-0023-0023-000000000023
 md"""
 !!! tip "Try it"
-    - Select G4 + G7, then check "Active bleeding" -- watch the conflict appear
-    - Select G4 + G7 with no conditions -- they're consistent
-    - Compare TABLEAU\_K vs TABLEAU\_KD vs TABLEAU\_KDt -- the D axiom (seriality) can change results because it forces at least one accessible world to exist
+    - Select G4 + G7, then check "Active bleeding" — watch the conflict appear
+    - Select G4 + G7 with no conditions — they're consistent
+    - Compare TABLEAU\_K vs TABLEAU\_KD vs TABLEAU\_KDt — the D axiom (seriality) can change results because it forces at least one accessible world to exist
 """
 
 # ╔═╡ 6a1b3c4d-0024-0024-0024-000000000024
@@ -423,7 +488,7 @@ begin
 
 	The minimal conflicting subset is **G4 + G7** in the presence of active bleeding. G4 prohibits thrombolytics (because of bleeding), G7 mandates them (because of STEMI). The other guidelines (G1, T1, T2) do not contribute to this conflict.
 
-	**Clinical interpretation**: This patient needs a **clinical decision** that logic alone cannot make. The cardiologist and emergency physician must weigh the risk of hemorrhagic extension (favoring G4) against the risk of infarct progression (favoring G7). The logic tells us the conflict exists and exactly where it is -- the clinical judgment resolves it.
+	**Clinical interpretation**: This patient needs a **clinical decision** that logic alone cannot make. The cardiologist and emergency physician must weigh the risk of hemorrhagic extension (favoring G4) against the risk of infarct progression (favoring G7). The logic tells us the conflict exists and exactly where it is — the clinical judgment resolves it.
 	"""
 end
 
@@ -462,11 +527,11 @@ begin
 	- □(drug\_x): "Drug X must be administered"
 	- □(not drug\_x): "Drug X must not be administered"
 
-	Consistent? **$(uc_result ? "yes" : "CONFLICT")** -- always, regardless of patient state.
+	Consistent? **$(uc_result ? "yes" : "CONFLICT")** — always, regardless of patient state.
 
 	### Conditional Conflict
 
-	- (condition\_a -> □(not drug\_x)): "If condition A, drug X must not be given"
+	- (condition\_a → □(not drug\_x)): "If condition A, drug X must not be given"
 	- □(drug\_x): "Drug X must be given"
 
 	| Patient State | Consistent? |
@@ -476,11 +541,34 @@ begin
 
 	### Clinical Significance
 
-	**Unconditional conflicts** indicate a fundamental disagreement between guidelines -- they can never be jointly followed. These should trigger **hard stops** in clinical decision support: the EHR should prevent order entry and require explicit override with documentation.
+	**Unconditional conflicts** indicate a fundamental disagreement between guidelines — they can never be jointly followed. These should trigger **hard stops** in clinical decision support: the EHR should prevent order entry and require explicit override with documentation.
 
 	**Conditional conflicts** are context-dependent. They should trigger **soft alerts**: "Guideline X prohibits this intervention for patients with condition A. The patient has condition A. Do you wish to proceed?" The clinician can then evaluate which guideline takes precedence for this specific patient.
 	"""
 end
+
+# ╔═╡ 6a1b3c4d-0036-0036-0036-000000000036
+md"""
+### Exercise 3: Classify the Conflict Type
+
+For each guideline pair below, classify it as: **(A) unconditional conflict**, **(B) conditional conflict**, or **(C) no conflict**. Do not run the checker — reason from the formulas.
+
+**Pair 1**: `Box(Atom(:aspirin))` and `Box(Not(Atom(:aspirin)))`
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal Pair 1", [md"(A) Unconditional conflict. □(aspirin) and □(¬aspirin) are directly contradictory in any serial logic — both cannot hold simultaneously in the same world with an accessible successor."])))
+
+**Pair 2**: `Implies(Atom(:allergy), Box(Not(Atom(:penicillin))))` and `Box(Atom(:penicillin))`
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal Pair 2", [md"(B) Conditional conflict. Without :allergy as a fact, the conditional is vacuously true and coexists with the obligation. With :allergy present, the antecedent fires and creates a contradiction."])))
+
+**Pair 3**: `FutureBox(Box(Atom(:monitor_glucose)))` and `Box(FutureDiamond(Atom(:discharge)))`
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal Pair 3", [md"(C) No conflict. The first requires monitoring glucose at every future time; the second requires that discharge eventually happens. These govern different atoms (:monitor_glucose vs :discharge) so they do not constrain each other. Both can be satisfied in the same model."])))
+
+**Pair 4**: `FutureBox(Box(Atom(:therapy)))` and `Box(FutureDiamond(Not(Atom(:therapy))))`
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal Pair 4", [md"(A) Unconditional conflict (temporal variant). G(□(therapy)) says therapy is obligatory at every future time. □(F(¬therapy)) says it is obligatory that therapy eventually ceases. These conflict in any KDt model: the first leaves no future moment where therapy is absent, which the second requires."])))
+"""
 
 # ╔═╡ 6a1b3c4d-0029-0029-0029-000000000029
 md"""
@@ -535,18 +623,23 @@ Automated consistency checking with `tableau_consistent` provides the foundation
 
 | Conflict Type | Logic Pattern | CDS Response |
 |:-------------|:-------------|:-------------|
-| Unconditional | □(p) and □(not p) | **Hard stop** -- cannot proceed without override and documentation |
-| Conditional (triggered) | (a -> □(not p)) and □(p) with a true | **Interruptive alert** -- "Patient has condition A; guideline X contraindicates this action" |
-| Conditional (untriggered) | (a -> □(not p)) and □(p) with a absent | **Informational** -- "Note: if patient develops A, this order would conflict with guideline X" |
-| Temporal | G(□(p)) vs □(F(not p)) | **Planning alert** -- "Long-term management plan contains conflicting temporal requirements" |
+| Unconditional | □(p) and □(¬p) | **Hard stop** — cannot proceed without override and documentation |
+| Conditional (triggered) | (a → □(¬p)) and □(p) with a true | **Interruptive alert** — "Patient has condition A; guideline X contraindicates this action" |
+| Conditional (untriggered) | (a → □(¬p)) and □(p) with a absent | **Informational** — "Note: if patient develops A, this order would conflict with guideline X" |
+| Temporal | 𝐆(□(p)) vs □(𝐅(¬p)) | **Planning alert** — "Long-term management plan contains conflicting temporal requirements" |
 
 ### Open Questions
 
-**Which guideline takes precedence?** Standard deontic-temporal logic treats all obligations equally. In practice, guidelines have different evidence levels, recommendation strengths, and clinical contexts. Resolving conflicts requires **defeasible reasoning** -- a form of non-monotonic logic where specific conditions can override general rules. This is an active research area and a natural extension of this work.
+**Which guideline takes precedence?** Standard deontic-temporal logic treats all obligations equally. In practice, guidelines have different evidence levels, recommendation strengths, and clinical contexts. Resolving conflicts requires **defeasible reasoning** — a form of non-monotonic logic where specific conditions can override general rules. This is an active research area and a natural extension of this work.
 
-**What about probability?** A guideline saying "thrombolytics reduce mortality by 25% in STEMI" and one saying "thrombolytics increase hemorrhagic stroke risk by 3% in bleeding patients" are not logically contradictory -- they are *competing risk-benefit tradeoffs*. Formal logic detects *normative* conflicts (obligations vs prohibitions), not empirical tradeoffs. Both tools are needed.
+**What about probability?** A guideline saying "thrombolytics reduce mortality by 25% in STEMI" and one saying "thrombolytics increase hemorrhagic stroke risk by 3% in bleeding patients" are not logically contradictory — they are *competing risk-benefit tradeoffs*. Formal logic detects *normative* conflicts (obligations vs prohibitions), not empirical tradeoffs. Both tools are needed.
 
 **The role of clinical judgment.** When the tableau closes, it tells us that no model simultaneously satisfies all guidelines. It does *not* tell us which guideline to follow. That decision requires clinical expertise, patient preferences, and contextual factors that formal logic cannot capture. The logic's role is to make the conflict *explicit* so the clinician can make an informed decision rather than unknowingly violating one guideline while following another.
+"""
+
+# ╔═╡ 6a1b3c4d-0037-0037-0037-000000000037
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify five roles a knowledge representation plays. This notebook enacts two of them particularly clearly. **Role 4 — Medium for Computation**: the deontic-temporal formulas in this notebook are not just readable descriptions of clinical rules; they are executable objects. `tableau_consistent` takes them as input and returns a mathematical certificate of satisfiability or a proof of inconsistency. The representation must be structured in a way that makes this computation tractable — which is exactly why Kripke semantics and tableau methods were chosen over, say, natural language or numerical models. **Role 5 — Medium for Human Expression**: every formula here began as a sentence written by a clinician or a guideline committee. The formalization process — deciding whether 'should' means □ or ◇, whether 'if condition A' becomes an antecedent or a world-state constraint — is a form of knowledge elicitation. Lomotan et al. (2010) showed empirically that clinicians disagree about the deontic strength of these terms. Making the translation explicit forces that disagreement to the surface, which is itself a form of knowledge work. The representation does not just store what clinicians know — it makes tacit disagreements legible."])))
 """
 
 # ╔═╡ 6a1b3c4d-0032-0032-0032-000000000032
@@ -556,38 +649,48 @@ md"""
 ### What Automated Consistency Checking Can Do
 
 - **Detect logical conflicts** between guidelines before they reach patient care
-- **Distinguish conditional from unconditional conflicts** -- identifying exactly which patient conditions trigger the inconsistency
-- **Identify temporal conflicts** -- obligations that are incompatible over time even if compatible at any single moment
-- **Scale to guideline databases** -- checking all pairwise (and higher-order) combinations systematically, which manual review cannot do reliably
+- **Distinguish conditional from unconditional conflicts** — identifying exactly which patient conditions trigger the inconsistency
+- **Identify temporal conflicts** — obligations that are incompatible over time even if compatible at any single moment
+- **Scale to guideline databases** — checking all pairwise (and higher-order) combinations systematically, which manual review cannot do reliably
 
 ### What It Cannot Do
 
-- **Resolve conflicts** -- detection is not resolution; clinical judgment and guideline hierarchy are needed
-- **Capture risk-benefit tradeoffs** -- logic detects normative inconsistency, not empirical disagreement
-- **Replace clinical expertise** -- the goal is to make conflicts visible, not to automate clinical decisions
-- **Handle natural language directly** -- formalization from clinical text to modal logic requires expert translation (though NLP-assisted formalization is an active research area)
+- **Resolve conflicts** — detection is not resolution; clinical judgment and guideline hierarchy are needed
+- **Capture risk-benefit tradeoffs** — logic detects normative inconsistency, not empirical disagreement
+- **Replace clinical expertise** — the goal is to make conflicts visible, not to automate clinical decisions
+- **Handle natural language directly** — formalization from clinical text to modal logic requires expert translation (though NLP-assisted formalization is an active research area)
 
 ### The Technical Foundation
 
 Everything in this notebook rests on:
 
-1. **Kripke semantics** (Ch 1) -- guidelines interpreted as modal claims about acceptable clinical states
-2. **Tableau methods** (Ch 6) -- automated satisfiability checking via systematic branch exploration
-3. **Temporal operators** (Ch 14) -- "always," "eventually," "before," "after" as first-class logical constructs
-4. **Combined deontic-temporal frames** (TABLEAU\_KDt) -- seriality ensures obligations are achievable; reflexivity and transitivity govern temporal reasoning
+1. **Kripke semantics** (Ch 1) — guidelines interpreted as modal claims about acceptable clinical states
+2. **Tableau methods** (Ch 6) — automated satisfiability checking via systematic branch exploration
+3. **Temporal operators** (Ch 14) — "always," "eventually," "before," "after" as first-class logical constructs
+4. **Combined deontic-temporal frames** (TABLEAU\_KDt) — seriality ensures obligations are achievable; reflexivity and transitivity govern temporal reasoning
 
 The tableau prover does not enumerate models (which would be intractable for complex formulas). Instead, it systematically searches for a satisfying assignment and reports either success (consistent) or closure of all branches (inconsistent). This is sound and complete for the logics we consider.
+
+### Where to Go Next
+
+- **B&D extension notebook**: `ext_deontic_temporal.jl` — the theoretical foundations of combined deontic-temporal logic
+- **Tableau foundations**: `ch6_health_conflict_detection.jl` — how the tableau prover works, step by step
+- **Temporal operators in clinical context**: `ch14_health_temporal_clinical.jl` — 𝐆, 𝐅, 𝐇, 𝐏 operators applied to clinical sequencing
+- **Research direction**: guideline-validation project (gamen-hs) — a Haskell implementation with full STIT and defeasible reasoning support
 """
 
 # ╔═╡ Cell order:
-# ╟─6a1b3c4d-0002-0002-0002-000000000002
 # ╟─6a1b3c4d-0001-0001-0001-000000000001
+# ╟─6a1b3c4d-0002-0002-0002-000000000002
+# ╟─6a1b3c4d-0033-0033-0033-000000000033
 # ╟─6a1b3c4d-0003-0003-0003-000000000003
 # ╟─6a1b3c4d-0004-0004-0004-000000000004
+# ╟─6a1b3c4d-0034-0034-0034-000000000034
 # ╟─6a1b3c4d-0005-0005-0005-000000000005
 # ╟─6a1b3c4d-0006-0006-0006-000000000006
 # ╟─6a1b3c4d-0007-0007-0007-000000000007
 # ╟─6a1b3c4d-0008-0008-0008-000000000008
+# ╟─6a1b3c4d-0035-0035-0035-000000000035
 # ╟─6a1b3c4d-0009-0009-0009-000000000009
 # ╟─6a1b3c4d-0010-0010-0010-000000000010
 # ╟─6a1b3c4d-0011-0011-0011-000000000011
@@ -608,7 +711,9 @@ The tableau prover does not enumerate models (which would be intractable for com
 # ╟─6a1b3c4d-0026-0026-0026-000000000026
 # ╟─6a1b3c4d-0027-0027-0027-000000000027
 # ╟─6a1b3c4d-0028-0028-0028-000000000028
+# ╟─6a1b3c4d-0036-0036-0036-000000000036
 # ╟─6a1b3c4d-0029-0029-0029-000000000029
 # ╟─6a1b3c4d-0030-0030-0030-000000000030
 # ╟─6a1b3c4d-0031-0031-0031-000000000031
+# ╟─6a1b3c4d-0037-0037-0037-000000000037
 # ╟─6a1b3c4d-0032-0032-0032-000000000032
