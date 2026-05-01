@@ -19,9 +19,43 @@ We cover:
 - Frame correspondence properties (Table 14.1)
 """
 
+# ╔═╡ e1e2e3e4-0026-0026-0026-000000000026
+md"""
+## Why Temporal Logic?
+
+Consider a scenario familiar from clinical care: a patient arrives with sepsis.
+The treatment protocol specifies:
+
+1. **Blood cultures must be drawn *before* antibiotics are administered.**
+2. **Antibiotics must be given *within one hour* of sepsis recognition.**
+3. **If the patient was already on antibiotics, the protocol does not apply.**
+
+These sentences are not just true or false — they describe *relationships across
+time*. "Before," "within," "already," "eventually" are temporal qualifiers that
+plain propositional logic cannot capture.
+
+Temporal logic gives us operators that reason over *sequences of events*:
+- **G**A: "A is always true from now on" — invariants, safety properties
+- **F**A: "A is eventually true" — liveness, guaranteed outcomes
+- **H**A: "A has always been true in the past" — historical invariants
+- **P**A: "A was true at some past time" — past witnessing
+
+These are not mere programming conveniences. They are *formal tools* for
+specifying, verifying, and reasoning about sequential processes — clinical
+workflows, treatment timelines, event logs, and audit trails.
+
+**Learning objectives:** After this notebook you will be able to:
+1. Construct temporal formulas using the P, H, F, G, Since, and Until operators
+2. Build and evaluate temporal Kripke models in Gamen.jl
+3. Explain the duality between past and future operators
+4. Identify frame correspondence properties (transitivity, linearity, density) and their valid formulas
+"""
+
 # ╔═╡ e1e2e3e4-0002-0002-0002-000000000002
 begin
 	using Gamen
+	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ e1e2e3e4-0003-0003-0003-000000000003
@@ -90,8 +124,8 @@ end
 # ╔═╡ e1e2e3e4-0007-0007-0007-000000000007
 begin
 	# Since and Until
-	spq = Since(p, q)   # SpBC: since q was true, p has been true
-	upq = Until(p, q)   # UpBC: until q becomes true, p holds
+	spq = Since(p, q)   # S(p,q): p was true at t', q held strictly between t' and now
+	upq = Until(p, q)   # U(p,q): p will be true at t', q holds strictly between now and t'
 
 	println("Since(p, q) = ", spq)
 	println("Until(p, q) = ", upq)
@@ -127,6 +161,18 @@ begin
 	println("Successors of t2: ", sort(collect(accessible(m_linear.frame, :t2))))
 	println("Successors of t3: ", sort(collect(accessible(m_linear.frame, :t3))))
 end
+
+# ╔═╡ e1e2e3e4-0028-0028-0028-000000000028
+begin
+	# Visualize the linear temporal model
+	# t1 → t2 → t3, p holds at t1 and t2, q holds at t3
+	visualize_model(m_linear, title = "Linear temporal model: t1 ≺ t2 ≺ t3")
+end
+
+# ╔═╡ e1e2e3e4-0029-0029-0029-000000000029
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens: Temporal Models as Surrogates (Davis et al. 1993)", [md"Davis, Shrobe, and Szolovits (1993) identify the first role of a knowledge representation as a **surrogate** — a substitute for things in the world that enables reasoning. A temporal Kripke model M = ⟨T, ≺, V⟩ is a surrogate for a *sequence of events*. The time points T stand in for real moments; the precedence relation ≺ encodes their ordering; V maps propositions to the times when they hold. As Davis et al. note, 'perfect fidelity is impossible' — a temporal model of a clinical timeline omits duration, uncertainty, concurrency, and measurement error. The choice of what to include (and what to leave out) is an *ontological commitment*: by using a simple linear chain we commit to a deterministic, totally ordered history. Branching-time models (Ch 14's general frames) relax this, admitting multiple possible futures. The mismatch between the surrogate and reality is not a defect to be fixed — it is the price of tractable reasoning."])))
+"""
 
 # ╔═╡ e1e2e3e4-0010-0010-0010-000000000010
 md"""
@@ -191,6 +237,27 @@ begin
 	# t2 ≺ t3, p at t2 ✓ → true (only direct predecessor checked)
 end
 
+# ╔═╡ e1e2e3e4-0030-0030-0030-000000000030
+md"""
+## Exercises: Temporal Operators
+
+Work through these before revealing the answers.
+
+**1. In the linear model t1 ≺ t2 ≺ t3 (p at t1,t2; q at t3), evaluate G(p) at t1.**
+
+Recall G looks at *all* direct successors. At t1, the only direct successor is t2.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**True.** The only direct successor of t1 is t2, and p holds at t2. G looks one step ahead, not transitively — so t3 is not checked. Gp at t1 = true."])))
+
+**2. In the same model, is G(q) valid at t1? What about at t2?**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**G(q) at t1 = false.** The direct successor of t1 is t2, and q does NOT hold at t2. **G(q) at t2 = true.** The direct successor of t2 is t3, and q holds at t3."])))
+
+**3. Translate into temporal formula: 'p has been continuously true since the beginning (from the current time looking back, all predecessors satisfy p).'**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"H(p) — PastBox(p). The H operator says: for every t' ≺ t (direct predecessor), p holds at t'. At t1 this is vacuously true (no predecessors). At t2 it checks t1, and at t3 it checks t2 only."])))
+"""
+
 # ╔═╡ e1e2e3e4-0015-0015-0015-000000000015
 md"""
 ## Duality
@@ -222,6 +289,17 @@ begin
 	end
 end
 
+# ╔═╡ e1e2e3e4-0031-0031-0031-000000000031
+md"""
+## Exercise: Build a Model
+
+**4. Construct a temporal model where G(p) is true at every time point.**
+
+What is the simplest model where G(p) holds at all worlds? Think about what frame condition would guarantee this.
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"One approach: a model with no worlds at all (empty frame) — vacuously true, but degenerate. A more informative answer: a model where p holds at every world and the frame has no dead ends. For example, a cyclic model {t1 → t1} with p at t1 satisfies G(p) everywhere, since every direct successor (t1 itself) has p. Try: `KripkeModel(KripkeFrame([:t1], [:t1 => :t1]), [:p => [:t1]])` and verify `satisfies(m, :t1, FutureBox(Atom(:p)))` returns true."])))
+"""
+
 # ╔═╡ e1e2e3e4-0018-0018-0018-000000000018
 md"""
 ## Since and Until
@@ -247,19 +325,20 @@ begin
 		[:p => [:t1, :t2], :q => [:t3]]
 	)
 
-	# U(q)(p) at t1: ∃t' with t1≺t' and q at t', and p holds strictly between
+	# U(q, p) at t1: left=q (B: true at t'), right=p (C: holds between)
 	# Direct successors of t1: t2 and t3.
-	# t' = t3: q at t3 ✓; s strictly between t1 and t3: s with t1→s and t3∈successors(s)
-	#   → s = t2 (t1→t2, t2→t3). Is p at t2? Yes ✓ → Until holds
-	println("U(q)(p) at t1: ", satisfies(m2, :t1, Until(q, p)))
+	# t' = t3: q at t3 ✓; s strictly between t1 and t3:
+	#   s = t2 (t1→t2, t2→t3 ✓). Is p at t2? Yes ✓ → Until holds
+	println("U(q, p) at t1: ", satisfies(m2, :t1, Until(q, p)))
 
-	# S(p)(q) at t3: ∃t' ≺ t3 with p at t', and q holds strictly between t' and t3
-	# Predecessors of t3: t2 (via t2→t3) and t1 (via t1→t3)
+	# S(p, q) at t3: left=p (B: true at t'), right=q (C: holds between)
+	# Predecessors of t3: t2 (t2→t3) and t1 (t1→t3)
 	# t' = t2: p at t2 ✓; strictly between t2 and t3: nothing → vacuously ✓
-	println("S(p)(q) at t3: ", satisfies(m2, :t3, Since(p, q)))
+	println("S(p, q) at t3: ", satisfies(m2, :t3, Since(p, q)))
 
-	# U(q)(q) at t1: need q at t' and q between; t3 has q but t2 (between) doesn't
-	println("U(q)(q) at t1: ", satisfies(m2, :t1, Until(q, q)))
+	# U(q, q) at t1: need q at t' and q strictly between
+	# t' = t3: q at t3 ✓; s = t2 between t1 and t3, need q at t2 — NO
+	println("U(q, q) at t1: ", satisfies(m2, :t1, Until(q, q)))
 end
 
 # ╔═╡ e1e2e3e4-0020-0020-0020-000000000020
@@ -321,6 +400,19 @@ begin
 	        "  unbounded_future=", is_unbounded_future(cyclic))
 end
 
+# ╔═╡ e1e2e3e4-0032-0032-0032-000000000032
+md"""
+## Exercise: Frame Properties
+
+**5. Is a cyclic frame with t1 ↔ t2 (t1→t2 and t2→t1) transitive? Linear? Dense?**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Transitive? Yes.** From t1→t2→t1 we need t1→t1, but that edge is absent — so actually NOT transitive without self-loops. **Linear? Yes.** Every pair of worlds is comparable (t1 and t2 each point to the other). **Dense? No.** t1→t2 requires a w with t1→w→t2; only t1 and t2 exist, and t1→t1 is absent, so no intermediate witness exists."])))
+
+**6. A transitive, linear, unbounded-future frame corresponds to the standard integers (Z, <). What formula is valid on this frame but not on a chain with a last element?**
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Gp → Fp** (unbounded future). On a chain with a last element (say t3 with no successors), Gp holds vacuously at t3 but Fp requires a successor, so Gp → Fp fails. On an unbounded frame every world has a successor, so Gp → Fp is valid."])))
+"""
+
 # ╔═╡ e1e2e3e4-0025-0025-0025-000000000025
 md"""
 ## Summary
@@ -331,8 +423,8 @@ md"""
 | Past necessity (H) | `PastBox(A)` or `𝐇(A)` |
 | Future possibility (F) | `FutureDiamond(A)` or `𝐅(A)` |
 | Future necessity (G) | `FutureBox(A)` or `𝐆(A)` |
-| Since | `Since(B, C)` |
-| Until | `Until(B, C)` |
+| Since | `Since(B, C)` — B was true at t', C holds strictly between |
+| Until | `Until(B, C)` — B will be true at t', C holds strictly between |
 | Temporal model | `KripkeModel` (same type, temporal reading) |
 | Truth evaluation | `satisfies(model, t, formula)` |
 | Frame properties | `is_transitive_frame`, `is_linear_frame`, `is_dense_frame`, `is_unbounded_past`, `is_unbounded_future` |
@@ -344,6 +436,7 @@ formula types.
 
 # ╔═╡ Cell order:
 # ╟─e1e2e3e4-0001-0001-0001-000000000001
+# ╟─e1e2e3e4-0026-0026-0026-000000000026
 # ╟─e1e2e3e4-0002-0002-0002-000000000002
 # ╟─e1e2e3e4-0003-0003-0003-000000000003
 # ╟─e1e2e3e4-0004-0004-0004-000000000004
@@ -352,14 +445,18 @@ formula types.
 # ╟─e1e2e3e4-0007-0007-0007-000000000007
 # ╟─e1e2e3e4-0008-0008-0008-000000000008
 # ╟─e1e2e3e4-0009-0009-0009-000000000009
+# ╟─e1e2e3e4-0028-0028-0028-000000000028
+# ╟─e1e2e3e4-0029-0029-0029-000000000029
 # ╟─e1e2e3e4-0010-0010-0010-000000000010
 # ╟─e1e2e3e4-0011-0011-0011-000000000011
 # ╟─e1e2e3e4-0012-0012-0012-000000000012
 # ╟─e1e2e3e4-0013-0013-0013-000000000013
 # ╟─e1e2e3e4-0014-0014-0014-000000000014
+# ╟─e1e2e3e4-0030-0030-0030-000000000030
 # ╟─e1e2e3e4-0015-0015-0015-000000000015
 # ╟─e1e2e3e4-0016-0016-0016-000000000016
 # ╟─e1e2e3e4-0017-0017-0017-000000000017
+# ╟─e1e2e3e4-0031-0031-0031-000000000031
 # ╟─e1e2e3e4-0018-0018-0018-000000000018
 # ╟─e1e2e3e4-0019-0019-0019-000000000019
 # ╟─e1e2e3e4-0020-0020-0020-000000000020
@@ -367,4 +464,5 @@ formula types.
 # ╟─e1e2e3e4-0022-0022-0022-000000000022
 # ╟─e1e2e3e4-0023-0023-0023-000000000023
 # ╟─e1e2e3e4-0024-0024-0024-000000000024
+# ╟─e1e2e3e4-0032-0032-0032-000000000032
 # ╟─e1e2e3e4-0025-0025-0025-000000000025
