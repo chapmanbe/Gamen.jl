@@ -20,21 +20,42 @@ end
 md"""
 # Decidability of Guideline Checking
 
-Can a computer *always* determine whether a set of clinical guidelines is consistent? The answer is **yes** -- for the modal logics we use, the problem is **decidable**. There is an algorithm that is guaranteed to terminate with the correct answer for any finite set of guidelines.
+## Clinical Scenario
 
-This notebook parallels [Chapter 5 of Boxes and Diamonds](https://bd.openlogicproject.org) (Filtrations and Decidability), applied to automated guideline checking. We cover:
+It is 2 a.m. An alert fires in the ICU: *"Sepsis protocol: give antibiotics within 1 hour, obtain blood cultures before antibiotics, and do not give thrombolytics if active bleeding."* Three recommendations, automatically encoded from the Surviving Sepsis Campaign guidelines. The CDS system must decide, in real time, whether the full guideline set is **logically consistent** — i.e., whether there exists any patient state in which all three rules can be satisfied simultaneously.
 
-1. The **finite model property** -- why a finite search always suffices
-2. **Decidability** -- the existence of a terminating algorithm
-3. The **computational cost** -- why brute force is expensive and what that means in practice
-4. **Filtrations** -- the theoretical tool that collapses irrelevant clinical scenarios
-5. **Tableaux** as the practical decision procedure
+A skeptical resident asks: *"Can a computer really always answer that question? For any guideline set, no matter how complex?"*
+
+The answer is **yes** — but only because of a deep mathematical property of the modal logics we use: **decidability**. There is an algorithm that is *guaranteed to terminate* with the correct answer. This notebook explains why, and what it costs.
+
+---
+
+## Why This Matters
+
+- An inconsistent guideline set could fire alerts that can never all be satisfied — creating alert fatigue (Braithwaite et al. 2020, the 60-30-10 challenge)
+- Automated consistency checking requires knowing that the check will *finish* — undecidable formalisms cannot give this guarantee
+- The same theoretical result (the finite model property) bounds the search space for any guideline formula
+
+---
+
+## Learning Outcomes
+
+After working through this notebook you will be able to:
+
+1. State the **finite model property** and explain why it implies decidability
+2. Calculate the theoretical **model-size bound** (2ⁿ) for a given formula
+3. Explain why **brute-force search** is feasible only for tiny problems (max 4 worlds)
+4. Describe how **filtrations** collapse irrelevant clinical distinctions to produce the finite model
+5. Contrast brute-force search with the **tableau method** as practical alternatives
+
+This notebook parallels [Chapter 5 of Boxes and Diamonds](https://bd.openlogicproject.org) (Filtrations and Decidability).
 """
 
 # ╔═╡ 10a1b3c4d-0002-0002-0002-000000000002
 begin
 	using Gamen
 	using PlutoUI
+	import CairoMakie, GraphMakie, Graphs
 end
 
 # ╔═╡ 10a1b3c4d-0003-0003-0003-000000000003
@@ -77,6 +98,19 @@ md"""
 Both return `true`: K has the FMP because it imposes no frame conditions (Proposition 5.14, B&D), and S5 has it because filtrations preserve the equivalence-relation structure (Corollary 5.16).
 """
 
+# ╔═╡ 10a1b3c4d-0031-0031-0031-000000000031
+md"""
+### Exercise 1: Finite Models in Clinical Logic
+
+A colleague proposes encoding the clinical rule *"Every patient who is obligated to receive warfarin is actually receiving it"* as □warfarin → warfarin (the T schema).
+
+**a)** In which modal system(s) is this formula **valid**: K, KD, KT, or S5?
+
+**b)** Does the T schema have a finite countermodel in K? What does that mean practically for CDS checking?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**a)** Valid in KT and S5 (both require reflexivity, which is the frame condition corresponding to the T axiom). Not valid in K or KD. **b)** Yes — because K has the finite model property, any formula that fails in K fails in some *finite* model. The finite countermodel for □warfarin → warfarin in K is simply a two-world model where world w sees world v, warfarin is true at v but false at w. Practically: if your CDS system uses K (no frame constraints), it cannot derive that obligations are self-fulfilling — which is usually the correct clinical assumption (obligations and facts are distinct)."])))
+"""
+
 # ╔═╡ 10a1b3c4d-0008-0008-0008-000000000008
 md"""
 ## Decidability
@@ -117,6 +151,23 @@ begin
 	result_kt = is_decidable_within(SYSTEM_KT, t_schema)
 	(formula = "T schema in KT", valid_in_KT = result_kt.valid)
 end
+
+# ╔═╡ 10a1b3c4d-0032-0032-0032-000000000032
+md"""
+### Exercise 2: Calculating the Decidability Bound
+
+Consider the sepsis guideline conjunction:
+
+□(cultures) ∧ □(antibiotics) ∧ (bleeding → □(¬thrombolytic))
+
+**a)** How many atomic propositions does this formula use?
+
+**b)** List all subformulas (hint: there are 10 including atoms).
+
+**c)** What is the theoretical upper bound on model size for `is_decidable_within`? Is brute-force feasible?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**a)** 3 atoms: cultures, antibiotics, thrombolytic (bleeding is also an atom — 4 total). **b)** The 10 subformulas are: cultures, antibiotics, thrombolytic, bleeding, ¬thrombolytic, □cultures, □antibiotics, □(¬thrombolytic), bleeding → □(¬thrombolytic), and the full conjunction. **c)** Bound = min(2^10, 4) = 4 worlds (Gamen caps at 4). With 4 worlds: 4² = 16 possible edges → 2^16 = 65,536 frames to enumerate — feasible in seconds. For real guidelines with 50+ subformulas the bound would be 2^50 worlds — far beyond brute force; tableaux are required."])))
+"""
 
 # ╔═╡ 10a1b3c4d-0013-0013-0013-000000000013
 md"""
@@ -182,6 +233,21 @@ end
 # ╔═╡ 10a1b3c4d-0019-0019-0019-000000000019
 md"""
 The first pair is consistent -- there exists a model where consent is obligatory and antibiotics are permitted. The second pair is inconsistent -- no model can make both `Box(discharge)` and `Box(Not(discharge))` true at the same world (assuming at least one accessible world, which KD guarantees via the D axiom).
+"""
+
+# ╔═╡ 10a1b3c4d-0033-0033-0033-000000000033
+md"""
+### Exercise 3: Predicting Consistency
+
+Before running `is_consistent`, predict whether each pair of guidelines is consistent in KD, and explain your reasoning.
+
+**Pair A:** □(antibiotics) and □(antibiotics → cultures)
+
+**Pair B:** □(antibiotics) and ¬◇(antibiotics)
+
+**Pair C:** □(consent) and ◇(¬consent)
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**Pair A: Consistent.** Both can be satisfied: if every accessible world has antibiotics true, and in every accessible world antibiotics implies cultures, then both hold simultaneously. No contradiction. **Pair B: Inconsistent.** □antibiotics means antibiotics is true in all accessible worlds. ¬◇antibiotics means no accessible world has antibiotics true (it is the dual: ¬◇p = □¬p). In KD there is always at least one accessible world, so □antibiotics and □(¬antibiotics) cannot both hold — contradiction. **Pair C: Consistent.** □consent means the current world obliges consent in all accessible worlds. ◇(¬consent) means there exists *some* accessible world without consent. But that world does not have to be the same one — wait, actually □consent requires consent in *all* accessible worlds, while ◇(¬consent) requires consent absent in *some* accessible world. These directly contradict each other. **Pair C is inconsistent** in KD (with at least one accessible world)."])))
 """
 
 # ╔═╡ 10a1b3c4d-0020-0020-0020-000000000020
@@ -311,6 +377,22 @@ begin
 	 filtration_preserves_truth = filtration_lemma_holds(filt))
 end
 
+# ╔═╡ 10a1b3c4d-0034-0034-0034-000000000034
+md"""
+**Before filtration** — four clinical scenarios (s1 sees s2, s3, s4):
+"""
+
+# ╔═╡ 10a1b3c4d-0035-0035-0035-000000000035
+visualize_model(model_big)
+
+# ╔═╡ 10a1b3c4d-0036-0036-0036-000000000036
+md"""
+**After filtration** — s2 and s3 merged into one equivalence class (both made consent true; same truth-value assignment for every formula in Γ = {consent, □consent}):
+"""
+
+# ╔═╡ 10a1b3c4d-0037-0037-0037-000000000037
+visualize_model(filt.model)
+
 # ╔═╡ 10a1b3c4d-0027-0027-0027-000000000027
 md"""
 Four clinical scenarios collapsed to $(length(classes)) equivalence classes. Worlds s2 and s3 were equivalent with respect to `{consent, Box(consent)}` -- they agreed on all relevant formulas -- so the filtration merged them. The **Filtration Lemma** (Theorem 5.5, B&D) guarantees that truth is preserved: `Box(consent)` is true at s1 in the original model if and only if it is true at the corresponding class in the filtration.
@@ -340,11 +422,33 @@ md"""
 | Finite model property | If guidelines are satisfiable at all, they are satisfiable in a finite model |
 | Decidability | An algorithm always terminates with the correct consistency verdict |
 | 2^n bound | The maximum model size needed, where n = number of subformulas |
-| O(2^(n^2)) brute force | Enumerating all frames is feasible only for tiny problems (max 4 worlds) |
+| O(2^(n²)) brute force | Enumerating all frames is feasible only for tiny problems (max 4 worlds) |
 | Filtration | Collapses irrelevant clinical distinctions, reducing model size |
 | Tableau method | The practical decision procedure -- prunes early, avoids exhaustive enumeration |
 
 **The bottom line**: decidability guarantees that automated guideline checking always terminates. The finite model property is the theoretical foundation. For practical performance on real guideline sets, the tableau method (Chapter 6) is essential -- it delivers the same guarantee without the exponential cost of brute-force enumeration.
+"""
+
+# ╔═╡ 10a1b3c4d-0038-0038-0038-000000000038
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens", [md"Davis, Shrobe & Szolovits (1993) identify five roles a knowledge representation must play. Role 4 is **medium for efficient computation**: 'The representation must be structured so that reasoning can be carried out efficiently.' Decidability and the finite model property are what make modal logic a tractable medium for automated guideline checking. First-order logic is undecidable — it cannot serve as an efficient computational medium for the consistency-checking task. Filtrations are the mathematical device that makes the computation tractable: they collapse the search space from potentially infinite models to models bounded by 2^n worlds (Proposition 5.12, B&D). The tableau method (Chapter 6) then delivers this same decidability guarantee without the 2^(n²) cost of brute-force frame enumeration — it is the engineering realisation of Role 4 for the guideline-checking problem. See also Buchanan (2006): 'making assumptions explicit is valuable' — the frame conditions we choose (K, KD, KT) determine what filtrations preserve and thus what the decision procedure can prove."])))
+"""
+
+# ╔═╡ 00000000-0000-0000-0000-000000000001
+PLUTO_PROJECT_TOML_CONTENTS = """
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Gamen = "d58aead4-12fe-4bc4-9bd9-a7dede724567"
+GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+
+[compat]
+CairoMakie = "0.15"
+Gamen = "~0.2"
+GraphMakie = "0.6"
+Graphs = "1"
+PlutoUI = "~0.7.80"
 """
 
 # ╔═╡ Cell order:
@@ -355,11 +459,13 @@ md"""
 # ╟─10a1b3c4d-0005-0005-0005-000000000005
 # ╟─10a1b3c4d-0006-0006-0006-000000000006
 # ╟─10a1b3c4d-0007-0007-0007-000000000007
+# ╟─10a1b3c4d-0031-0031-0031-000000000031
 # ╟─10a1b3c4d-0008-0008-0008-000000000008
 # ╟─10a1b3c4d-0009-0009-0009-000000000009
 # ╟─10a1b3c4d-0010-0010-0010-000000000010
 # ╟─10a1b3c4d-0011-0011-0011-000000000011
 # ╟─10a1b3c4d-0012-0012-0012-000000000012
+# ╟─10a1b3c4d-0032-0032-0032-000000000032
 # ╟─10a1b3c4d-0013-0013-0013-000000000013
 # ╟─10a1b3c4d-0014-0014-0014-000000000014
 # ╟─10a1b3c4d-0015-0015-0015-000000000015
@@ -367,6 +473,7 @@ md"""
 # ╟─10a1b3c4d-0017-0017-0017-000000000017
 # ╟─10a1b3c4d-0018-0018-0018-000000000018
 # ╟─10a1b3c4d-0019-0019-0019-000000000019
+# ╟─10a1b3c4d-0033-0033-0033-000000000033
 # ╟─10a1b3c4d-0020-0020-0020-000000000020
 # ╟─10a1b3c4d-0021-0021-0021-000000000021
 # ╟─10a1b3c4d-0022-0022-0022-000000000022
@@ -374,7 +481,13 @@ md"""
 # ╟─10a1b3c4d-0024-0024-0024-000000000024
 # ╟─10a1b3c4d-0025-0025-0025-000000000025
 # ╟─10a1b3c4d-0026-0026-0026-000000000026
+# ╟─10a1b3c4d-0034-0034-0034-000000000034
+# ╟─10a1b3c4d-0035-0035-0035-000000000035
+# ╟─10a1b3c4d-0036-0036-0036-000000000036
+# ╟─10a1b3c4d-0037-0037-0037-000000000037
 # ╟─10a1b3c4d-0027-0027-0027-000000000027
 # ╟─10a1b3c4d-0028-0028-0028-000000000028
 # ╟─10a1b3c4d-0029-0029-0029-000000000029
 # ╟─10a1b3c4d-0030-0030-0030-000000000030
+# ╟─10a1b3c4d-0038-0038-0038-000000000038
+# ╟─00000000-0000-0000-0000-000000000001
