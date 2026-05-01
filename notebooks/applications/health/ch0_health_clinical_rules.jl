@@ -8,20 +8,30 @@ using InteractiveUtils
 md"""
 # Clinical Rules and Propositional Logic
 
-This notebook parallels **Chapter 0 (Propositional Logic)** but uses clinical examples
-throughout. It shows how propositional logic underlies the rule-based clinical decision
-support systems embedded in every modern EHR — and why propositional logic alone is
-insufficient for the normative language of clinical guidelines.
+Imagine a patient arrives in the emergency department with a fever and blood cultures
+showing gram-positive cocci in chains. The physician knows the organism is almost
+certainly streptococcus — but *how does she know*? And how can we encode that reasoning
+into software that helps hundreds of physicians make the same inference correctly, every
+time?
 
-### Background
+**Propositional logic** — the logic of true/false statements connected by AND, OR, NOT,
+and IF-THEN — is the formal foundation of every clinical decision support (CDS) alert in
+every modern EHR. Understanding it lets you see exactly what those systems can and cannot
+do, and why some clinical guidelines resist automation entirely.
 
-Expert systems like MYCIN (Shortliffe et al., 1975) encoded clinical knowledge as
-**production rules** — IF-THEN statements with the logical form of implications.
-MYCIN's approximately 100 rules could recommend antibiotics at a level comparable to
-infectious disease specialists (Yu et al., 1979). Every clinical decision support
-alert in a modern EHR is a descendant of these rules.
+This notebook parallels **Chapter 0 (Propositional Logic)** and uses MYCIN-style clinical
+rules throughout. MYCIN (Shortliffe et al., 1975) encoded clinical knowledge as explicit
+IF-THEN rules and could recommend antibiotics at a level comparable to infectious disease
+specialists (Yu et al., 1979). Every CDS alert in use today is a descendant of those
+rules.
 
 **No prior logic background is assumed.**
+
+### By the end of this notebook, you will be able to:
+- Translate a clinical IF-THEN rule into a propositional formula
+- Evaluate whether a rule fires for a specific patient scenario
+- Chain multiple rules together using modus ponens and the hypothetical syllogism
+- Explain why propositional logic alone cannot express normative guideline language ("must," "should," "may")
 """
 
 # ╔═╡ 0b0b0c0d-0002-0002-0002-000000000002
@@ -70,7 +80,12 @@ IF   gram-positive AND coccus AND chains
 THEN the organism is streptococcus
 ```
 
-In propositional logic, this is an **implication**:
+In propositional logic, this is an **implication**: IF the premises are all true, THEN
+the conclusion must follow. In Gamen.jl, we build formulas from named parts:
+`Atom(:name)` represents a named proposition (true or false), `And(A, B)` represents
+A ∧ B (both must be true), `Implies(A, B)` represents IF A THEN B, and `Not(A)`
+represents ¬A (not A). The next code cell creates the streptococcus rule using these
+building blocks.
 
 $(\text{gram\_pos} \land \text{coccus} \land \text{chains}) \to \text{strep}$
 """
@@ -118,11 +133,26 @@ begin
 	"""
 end
 
+# ╔═╡ 0b0b0c0d-0022-0022-0022-000000000022
+md"""
+### Exercise: Writing a New Clinical Rule
+
+A MYCIN-style rule for gram-negative organisms states: "If the organism is gram-negative
+AND the patient has bacteremia, THEN suspect E. coli."
+
+1. Write this rule as a Gamen.jl formula using `Atom`, `And`, and `Implies`.
+2. Create a single-world patient model where gram-negative = true, bacteremia = true, and e_coli = true.
+3. Evaluate the rule on this patient. Then remove bacteremia from the model — what happens, and why?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Rule: `Implies(And(Atom(:gram_neg), Atom(:bacteremia)), Atom(:e_coli))`. A model with `[:gram_neg => [:w], :bacteremia => [:w], :e_coli => [:w]]` satisfies it (premise true, conclusion true). If bacteremia is removed, the premise `gram_neg ∧ bacteremia` is false — the rule is *vacuously true*: it makes no claim about what happens when the premise fails. This is the closed-world assumption: absence of evidence is not evidence of absence, but the rule simply does not fire."])))
+"""
+
 # ╔═╡ 0b0b0c0d-0009-0009-0009-000000000009
 md"""
 ## Modus Ponens in Clinical Inference
 
-**Modus ponens** is the engine that drives rule-based clinical AI:
+**Modus ponens** (Latin: "the way of affirming") is one of the most fundamental named
+inference rules in logic — and the engine that drives rule-based clinical AI:
 
 > If the **premises** are true and the **rule** is true, the **conclusion** must be true.
 
@@ -131,7 +161,10 @@ In MYCIN's case:
 2. The rule says: if these, then streptococcus
 3. Therefore: the organism is streptococcus
 
-Let's verify this is always valid:
+We can verify this pattern holds in *all* possible scenarios using `is_tautology`, which
+checks whether a formula is true regardless of what the propositions are set to. (We'll
+explain `is_tautology` fully in Chapter 1; for now, a tautology means the inference is
+universally valid — no counterexample exists.)
 """
 
 # ╔═╡ 0b0b0c0d-0010-0010-0010-000000000010
@@ -166,7 +199,11 @@ Clinical reasoning chains multiple rules. Consider:
 2. **Rule 2**: If streptococcus and no penicillin allergy → prescribe penicillin
 3. **Rule 3**: If streptococcus and penicillin allergy → prescribe erythromycin
 
-This is the **hypothetical syllogism** (chain rule) applied to clinical practice.
+The logical pattern connecting these is the **hypothetical syllogism** (also called the
+*chain rule*): if we can prove A → B and B → C, we can conclude A → C. Here, the
+organism identification (Rule 1) feeds the treatment selection (Rules 2 and 3). This
+chaining is how MYCIN could connect a raw observation (gram stain result) to a specific
+drug recommendation through a sequence of intermediate inferences.
 """
 
 # ╔═╡ 0b0b0c0d-0013-0013-0013-000000000013
@@ -216,6 +253,20 @@ begin
 	how MYCIN would handle this case.
 	"""
 end
+
+# ╔═╡ 0b0b0c0d-0023-0023-0023-000000000023
+md"""
+### Exercise: Predicting Rule Firing
+
+Before running any code, predict the outcome for an **allergy-free** patient who is
+gram-positive cocci in chains, with strep already identified.
+
+- Which of Rules 1, 2, and 3 will **fire** (premise true, conclusion holds)?
+- Which will be **vacuously true** (premise false, rule technically satisfied but no conclusion drawn)?
+- Which — if any — will be **false**?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Rule 1 fires: gram_pos ∧ coccus ∧ chains = true, strep = true → Implies(T, T) = true. Rule 2 fires: strep = true, allergy = false so ¬allergy = true → Implies(T, T) = true; penicillin is prescribed. Rule 3 is vacuously true: allergy = false, so the premise strep ∧ allergy = false → Implies(F, _) = true regardless. No rule is false — implications are only false when the premise is true and the conclusion is false."])))
+"""
 
 # ╔═╡ 0b0b0c0d-0016-0016-0016-000000000016
 md"""
@@ -282,6 +333,21 @@ prohibition (□¬) — provides a formal vocabulary that resolves this ambiguit
 That is the subject of the health-application notebooks starting in Chapter 1.
 """
 
+# ╔═╡ 0b0b0c0d-0024-0024-0024-000000000024
+md"""
+### Exercise: Formalizing a Guideline Recommendation
+
+The ACC/AHA 2018 cholesterol guidelines state: "High-intensity statin therapy **should**
+be initiated or continued as first-line therapy in patients with clinical ASCVD."
+
+1. Is "should" here expressing an **obligation** (□ — must happen in all compliant scenarios) or a **permission** (◇ — may happen in some compliant scenario)?
+2. If a hospital implements this as a hard stop (clinician cannot proceed without addressing statins), which interpretation are they using?
+3. If a hospital implements it as a dismissible alert, which interpretation are they using?
+4. What does Lomotan et al. (2010) tell us about why these different implementations happen?
+
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"In ACC/AHA 2018, 'should' is a Class I recommendation — the strongest level, closest to obligation (□): in all guideline-compliant care pathways, high-intensity statins are prescribed. A hard stop encodes □: the system enforces compliance. A dismissible alert encodes something weaker — closer to a strong recommendation than a strict obligation. Lomotan et al. (2010) found that clinicians and informaticists interpret 'should' across a wide range (~55–87 on a 0–100 obligation scale), which is why the same guideline gets implemented differently at different institutions. Deontic logic (Chapter 1) gives us the formal vocabulary to make this choice explicit and consistent."])))
+"""
+
 # ╔═╡ 0b0b0c0d-0020-0020-0020-000000000020
 md"""
 ## Summary
@@ -331,6 +397,7 @@ md"""
 # ╟─0b0b0c0d-0006-0006-0006-000000000006
 # ╟─0b0b0c0d-0007-0007-0007-000000000007
 # ╟─0b0b0c0d-0008-0008-0008-000000000008
+# ╟─0b0b0c0d-0022-0022-0022-000000000022
 # ╟─0b0b0c0d-0009-0009-0009-000000000009
 # ╟─0b0b0c0d-0010-0010-0010-000000000010
 # ╟─0b0b0c0d-0011-0011-0011-000000000011
@@ -338,9 +405,11 @@ md"""
 # ╟─0b0b0c0d-0013-0013-0013-000000000013
 # ╟─0b0b0c0d-0014-0014-0014-000000000014
 # ╟─0b0b0c0d-0015-0015-0015-000000000015
+# ╟─0b0b0c0d-0023-0023-0023-000000000023
 # ╟─0b0b0c0d-0016-0016-0016-000000000016
 # ╟─0b0b0c0d-0017-0017-0017-000000000017
 # ╟─0b0b0c0d-0018-0018-0018-000000000018
 # ╟─0b0b0c0d-0019-0019-0019-000000000019
+# ╟─0b0b0c0d-0024-0024-0024-000000000024
 # ╟─0b0b0c0d-0020-0020-0020-000000000020
 # ╟─0b0b0c0d-0021-0021-0021-000000000021
