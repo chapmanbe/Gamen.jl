@@ -24,6 +24,13 @@ We cover:
 - Truth at a world (Definition 1.7)
 - Truth in a model (Definition 1.9)
 - Validity and entailment
+
+**Learning outcomes.** After working through this notebook you will be able to:
+1. Construct modal formulas using Gamen.jl's type hierarchy (Atom, Box, Diamond, connectives).
+2. Build a Kripke model (frame + valuation) and evaluate any formula at a world using `satisfies`.
+3. Explain the difference between □ (true at *all* accessible worlds) and ◇ (true at *some* accessible world), including vacuous truth at dead-end worlds.
+4. Identify whether an English sentence requires modal or propositional logic, and translate it into a formula.
+5. Verify the duality □A ≡ ¬◇¬A computationally on a concrete model.
 """
 
 # ╔═╡ 1a2b3c4d-0050-0050-0050-000000000050
@@ -172,7 +179,7 @@ md"""
 
 Before we move to semantics, practice translating English sentences into modal formulas. Try writing each one in Gamen.jl, then expand the hint to check your answer.
 
-Let $p$ = "it is raining" and $q$ = "I have an umbrella."
+Let p = "it is raining" and q = "I have an umbrella."
 
 **1. "It is not raining."**
 
@@ -215,6 +222,11 @@ begin
 	is_modal_free(And(p, Not(q))),   # true — no modal operators
 	is_modal_free(Implies(p, Box(q))) # false — contains □
 end
+
+# ╔═╡ 1a2b3c4d-0081-0081-0081-000000000081
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens: Formal Syntax as a Medium for Human Expression", [md"Davis et al. (1993) describe the fifth role of a knowledge representation as a *medium for expressing human knowledge* — a language for communicating what we know to reasoning systems and to each other. The translation exercises above make this role concrete: every time you write `Box(Implies(p, q))` for 'if it necessarily rains then I have an umbrella,' you are encoding a piece of natural-language reasoning into a form that Gamen.jl can compute with. This is not merely translation — it is a commitment. Natural language is ambiguous ('must' can be deontic obligation or epistemic necessity; 'if' can be material or counterfactual implication). Choosing □ vs ◇ forces you to be precise about what you mean. This precision is what makes automated consistency checking possible — and what makes LLMs (which operate on natural language) unsuitable substitutes for formal reasoning."])))
+"""
 
 # ╔═╡ 1a2b3c4d-0054-0054-0054-000000000054
 md"""
@@ -281,11 +293,11 @@ $(Markdown.MD(Markdown.Admonition("note", "Example: Clinical treatment", [md"A p
 md"""
 ### Figure 1.1 from Boxes and Diamonds
 
-The book's first example model (Figure 1.1) has three worlds with the following valuation: $p$ is true at $w_1$ and $w_2$, while $q$ is true only at $w_2$.
+The book's first example model (Figure 1.1) has three worlds with the following valuation: p is true at w₁ and w₂, while q is true only at w₂.
 
-- $W = \{w_1, w_2, w_3\}$
-- $R = \{w_1 \to w_2,\; w_1 \to w_3\}$
-- $V(p) = \{w_1, w_2\}$ and $V(q) = \{w_2\}$
+- W = {w₁, w₂, w₃}
+- R = {w₁Rw₂, w₁Rw₃} (w₁ accesses both w₂ and w₃; w₂ and w₃ are dead-ends with no successors)
+- V(p) = {w₁, w₂} and V(q) = {w₂}
 """
 
 # ╔═╡ 1a2b3c4d-0013-0013-0013-000000000013
@@ -298,6 +310,11 @@ end
 visualize_model(model,
 	positions = Dict(:w1 => (0.0, 0.0), :w2 => (2.0, 1.0), :w3 => (2.0, -1.0)),
 	title = "Figure 1.1: A simple model")
+
+# ╔═╡ 1a2b3c4d-0080-0080-0080-000000000080
+md"""
+$(Markdown.MD(Markdown.Admonition("note", "Knowledge Representation Lens: Kripke Models as Surrogates", [md"Davis, Shrobe & Szolovits (1993) describe the first role of a knowledge representation as a *surrogate* — a substitute for the real thing that enables us to reason about the world without directly interacting with it. A Kripke model M = ⟨W, R, V⟩ is precisely this: a mathematical surrogate for a real domain of situations (game states, patient scenarios, software states). The three worlds above stand in for real-world situations; the accessibility relation encodes which transitions are possible. Davis et al. warn that 'perfect fidelity is impossible' — the model always differs from the thing it represents. Here, we have chosen to model only two atomic propositions (p and q), ignoring everything else about the modeled scenario. That choice — what to represent and what to omit — is the central act of knowledge representation. As you build models in this notebook, ask: what have I left out, and does it matter for the reasoning I want to do?"])))
+"""
 
 # ╔═╡ 1a2b3c4d-0014-0014-0014-000000000014
 md"""
@@ -523,12 +540,14 @@ visualize_model(my_model)
 # ╟─1a2b3c4d-0051-0051-0051-000000000051
 # ╟─1a2b3c4d-0010-0010-0010-000000000010
 # ╟─1a2b3c4d-0011-0011-0011-000000000011
+# ╟─1a2b3c4d-0081-0081-0081-000000000081
 # ╟─1a2b3c4d-0054-0054-0054-000000000054
 # ╟─1a2b3c4d-0012-0012-0012-000000000012
 # ╟─1a2b3c4d-0070-0070-0070-000000000070
 # ╟─1a2b3c4d-0071-0071-0071-000000000071
 # ╟─1a2b3c4d-0013-0013-0013-000000000013
 # ╟─1a2b3c4d-0040-0040-0040-000000000040
+# ╟─1a2b3c4d-0080-0080-0080-000000000080
 # ╟─1a2b3c4d-0014-0014-0014-000000000014
 # ╟─1a2b3c4d-0015-0015-0015-000000000015
 # ╟─1a2b3c4d-0016-0016-0016-000000000016
