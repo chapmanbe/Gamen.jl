@@ -8,7 +8,7 @@ import Graphs: SimpleDiGraph, add_edge!, edges, src, dst, has_edge
 function Gamen.visualize_model(model::KripkeModel;
         positions::Dict{Symbol,Tuple{Float64,Float64}} = Dict{Symbol,Tuple{Float64,Float64}}(),
         show_valuations::Bool = true,
-        atom_order::Vector{Symbol} = Symbol[],
+        atom_order::Vector{Atom} = Atom[],
         title::String = "",
         size::Tuple{Int,Int} = (500, 400),
         node_size::Real = 30,
@@ -115,7 +115,7 @@ function Gamen.visualize_model(model::KripkeModel;
 end
 
 function Gamen.visualize_model(frame::KripkeFrame; kwargs...)
-    model = KripkeModel(frame, Dict{Symbol,Set{Symbol}}())
+    model = KripkeModel(frame, Dict{Atom,Set{Symbol}}())
     Gamen.visualize_model(model; show_valuations=false, kwargs...)
 end
 
@@ -130,7 +130,7 @@ function _format_world_name(w::Symbol)
     s
 end
 
-function _format_valuation(model::KripkeModel, world::Symbol, atoms::Vector{Symbol})
+function _format_valuation(model::KripkeModel, world::Symbol, atoms::Vector{Atom})
     parts = String[]
     for a in atoms
         worlds_true = get(model.valuation, a, Set{Symbol}())
