@@ -125,16 +125,16 @@ where all of Γ hold, in every model of the appropriate class.
 # ╔═╡ 4a4b4c4d-0010-0010-0010-000000000010
 begin
 	# {p, p→q} ⊢_K q  (modus ponens)
-	deriv_mp = is_derivable_from(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2)
+	deriv_mp = is_entailed_by(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2)
 
 	# K proves □(p→p) — necessitation of a tautology
-	deriv_nec = is_derivable_from(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2)
+	deriv_nec = is_entailed_by(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2)
 
 	# K does NOT prove □p→p (that requires axiom T)
-	deriv_t = is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2)
+	deriv_t = is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2)
 
 	# But KT does prove □p→p
-	deriv_kt = is_derivable_from(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2)
+	deriv_kt = is_entailed_by(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2)
 
 	(mp = deriv_mp, nec = deriv_nec, T_in_K = deriv_t, T_in_KT = deriv_kt)
 end
@@ -143,7 +143,7 @@ end
 md"""
 **Exercise 2.** Is □p → □□p derivable in K? What about in K4? Why does this make sense?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Not derivable in K, but derivable in K4. K4 includes axiom 4 (□p → □□p), which corresponds to transitivity. In a transitive frame, if p holds at all accessible worlds, it also holds at all worlds accessible from those -- so □p implies □□p. Try: `is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), Box(Box(p))); max_worlds=2)` and compare with `SYSTEM_K4`."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Not derivable in K, but derivable in K4. K4 includes axiom 4 (□p → □□p), which corresponds to transitivity. In a transitive frame, if p holds at all accessible worlds, it also holds at all worlds accessible from those -- so □p implies □□p. Try: `is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), Box(Box(p))); max_worlds=2)` and compare with `SYSTEM_K4`."])))
 """
 
 # ╔═╡ 4a4b4c4d-0011-0011-0011-000000000011
@@ -378,8 +378,8 @@ begin
 	k_axiom = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))
 	nec_taut = Box(Implies(p, p))
 
-	(K_axiom_derivable = is_derivable_from(SYSTEM_K, Formula[], k_axiom; max_worlds=2),
-	 nec_taut_derivable = is_derivable_from(SYSTEM_K, Formula[], nec_taut; max_worlds=2))
+	(K_axiom_derivable = is_entailed_by(SYSTEM_K, Formula[], k_axiom; max_worlds=2),
+	 nec_taut_derivable = is_entailed_by(SYSTEM_K, Formula[], nec_taut; max_worlds=2))
 end
 
 # ╔═╡ 4a4b4c4d-0028-0028-0028-000000000028
@@ -522,16 +522,16 @@ the systems must be different.
 begin
 	# □p → p is KT-derivable but not KD-derivable (Prop 3.32: KD ⊊ KT)
 	schema_t = Implies(Box(p), p)
-	(KT = is_derivable_from(SYSTEM_KT, Formula[], schema_t; max_worlds=2),
-	 KD = is_derivable_from(SYSTEM_KD, Formula[], schema_t; max_worlds=2))
+	(KT = is_entailed_by(SYSTEM_KT, Formula[], schema_t; max_worlds=2),
+	 KD = is_entailed_by(SYSTEM_KD, Formula[], schema_t; max_worlds=2))
 end
 
 # ╔═╡ 4a4b4c4d-0034-0034-0034-000000000034
 begin
 	# □p → □□p is not KB-derivable (Prop 3.33: KB ≠ K4)
 	schema_4 = Implies(Box(p), Box(Box(p)))
-	(KB = is_derivable_from(SYSTEM_KB, Formula[], schema_4; max_worlds=2),
-	 K4 = is_derivable_from(SYSTEM_K4, Formula[], schema_4; max_worlds=2))
+	(KB = is_entailed_by(SYSTEM_KB, Formula[], schema_4; max_worlds=2),
+	 K4 = is_entailed_by(SYSTEM_K4, Formula[], schema_4; max_worlds=2))
 end
 
 # ╔═╡ 4a4b4c4d-0035-0035-0035-000000000035
