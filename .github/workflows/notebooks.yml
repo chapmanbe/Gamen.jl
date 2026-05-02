@@ -39,9 +39,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: pluto_state_cache
-          key: ${{ runner.os }}-pluto-v3-${{ hashFiles('notebooks/Project.toml', 'src/**') }}-${{ hashFiles('notebooks/theory/pluto/**/*.jl', 'notebooks/applications/health/**/*.jl') }}
+          key: ${{ runner.os }}-pluto-v4-${{ hashFiles('notebooks/Project.toml', 'src/**', 'ext/**') }}-${{ hashFiles('notebooks/theory/pluto/**/*.jl', 'notebooks/applications/health/**/*.jl') }}
           restore-keys: |
-            ${{ runner.os }}-pluto-v3-${{ hashFiles('notebooks/Project.toml', 'src/**') }}
+            ${{ runner.os }}-pluto-v4-${{ hashFiles('notebooks/Project.toml', 'src/**', 'ext/**') }}
 
       - name: Instantiate notebooks environment
         run: |
