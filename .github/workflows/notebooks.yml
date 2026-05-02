@@ -7,6 +7,8 @@ on:
       - 'notebooks/**'
       - 'src/**'
       - '.github/workflows/notebooks.yml'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 concurrency:
