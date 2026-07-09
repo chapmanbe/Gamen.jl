@@ -400,7 +400,9 @@ const TABLEAU_KDt = TableauSystem(:KDt,
     Function[
         # Deontic seriality (D axiom): □A → ◇A
         apply_D_box_rule, apply_D_diamond_rule,
-    ]
+    ];
+    uses_blocking=true  # temporal transitivity (𝐆/𝐅) can re-inject unstripped
+                        # boxed formulas into descendant worlds indefinitely
 )
 
 # ── Frame properties for temporal logics (Table 14.1) ──

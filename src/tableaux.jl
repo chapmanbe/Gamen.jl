@@ -3,7 +3,8 @@
 # Architecture overview:
 #
 # This file implements prefixed signed tableau systems for modal logic,
-# following Fitting (1999) "Tableau Methods for Modal and Temporal Logics."
+# following Goré (1999) "Tableau Methods for Modal and Temporal Logics"
+# (in Handbook of Tableau Methods).
 #
 # Key types:
 #   Prefix          — a world name in the tableau (e.g., 1, 1.2, 1.3)
@@ -20,10 +21,15 @@
 #   Priority 2: world-creating rules (e.g., F□ at prefix σ creates a new
 #               successor σ.n and adds F formula there)
 #
-# Blocking (for temporal logic termination):
-#   Ancestor-based blocking prevents infinite expansion. A prefix σ is blocked
-#   when an unblocked ancestor has a superset of σ's formula content — the
-#   subtableau from σ would be isomorphic. See CLAUDE.md for details.
+# Blocking (for transitive/temporal logic termination):
+#   Ancestor-based blocking prevents infinite expansion. Only systems with
+#   uses_blocking=true (K4, S4, S5, KDt) use it — these are exactly the
+#   systems whose used-prefix rules re-inject an unstripped boxed formula
+#   into a descendant world. A prefix σ is blocked when an ancestor labels
+#   an identical set of signed formulas — the subtableau from σ would be
+#   isomorphic. Recomputed fresh on every rule application (not cached), so
+#   a prefix can also become unblocked if its content later diverges from
+#   every ancestor. See CLAUDE.md for details.
 #
 # Countermodel extraction:
 #   extract_countermodel reads an open (non-closed) branch and builds a
@@ -151,9 +157,11 @@ Fields:
 - `prefix_set`: `Set{Prefix}` for O(1) used-prefix queries
 - `expanded`: `BitSet` tracking which formula indices have been fully processed
   by Priority 1 rules and need not be re-checked
-- `blocked`: `Set{Prefix}` of prefixes blocked by ancestor subsumption — a prefix
-  σ is blocked when an ancestor σ' has a superset of its formula content, so the
-  subtableau from σ would be isomorphic and need not be expanded
+- `blocked`: `Set{Prefix}` of prefixes currently blocked by ancestor equality — a
+  prefix σ is blocked when an ancestor σ' labels an identical set of signed
+  formulas, so the subtableau from σ would be isomorphic and need not be
+  expanded. Only populated for systems with `uses_blocking = true`; recomputed
+  from scratch on every rule application, not accumulated (see `_should_block`)
 - `scan_start`: where the Priority 1 scan resumes (formulas before this index
   returned NoRule and haven't been invalidated by new child prefixes)
 """
@@ -639,6 +647,12 @@ Fields:
   symmetry, transitivity, euclideanness — T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇)
 - `witness_rules`: rules that create new prefixes to ensure a successor
   exists (seriality — D□/D◇)
+- `uses_blocking`: whether ancestor-equality blocking (loop-checking) applies
+  to this system. Only needed when a used-prefix rule re-injects an
+  *unstripped* boxed formula into a descendant world (transitivity: 4□/4◇,
+  and the temporal analogue) — that is the only shape of rule that can force
+  unbounded world creation. See Goré (1999), *Tableau Methods for Modal and
+  Temporal Logics*, in *Handbook of Tableau Methods*, §6.6.
 
 To define a new system, supply the appropriate rule vectors. No changes
 to the tableau engine are required.
@@ -647,7 +661,11 @@ struct TableauSystem
     name::Symbol
     used_prefix_rules::Vector{Function}
     witness_rules::Vector{Function}
+    uses_blocking::Bool
 end
+
+TableauSystem(name, used_prefix_rules, witness_rules; uses_blocking=false) =
+    TableauSystem(name, used_prefix_rules, witness_rules, uses_blocking)
 
 """
     TABLEAU_K
@@ -692,7 +710,7 @@ Tableau system for K4 (transitive frames). Adds the 4□ and 4◇ rules
 corresponding to the 4 axiom □p → □□p (Table 6.3, B&D).
 """
 const TABLEAU_K4 = TableauSystem(:K4, Function[apply_4_box_rule, apply_4_diamond_rule],
-                                       Function[])
+                                       Function[]; uses_blocking=true)
 
 """
     TABLEAU_S4
@@ -702,7 +720,7 @@ and 4□/4◇ rules (Table 6.4, B&D).
 """
 const TABLEAU_S4 = TableauSystem(:S4, Function[apply_T_box_rule, apply_T_diamond_rule,
                                                apply_4_box_rule, apply_4_diamond_rule],
-                                       Function[])
+                                       Function[]; uses_blocking=true)
 
 """
     TABLEAU_S5
@@ -714,7 +732,7 @@ const TABLEAU_S5 = TableauSystem(:S5, Function[apply_T_box_rule,  apply_T_diamon
                                                apply_B_box_rule,  apply_B_diamond_rule,
                                                apply_4_box_rule,  apply_4_diamond_rule,
                                                apply_4T_box_rule, apply_4T_diamond_rule],
-                                       Function[])
+                                       Function[]; uses_blocking=true)
 
 # ── Blocking for temporal tableaux ──
 
@@ -750,27 +768,37 @@ end
 """
     _should_block(branch::TableauBranch, σ::Prefix) -> Bool
 
-Return `true` if prefix σ should be blocked because an ancestor has a
-superset (or equal set) of its formula content. A blocked prefix need not
-be expanded further — its subtableau would be isomorphic to the ancestor's.
+Return `true` if prefix σ should be blocked because an ancestor labels an
+*identical* set of signed formulas — σ's subtableau would be isomorphic to
+the ancestor's, so expanding it further is redundant.
 
-Blocking is sound because: if an ancestor σ' has content ⊇ content(σ), then
-any model satisfying σ' also satisfies σ. Blocking preserves all open branches
-and cannot cause a branch to close that should remain open.
+This is a pure function of the branch's current content: it is recomputed
+from scratch on every call (see `_compute_blocked_set`), not cached, because
+a prefix's content — and hence its blocked status — can change as further
+rules fire (e.g. an ancestor's `apply_4_box_rule` pushing new content into a
+descendant). A prefix that no longer matches any ancestor must stop being
+blocked.
 
-See Fitting (1983), Ch. 9 (loop checking); Wolper (1985) for temporal tableaux.
+Blocking on exact equality (rather than subset) follows Goré (1999),
+*Tableau Methods for Modal and Temporal Logics*, in *Handbook of Tableau
+Methods*, §6.6; see also Fitting (1983), Ch. 9, for the general loop-checking
+framework, and Wolper (1985) for temporal tableaux.
 """
 function _should_block(branch::TableauBranch, σ::Prefix)
-    σ ∈ branch.blocked && return true
     length(σ.seq) <= 1 && return false  # root is never blocked
     σ_content = _prefix_content(branch, σ)
-    for anc in _ancestors(σ)
-        anc ∈ branch.blocked && continue  # blocked ancestors don't count
-        if σ_content ⊆ _prefix_content(branch, anc)
-            return true
-        end
-    end
-    false
+    any(anc -> σ_content == _prefix_content(branch, anc), _ancestors(σ))
+end
+
+"""
+    _compute_blocked_set(branch::TableauBranch) -> Set{Prefix}
+
+Recompute the full set of blocked prefixes on `branch` from its current
+content. Called once per `_apply_all_rules` invocation for systems with
+`uses_blocking = true`; see that function's docstring.
+"""
+function _compute_blocked_set(branch::TableauBranch)
+    Set{Prefix}(σ for σ in branch.prefix_set if _should_block(branch, σ))
 end
 
 # ── Automated tableau construction ──
@@ -793,6 +821,13 @@ _is_propositional(f::Formula) = f isa Not || f isa And || f isa Or || f isa Impl
 
 function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
     is_closed(branch) && return [branch]
+
+    # Recomputed fresh for whichever branch is about to be returned — blocking
+    # status must be re-derived from current content on every rule application
+    # (not just world-creating ones), since e.g. a used-prefix rule can push
+    # new content into an already-blocked descendant and distinguish it from
+    # its ancestors. Disabled entirely for systems with uses_blocking=false.
+    finalize_blocked(b::TableauBranch) = system.uses_blocking ? _compute_blocked_set(b) : Set{Prefix}()
 
     # Priority 1: propositional and used-prefix rules
     # Start scanning from scan_start — formulas before this index returned NoRule
@@ -833,7 +868,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
             end
             return [TableauBranch(new_branch.formulas, new_branch.formula_set,
                                   new_branch.prefix_set, new_branch.expanded,
-                                  copy(new_branch.blocked), i)]
+                                  finalize_blocked(new_branch), i)]
         elseif result isa SplitRule
             function _add_unique(b, pfs)
                 for pf in pfs
@@ -858,10 +893,10 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
             end
             return [TableauBranch(left.formulas, left.formula_set,
                                   left.prefix_set, left_exp,
-                                  copy(left.blocked), i),
+                                  finalize_blocked(left), i),
                     TableauBranch(right.formulas, right.formula_set,
                                   right.prefix_set, right_exp,
-                                  copy(right.blocked), i)]
+                                  finalize_blocked(right), i)]
         end
     end
 
@@ -886,13 +921,8 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            # Check blocking for newly created prefixes
-            new_blocked = copy(new_branch.blocked)
-            for np in setdiff(new_branch.prefix_set, branch.prefix_set)
-                _should_block(new_branch, np) && push!(new_blocked, np)
-            end
             return [TableauBranch(new_branch.formulas, new_branch.formula_set,
-                                  new_branch.prefix_set, BitSet(), new_blocked, 1)]
+                                  new_branch.prefix_set, BitSet(), finalize_blocked(new_branch), 1)]
         end
     end
 
@@ -914,13 +944,8 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                 new_branch = append_formula(new_branch, addition)
             end
             new_branch == branch && continue
-            # Check blocking for newly created prefixes
-            new_blocked = copy(new_branch.blocked)
-            for np in setdiff(new_branch.prefix_set, branch.prefix_set)
-                _should_block(new_branch, np) && push!(new_blocked, np)
-            end
             return [TableauBranch(new_branch.formulas, new_branch.formula_set,
-                                  new_branch.prefix_set, BitSet(), new_blocked, 1)]
+                                  new_branch.prefix_set, BitSet(), finalize_blocked(new_branch), 1)]
         end
     end
 
@@ -939,13 +964,8 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
                     new_branch = append_formula(new_branch, addition)
                 end
                 new_branch == branch && continue
-                # Check blocking for newly created prefixes
-                new_blocked = copy(new_branch.blocked)
-                for np in setdiff(new_branch.prefix_set, branch.prefix_set)
-                    _should_block(new_branch, np) && push!(new_blocked, np)
-                end
                 return [TableauBranch(new_branch.formulas, new_branch.formula_set,
-                                  new_branch.prefix_set, BitSet(), new_blocked, 1)]
+                                  new_branch.prefix_set, BitSet(), finalize_blocked(new_branch), 1)]
             end
         end
     end

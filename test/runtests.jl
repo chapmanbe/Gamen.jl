@@ -1553,13 +1553,42 @@ using Test
             @test length(content_τ) == 1
             @test content_τ ⊆ content_σ  # τ has subset of σ's formulas
 
-            # _should_block: child with subset of parent's content is blocked
+            # _should_block: blocking requires EXACT equality (Goré 1999, §6.6),
+            # not subset — a strict subset must NOT block (would make K
+            # incomplete, see the diamond-monotonicity regression test below)
             @test !Gamen._should_block(branch, σ)  # root is never blocked
-            @test Gamen._should_block(branch, τ)    # τ ⊆ σ
+            @test !Gamen._should_block(branch, τ)  # τ ⊊ σ: strict subset, not blocked
+
+            # _should_block: identical content DOES block
+            branch_eq = TableauBranch([pf_true(σ, p), pf_false(σ, q),
+                                        pf_true(τ, p), pf_false(τ, q)])
+            @test Gamen._should_block(branch_eq, τ)  # τ == σ exactly
 
             # _should_block: child with strictly more content is not blocked
             branch2 = TableauBranch([pf_true(σ, p), pf_true(τ, p), pf_true(τ, q)])
             @test !Gamen._should_block(branch2, τ)  # τ has {p,q}, σ has {p}
+
+            # Unblocking: a prefix that matched an ancestor exactly, then gains
+            # further content, must stop being blocked (review finding C2,
+            # root cause (b): blocking must not be sticky)
+            branch_grown = Gamen.append_formula(branch_eq, pf_true(τ, Atom(:r)))
+            @test !Gamen._should_block(branch_grown, τ)  # now {p,¬q,r} ≠ {p,¬q}
+
+            # uses_blocking is a per-system capability (review finding C2, root
+            # cause (a)): only transitive/temporal systems need it
+            @test !TABLEAU_K.uses_blocking
+            @test !TABLEAU_KT.uses_blocking
+            @test !TABLEAU_KD.uses_blocking
+            @test !TABLEAU_KB.uses_blocking
+            @test TABLEAU_K4.uses_blocking
+            @test TABLEAU_S4.uses_blocking
+            @test TABLEAU_S5.uses_blocking
+            @test TABLEAU_KDt.uses_blocking
+
+            # Regression (review finding C2): over-eager subset-blocking used to
+            # make this K-valid formula (◇-monotonicity) unprovable in plain K
+            @test tableau_proves(TABLEAU_K, Formula[],
+                Implies(And(And(p, q), Diamond(And(p, q))), Diamond(p)))
 
             # Temporal blocking: 𝐆(□p) exercises blocking — without it, the
             # seriality rule creates worlds indefinitely (each isomorphic to its parent)
@@ -1567,7 +1596,7 @@ using Test
             t = build_tableau([pf_true(root, FutureBox(Box(p)))], TABLEAU_KDt)
             @test !is_closed(t)
             # With blocking, the tableau should have very few worlds (3 prefixes,
-            # with 1.1.1 blocked because its content ⊆ ancestor 1.1's content)
+            # with 1.1.1 blocked because its content == ancestor 1.1's content)
             open_branch = t.branches[findfirst(b -> !is_closed(b), t.branches)]
             @test length(open_branch.formulas) <= 15  # would be ~1000+ without blocking
             @test !isempty(open_branch.blocked)  # at least one prefix is blocked

@@ -66,20 +66,24 @@ This is a fundamental complexity bound, not a bug to be fixed. Do not attempt to
 
 ## Tableau Blocking
 
-Temporal tableaux use **ancestor-based blocking** to ensure termination. A prefix σ is blocked when an unblocked ancestor has a superset of its formula content — the subtableau from σ would be isomorphic, so expansion is redundant. Without blocking, temporal formulas like `𝐆(□p)` create isomorphic worlds indefinitely.
+Transitive and temporal tableaux use **ancestor-based blocking** to ensure termination. It is a **per-system capability** (`TableauSystem.uses_blocking`), not engine-global — only systems whose used-prefix rules re-inject an *unstripped* boxed formula into a descendant world need it: `TABLEAU_K4`, `TABLEAU_S4`, `TABLEAU_S5` (transitivity, `4□/4◇`) and `TABLEAU_KDt` (temporal transitivity). `TABLEAU_K`, `TABLEAU_KT`, `TABLEAU_KD`, `TABLEAU_KB` never need it — their rules only strip the box operator or target an already-existing parent, so they terminate on their own. Applying blocking outside these systems makes the tableau *incomplete* (it previously made a K-valid ◇-monotonicity formula unprovable in plain K — see `notes/adversarial-review-2026-07-08.md` §C2).
+
+A prefix σ is blocked when an ancestor labels an **identical** set of signed formulas (not merely a superset) — the subtableau from σ would be isomorphic, so expansion is redundant. Without blocking, temporal formulas like `𝐆(□p)` create isomorphic worlds indefinitely. Blocking status is **recomputed from scratch on every rule application** (`_compute_blocked_set`), not accumulated — a prefix that matched an ancestor can later be distinguished from it (e.g. by an ancestor's own `4□` propagation pushing new content into the prefix) and must become unblocked again.
 
 Blocking is integrated at two points in `_apply_all_rules`:
-- **Strategy A**: World-creating rules (Priority 2) skip blocked prefixes and check new prefixes for blocking after creation
+- **Strategy A**: World-creating rules (Priority 2) skip blocked prefixes
 - **Strategy B**: The Priority 1 scan skips formulas at blocked prefixes
 
-References: Fitting (1983) Ch. 9 (loop checking), Wolper (1985) for temporal tableaux.
+Every return path recomputes the blocked set via a local `finalize_blocked` closure before constructing the returned `TableauBranch`, so re-evaluation happens after both world-creating *and* ordinary propositional/used-prefix rule applications.
+
+References: Goré (1999) "Tableau Methods for Modal and Temporal Logics" (in *Handbook of Tableau Methods*), §6.6, for the equality criterion; Fitting (1983) Ch. 9 for the general loop-checking framework; Wolper (1985) for temporal tableaux. Note: B&D itself proves tableau completeness only for K (Theorem 6.19) — it never states or proves a completeness theorem for K4/S4/S5, so this discipline is properly attributed to Goré/Fitting, not to B&D.
 
 ## Testing
 
 - Use the `Test` stdlib with `@testset` and `@test`.
 - CI via GitHub Actions using the standard `julia-runtest` workflow.
 - **Known slow test:** The `Decidability (Theorem 5.17)` testset in Chapter 5 takes ~80 seconds due to exhaustive model enumeration. This is expected.
-- All 559 tests pass.
+- All 570 tests pass.
 - **Human validation**: Automated tests catch internal inconsistency but not disagreement with B&D. See `notes/human-validation-guide.md` for the paper-to-code audit workflow, hand-worked REPL examples, countermodel inspection, and cross-validation against gamen-hs. Run before JOSE submission and whenever a new module lands.
 
 ## Documentation
