@@ -198,11 +198,15 @@ end
     is_closed(branch::TableauBranch) -> Bool
 
 A branch is closed if it contains both σ T A and σ F A for some prefix σ
-and formula A (Definition 6.2, B&D).
+and formula A (Definition 6.2, B&D), or if it contains σ T ⊥ for some
+prefix σ. B&D implicitly assumes ⊥-free inputs; since ⊥ is semantically
+equivalent to φ ∧ ¬φ, closing on σ T ⊥ is the same closure condition
+(issue #10).
 """
 function is_closed(branch::TableauBranch)
     for pf in branch.formulas
         if pf.sign isa TrueSign
+            pf.formula isa Bottom && return true
             companion = PrefixedFormula(pf.prefix, F_SIGN, pf.formula)
             if companion ∈ branch.formula_set
                 return true
@@ -696,11 +700,14 @@ const TABLEAU_KD = TableauSystem(:KD, Function[],
 """
     TABLEAU_KB
 
-Tableau system for KB (symmetric frames). Adds T□/T◇ and B□/B◇ rules
-corresponding to the B axiom □p → ◇□p (Table 6.3, B&D).
+Tableau system for KB (symmetric frames). Adds the B□ and B◇ rules
+corresponding to the B axiom p → □◇p (Table 6.3, B&D).
+
+Earlier versions wrongly included the T□/T◇ (reflexivity) rules, making the
+system prove KT-theorems such as □p → p that are invalid on symmetric
+frames (issue #10).
 """
-const TABLEAU_KB = TableauSystem(:KB, Function[apply_T_box_rule, apply_T_diamond_rule,
-                                               apply_B_box_rule, apply_B_diamond_rule],
+const TABLEAU_KB = TableauSystem(:KB, Function[apply_B_box_rule, apply_B_diamond_rule],
                                        Function[])
 
 """
@@ -1047,6 +1054,37 @@ A tableau is closed if all its branches are closed (Definition 6.2, B&D).
 is_closed(t::Tableau) = all(is_closed, t.branches)
 
 """
+    _check_tableau_supported(f::Formula)
+
+Throw `ArgumentError` if `f` contains an operator the tableau engine has no
+rules for (𝐇/PastBox, 𝐏/PastDiamond, Since, Until). B&D provides no temporal
+tableau rules; the 𝐆/𝐅 rules in `TABLEAU_KDt` were built by analogy to □/◇,
+but no such analogy has been adopted for the past/binary operators, and
+treating them as opaque atoms made valid Kt-formulas (e.g. p → 𝐆(𝐏p))
+silently unprovable (issue #10).
+"""
+function _check_tableau_supported(f::Formula)
+    if f isa PastBox || f isa PastDiamond
+        throw(ArgumentError("no tableau rules exist for $(nameof(typeof(f))) " *
+                            "(𝐇/𝐏): B&D provides no temporal tableau rules; " *
+                            "see issue #10"))
+    elseif f isa Since || f isa Until
+        throw(ArgumentError("no tableau rules exist for $(nameof(typeof(f))): " *
+                            "B&D provides no temporal tableau rules; see issue #10"))
+    elseif f isa Not
+        _check_tableau_supported(f.operand)
+    elseif f isa And || f isa Or || f isa Iff
+        _check_tableau_supported(f.left)
+        _check_tableau_supported(f.right)
+    elseif f isa Implies
+        _check_tableau_supported(f.antecedent)
+        _check_tableau_supported(f.consequent)
+    elseif f isa Box || f isa Diamond || f isa FutureBox || f isa FutureDiamond
+        _check_tableau_supported(f.operand)
+    end
+end
+
+"""
     build_tableau(assumptions::Vector{PrefixedFormula},
                   system::TableauSystem; max_steps::Int=1000) -> Tableau
 
@@ -1056,9 +1094,16 @@ closed or no more rules apply (Definition 6.17, Proposition 6.18, B&D).
 
 `max_steps` bounds the number of rule applications to prevent non-termination
 for non-theorems in systems without the finite model property.
+
+Throws `ArgumentError` if any assumption contains 𝐇, 𝐏, `Since`, or `Until`:
+no tableau rules exist for these operators (B&D presents none), and silently
+treating them as atoms would return unsound provability verdicts (issue #10).
 """
 function build_tableau(assumptions::Vector{PrefixedFormula},
                        system::TableauSystem; max_steps::Int=1000)
+    for pf in assumptions
+        _check_tableau_supported(pf.formula)
+    end
     branches = [TableauBranch(copy(assumptions))]
     steps = 0
 

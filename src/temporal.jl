@@ -187,10 +187,10 @@ function satisfies(model::TemporalModel, t::Symbol, f::Since)
         t in accessible(model.frame, t_prime) || continue
         # M,t' ⊩ B
         satisfies(model, t_prime, f.left) || continue
-        # For all s with t' ≺ s ≺ t (i.e., s is a successor of t' and a predecessor of t)
+        # For all s with t' ≺ s ≺ t. Endpoints are NOT exempted: B&D leaves ≺
+        # free to be reflexive or not, so s = t/t' is in range exactly when
+        # the frame makes it so (issue #10).
         all_between = all(model.frame.worlds) do s
-            s == t_prime && return true
-            s == t && return true
             between = (s in accessible(model.frame, t_prime)) &&
                        (t in accessible(model.frame, s))
             !between || satisfies(model, s, f.right)
@@ -205,10 +205,10 @@ function satisfies(model::TemporalModel, t::Symbol, f::Until)
     for t_prime in accessible(model.frame, t)
         # M,t' ⊩ B
         satisfies(model, t_prime, f.left) || continue
-        # For all s with t ≺ s ≺ t' (s is successor of t and predecessor of t')
+        # For all s with t ≺ s ≺ t'. Endpoints are NOT exempted: B&D leaves ≺
+        # free to be reflexive or not, so s = t/t' is in range exactly when
+        # the frame makes it so (issue #10).
         all_between = all(model.frame.worlds) do s
-            s == t && return true
-            s == t_prime && return true
             between = (s in accessible(model.frame, t)) &&
                        (t_prime in accessible(model.frame, s))
             !between || satisfies(model, s, f.right)
@@ -389,6 +389,14 @@ transitive frames.
 
 In Phase 1, deontic and temporal accessibility share a single relation.
 Multi-relational prefixes (distinguishing R_d from R_t) are deferred to Phase 2.
+
+⚠️ **Unsourced rules**: B&D presents no tableau rules for temporal logic. The
+𝐆/𝐅 rules here were constructed by analogy to □/◇ (treating ≺ as a
+future-facing accessibility relation) and have no published source yet. No
+rules exist for 𝐇, 𝐏, `Since`, or `Until` — formulas containing them throw
+`ArgumentError` rather than being silently treated as atoms. Extending the
+temporal tableau is quarantined until a published rule set is adopted
+(issue #10).
 """
 const TABLEAU_KDt = TableauSystem(:KDt,
     Function[

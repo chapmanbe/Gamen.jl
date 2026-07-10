@@ -51,6 +51,10 @@ function is_tautology(φ::Formula)
     is_modal_free(φ) || throw(ArgumentError("is_tautology requires a modal-free formula"))
     vars = sort(collect(atoms(φ)))
     n = length(vars)
+    # Guard: 2^n overflows Int64 at n ≥ 63, silently yielding an empty loop
+    # — i.e. "tautology" for every formula (issue #10).
+    n >= 62 && throw(ArgumentError(
+        "is_tautology would enumerate 2^$n assignments; this is infeasible"))
     for i in 0:(2^n - 1)
         assignment = Dict{Atom,Bool}()
         for (j, v) in enumerate(vars)
