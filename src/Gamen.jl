@@ -70,7 +70,8 @@ export tableau_rules, tableau_witness_rules
 export PastBox, PastDiamond, FutureBox, FutureDiamond, Since, Until
 export 𝐇, 𝐏, 𝐆, 𝐅
 export TemporalModel
-export TABLEAU_KDt
+# TABLEAU_KDt is intentionally NOT exported — quarantined experimental temporal
+# tableau (see its docstring / adversarial-review §C6). Reach it as Gamen.TABLEAU_KDt.
 export is_transitive_frame, is_linear_frame, is_dense_frame
 export is_unbounded_past, is_unbounded_future
 

@@ -1,6 +1,11 @@
 using Gamen
 using Test
 
+# TABLEAU_KDt is intentionally un-exported (quarantined experimental temporal
+# tableau — see its docstring / adversarial-review §C6). Import it explicitly so
+# the existing tableau tests can still exercise it internally.
+using Gamen: TABLEAU_KDt
+
 @testset "Gamen.jl" begin
     @testset "Formula construction and display" begin
         p = Atom(:p)
@@ -1697,6 +1702,31 @@ using Test
             # U(q)(q) at t1 in m_direct: need q at successor and q between t1 and it
             # Only t3 has q, but t2 is between (t1→t2, t2→t3) and q not at t2 → false
             @test !satisfies(m_direct, :t1, Until(q, q))
+
+            # Reflexive-frame endpoints (adversarial-review §a ruling, 2026-07-10):
+            # B&D Ch.14 does not require ≺ irreflexive, so when t≺t the endpoint t
+            # genuinely lies in the open interval (t,t') and its C-value must count —
+            # no unconditional endpoint exemption.
+            m_reflex = KripkeModel(
+                KripkeFrame([:t1, :t2], [:t1 => :t1, :t2 => :t2, :t1 => :t2]),
+                [:p => [:t2], :q => [:t2]]   # p false at t1
+            )
+            # Until(q,p) @ t1: witness t2 (q there); reflexivity puts t1 in the
+            # interval, and p is false at t1 ⇒ must be false (old code exempted t1).
+            @test !satisfies(m_reflex, :t1, Until(q, p))
+            # With p also true at t1, the interval is satisfied ⇒ true.
+            m_reflex2 = KripkeModel(
+                KripkeFrame([:t1, :t2], [:t1 => :t1, :t2 => :t2, :t1 => :t2]),
+                [:p => [:t1, :t2], :q => [:t2]]
+            )
+            @test satisfies(m_reflex2, :t1, Until(q, p))
+            # Symmetric case for Since: reflexivity puts t2 in the interval (t1,t2),
+            # so Since(q,p) @ t2 needs p at t2; false when p omitted there.
+            m_reflex3 = KripkeModel(
+                KripkeFrame([:t1, :t2], [:t1 => :t1, :t2 => :t2, :t1 => :t2]),
+                [:p => [:t1], :q => [:t1]]   # p false at t2
+            )
+            @test !satisfies(m_reflex3, :t2, Since(q, p))
         end
 
         @testset "Frame correspondence properties (Table 14.1)" begin

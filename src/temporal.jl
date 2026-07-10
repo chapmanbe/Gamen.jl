@@ -187,10 +187,12 @@ function satisfies(model::TemporalModel, t::Symbol, f::Since)
         t in accessible(model.frame, t_prime) || continue
         # M,t' ⊩ B
         satisfies(model, t_prime, f.left) || continue
-        # For all s with t' ≺ s ≺ t (i.e., s is a successor of t' and a predecessor of t)
+        # For all s with t' ≺ s ≺ t (successor of t' and predecessor of t).
+        # No endpoint exemption: B&D Ch.14 keeps ≺ maximally general and does
+        # not require irreflexivity, so on a reflexive frame (t'≺t' or t≺t) an
+        # endpoint genuinely lies in the open interval and its C-value counts.
+        # The betweenness test below already includes an endpoint exactly then.
         all_between = all(model.frame.worlds) do s
-            s == t_prime && return true
-            s == t && return true
             between = (s in accessible(model.frame, t_prime)) &&
                        (t in accessible(model.frame, s))
             !between || satisfies(model, s, f.right)
@@ -205,10 +207,10 @@ function satisfies(model::TemporalModel, t::Symbol, f::Until)
     for t_prime in accessible(model.frame, t)
         # M,t' ⊩ B
         satisfies(model, t_prime, f.left) || continue
-        # For all s with t ≺ s ≺ t' (s is successor of t and predecessor of t')
+        # For all s with t ≺ s ≺ t' (successor of t and predecessor of t').
+        # No endpoint exemption — see the Since case: on a reflexive frame an
+        # endpoint genuinely lies in the open interval and its C-value counts.
         all_between = all(model.frame.worlds) do s
-            s == t && return true
-            s == t_prime && return true
             between = (s in accessible(model.frame, t)) &&
                        (t_prime in accessible(model.frame, s))
             !between || satisfies(model, s, f.right)
@@ -383,9 +385,25 @@ end
 """
     TABLEAU_KDt
 
+⚠️ **EXPERIMENTAL / QUARANTINED — not exported, do not treat as sound.**
+
 Tableau system for combined deontic-temporal logic. Deontic operators (□/◇)
 have serial frames (D axiom); temporal operators (𝐆/𝐅) have reflexive and
 transitive frames.
+
+B&D presents **no** tableau rules for temporal logic. The 𝐆/𝐅 rules used here
+were constructed by analogy to the □/◇ rules (Tables 6.2–6.3) — treating
+future-time necessity/possibility as S4-shaped box/diamond over ≺ — and have
+**no completeness proof and no temporal-tableau source**. Per the 2026-07-10
+adjudication of adversarial-review finding §C6, temporal tableau reasoning is
+quarantined until a proper template (Goré/Wolper-style) is adopted: this system
+is unexported and only reachable as `Gamen.TABLEAU_KDt`, and it must set
+`uses_temporal_rules=true` for the engine to apply the 𝐆/𝐅 rules at all. It
+covers only 𝐆/𝐅 — 𝐇/𝐏/Since/Until have no rules and are silently ignored.
+
+The semantic layer (`satisfies` on `TemporalModel`) is unaffected by this
+quarantine and remains the sound, complete way to reason about temporal
+formulas.
 
 In Phase 1, deontic and temporal accessibility share a single relation.
 Multi-relational prefixes (distinguishing R_d from R_t) are deferred to Phase 2.
@@ -401,8 +419,9 @@ const TABLEAU_KDt = TableauSystem(:KDt,
         # Deontic seriality (D axiom): □A → ◇A
         apply_D_box_rule, apply_D_diamond_rule,
     ];
-    uses_blocking=true  # temporal transitivity (𝐆/𝐅) can re-inject unstripped
-                        # boxed formulas into descendant worlds indefinitely
+    uses_blocking=true,  # temporal transitivity (𝐆/𝐅) can re-inject unstripped
+                         # boxed formulas into descendant worlds indefinitely
+    uses_temporal_rules=true  # opt in to the quarantined 𝐆/𝐅 engine rules
 )
 
 # ── Frame properties for temporal logics (Table 14.1) ──

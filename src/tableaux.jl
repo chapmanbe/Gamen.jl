@@ -653,6 +653,13 @@ Fields:
   and the temporal analogue) — that is the only shape of rule that can force
   unbounded world creation. See Goré (1999), *Tableau Methods for Modal and
   Temporal Logics*, in *Handbook of Tableau Methods*, §6.6.
+- `uses_temporal_rules`: whether the engine applies the future-temporal rules
+  (𝐆T/𝐆F/𝐅T/𝐅F) for this system. **Quarantined and off by default.** B&D
+  presents no tableau rules for temporal logic; the 𝐆/𝐅 rules were built by
+  analogy to the □/◇ rules and are unaudited (no completeness proof, no
+  temporal-tableau source). Kept behind this opt-in so no exported system can
+  invoke them as if sound. Do not enable a system with this flag on the public
+  API surface until a proper temporal-tableau template is adopted.
 
 To define a new system, supply the appropriate rule vectors. No changes
 to the tableau engine are required.
@@ -662,10 +669,13 @@ struct TableauSystem
     used_prefix_rules::Vector{Function}
     witness_rules::Vector{Function}
     uses_blocking::Bool
+    uses_temporal_rules::Bool
 end
 
-TableauSystem(name, used_prefix_rules, witness_rules; uses_blocking=false) =
-    TableauSystem(name, used_prefix_rules, witness_rules, uses_blocking)
+TableauSystem(name, used_prefix_rules, witness_rules;
+              uses_blocking=false, uses_temporal_rules=false) =
+    TableauSystem(name, used_prefix_rules, witness_rules,
+                  uses_blocking, uses_temporal_rules)
 
 """
     TABLEAU_K
@@ -908,7 +918,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         pf.prefix ∈ branch.blocked && continue  # Strategy A: skip blocked prefixes
         if pf.formula isa Box && pf.sign isa FalseSign
             r = apply_box_false_rule(pf, branch)
-        elseif pf.formula isa FutureBox && pf.sign isa FalseSign
+        elseif system.uses_temporal_rules && pf.formula isa FutureBox && pf.sign isa FalseSign
             r = apply_futurebox_false_rule(pf, branch)
         else
             continue
@@ -931,7 +941,7 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         pf.prefix ∈ branch.blocked && continue  # Strategy A: skip blocked prefixes
         if pf.formula isa Diamond && pf.sign isa TrueSign
             r = apply_diamond_true_rule(pf, branch)
-        elseif pf.formula isa FutureDiamond && pf.sign isa TrueSign
+        elseif system.uses_temporal_rules && pf.formula isa FutureDiamond && pf.sign isa TrueSign
             r = apply_futurediamond_true_rule(pf, branch)
         else
             continue
@@ -991,11 +1001,14 @@ function _try_priority1_rules(pf::PrefixedFormula, branch::TableauBranch, system
     r = apply_diamond_false_rule(pf, branch)
     r isa NoRule || return r
 
-    # Base temporal used-prefix rules (𝐆T, 𝐅F)
-    r = apply_futurebox_true_rule(pf, branch)
-    r isa NoRule || return r
-    r = apply_futurediamond_false_rule(pf, branch)
-    r isa NoRule || return r
+    # Base temporal used-prefix rules (𝐆T, 𝐅F) — quarantined: only fire for
+    # systems that explicitly opt in via uses_temporal_rules (see TableauSystem).
+    if system.uses_temporal_rules
+        r = apply_futurebox_true_rule(pf, branch)
+        r isa NoRule || return r
+        r = apply_futurediamond_false_rule(pf, branch)
+        r isa NoRule || return r
+    end
 
     # Frame-condition used-prefix rules (T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇)
     for rule in system.used_prefix_rules
