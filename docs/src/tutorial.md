@@ -229,31 +229,47 @@ are the complete Σ-consistent sets of formulas.
 ### Consistency and Derivability
 
 A set of formulas is Σ-consistent if no contradiction can be derived
-from it (Definition 3.39). Derivability from a set Γ ⊢_Σ A means A
-follows from finitely many premises in Γ (Definition 3.36):
+from it (Definition 3.39). `is_consistent` searches for a *witness* — a
+model with a world satisfying every formula in the set — over models
+with up to `max_worlds` worlds. The check is one-sided: finding a
+witness settles consistency (`consistent = true`, with the model), but
+exhausting the bound settles nothing (`consistent = missing`), because
+a satisfying model might simply need more worlds:
 
 ```jldoctest tutorial
-julia> is_consistent(SYSTEM_K, [p, Box(p)])
+julia> is_consistent(SYSTEM_K, [p, Box(p)]).consistent
 true
 
-julia> is_consistent(SYSTEM_K, [p, Not(p)])
-false
+julia> is_consistent(SYSTEM_K, [p, Not(p)]).consistent
+missing
 
-julia> is_consistent(SYSTEM_KT, [Box(p), Not(p)])
-false
+julia> is_consistent(SYSTEM_KT, [Box(p), Not(p)]).consistent
+missing
 ```
 
-Derivability checks whether a formula follows from premises:
+The witness itself is returned alongside the verdict:
 
 ```jldoctest tutorial
-julia> is_derivable_from(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2)
-true
+julia> result = is_consistent(SYSTEM_K, [Diamond(p)]);
 
-julia> is_derivable_from(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2)
+julia> satisfies(result.witness, result.world, Diamond(p))
+true
+```
+
+Entailment checking (Definition 3.36) is one-sided in the mirror-image
+direction: finding a countermodel *refutes* the entailment definitively
+(`entailed = false`, with the countermodel), while exhausting the bound
+without one is inconclusive (`entailed = missing`):
+
+```jldoctest tutorial
+julia> is_entailed_by(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2).entailed
+missing
+
+julia> is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2).entailed
 false
 
-julia> is_derivable_from(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2)
-true
+julia> is_entailed_by(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2).entailed
+missing
 ```
 
 ### Subformulas and Closure

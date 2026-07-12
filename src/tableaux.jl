@@ -1031,15 +1031,24 @@ end
 """
     Tableau
 
-A completed prefixed tableau: a set of branches, each either closed or fully
-expanded. A tableau is *closed* when all branches are closed (Definition 6.2, B&D).
+A prefixed tableau: a set of branches, each either closed or expanded as far
+as the search went. A tableau is *closed* when all branches are closed
+(Definition 6.2, B&D).
+
+`complete` is `true` when the search terminated on its own — every branch
+either closed or saturated (no more rules apply) — and `false` when it was
+cut off by `max_steps`. An *open incomplete* tableau carries no verdict: its
+open branches might still have closed with more steps, and
+`extract_countermodel` requires an open **complete** branch (Theorem 6.19).
 """
 struct Tableau
     branches::Vector{TableauBranch}
+    complete::Bool
 end
 
 function Base.show(io::IO, t::Tableau)
-    status = is_closed(t) ? "CLOSED" : "open"
+    status = is_closed(t) ? "CLOSED" :
+             (t.complete ? "open" : "open, INCOMPLETE (max_steps exhausted)")
     println(io, "Tableau ($status, $(length(t.branches)) branches):")
     for (i, b) in enumerate(t.branches)
         println(io, "  Branch $i: $(is_closed(b) ? "closed" : "open") ($(length(b.formulas)) formulas)")
@@ -1093,7 +1102,9 @@ of `system`. The tableau search terminates when all branches are
 closed or no more rules apply (Definition 6.17, Proposition 6.18, B&D).
 
 `max_steps` bounds the number of rule applications to prevent non-termination
-for non-theorems in systems without the finite model property.
+for non-theorems in systems without the finite model property. When the bound
+is hit before every branch closes or saturates, the returned tableau has
+`complete == false` and its open branches carry no verdict.
 
 Throws `ArgumentError` if any assumption contains 𝐇, 𝐏, `Since`, or `Until`:
 no tableau rules exist for these operators (B&D presents none), and silently
@@ -1106,26 +1117,35 @@ function build_tableau(assumptions::Vector{PrefixedFormula},
     end
     branches = [TableauBranch(copy(assumptions))]
     steps = 0
+    saturated = Set{Int}()  # indices of branches no rule applies to
+    complete = true
 
-    while steps < max_steps
-        # Find first open, non-saturated branch
-        idx = findfirst(b -> !is_closed(b), branches)
-        idx === nothing && break
+    while true
+        # Find first open branch not yet known to be saturated
+        idx = 0
+        for i in eachindex(branches)
+            if !(i in saturated) && !is_closed(branches[i])
+                idx = i
+                break
+            end
+        end
+        idx == 0 && break  # every branch closed or saturated: complete
+
+        if steps >= max_steps
+            complete = false
+            break
+        end
 
         branch = branches[idx]
         new_branches = _apply_all_rules(branch, system)
 
         if length(new_branches) == 1 && new_branches[1] == branch
-            # Branch is saturated — no more rules apply
-            # Check if there are other open branches to process
-            all_saturated = true
-            for b in branches
-                if !is_closed(b) && b != branch
-                    all_saturated = false
-                    break
-                end
-            end
-            break
+            # Saturated — no more rules apply; move on to the other open
+            # branches instead of abandoning them (they must be expanded
+            # too, or extract_countermodel on them would violate its
+            # open-complete-branch precondition)
+            push!(saturated, idx)
+            continue
         end
 
         branches[idx] = new_branches[1]
@@ -1136,7 +1156,7 @@ function build_tableau(assumptions::Vector{PrefixedFormula},
         steps += 1
     end
 
-    Tableau(branches)
+    Tableau(branches, complete)
 end
 
 # ── Completeness and countermodel extraction (§6.8–6.9, B&D) ──
@@ -1220,12 +1240,17 @@ end
 
 """
     tableau_proves(system::TableauSystem, premises::Vector{Formula},
-                   conclusion::Formula; max_steps::Int=1000) -> Bool
+                   conclusion::Formula; max_steps::Int=1000) -> Union{Bool,Missing}
 
 Return `true` if there is a closed tableau showing `premises ⊢ conclusion`
 in `system`. Constructs the initial assumptions
   1 T B₁, …, 1 T Bₙ, 1 F conclusion
 and checks whether the resulting tableau closes (Definition 6.2, B&D).
+
+Returns `false` only when the tableau saturated without closing (a genuine
+open complete tableau, i.e. a countermodel exists). Returns `missing` when
+the search hit `max_steps` before every branch closed or saturated — no
+verdict either way; retry with a larger `max_steps`.
 
 # Example
 
@@ -1243,20 +1268,24 @@ function tableau_proves(system::TableauSystem, premises::Vector{Formula},
         pf_false(root, conclusion)
     ]
     t = build_tableau(assumptions, system; max_steps=max_steps)
-    is_closed(t)
+    is_closed(t) && return true
+    t.complete ? false : missing
 end
 
 """
     tableau_consistent(system::TableauSystem, formulas::Vector{Formula};
-                       max_steps::Int=1000) -> Bool
+                       max_steps::Int=1000) -> Union{Bool,Missing}
 
 Return `true` if `formulas` is satisfiable in `system` (i.e., the tableau
-for `1 T A₁, …, 1 T Aₙ` does not close).
+for `1 T A₁, …, 1 T Aₙ` saturates without closing), `false` if the tableau
+closes, and `missing` when the search hit `max_steps` before every branch
+closed or saturated — no verdict either way; retry with a larger `max_steps`.
 """
 function tableau_consistent(system::TableauSystem, formulas::Vector{Formula};
                              max_steps::Int=1000)
     root = Prefix([1])
     assumptions = [pf_true(root, A) for A in formulas]
     t = build_tableau(assumptions, system; max_steps=max_steps)
-    !is_closed(t)
+    is_closed(t) && return false
+    t.complete ? true : missing
 end

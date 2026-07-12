@@ -805,49 +805,59 @@ using Test
         end
 
         @testset "Consistency (Def 3.39)" begin
-            # Consistent sets
-            @test is_consistent(SYSTEM_K, [p]; max_worlds=2) == true
-            @test is_consistent(SYSTEM_K, [p, q]; max_worlds=2) == true
-            @test is_consistent(SYSTEM_K, [Box(p)]; max_worlds=2) == true
-            @test is_consistent(SYSTEM_K, [Diamond(p)]; max_worlds=2) == true
+            # Consistent sets: verified by a witness model (§C7)
+            r = is_consistent(SYSTEM_K, [p]; max_worlds=2)
+            @test r.consistent === true
+            @test r.witness isa KripkeModel
+            @test satisfies(r.witness, r.world, p)
+            @test is_consistent(SYSTEM_K, [p, q]; max_worlds=2).consistent === true
+            @test is_consistent(SYSTEM_K, [Box(p)]; max_worlds=2).consistent === true
+            @test is_consistent(SYSTEM_K, [Diamond(p)]; max_worlds=2).consistent === true
 
-            # Inconsistent sets
-            @test is_consistent(SYSTEM_K, [p, Not(p)]; max_worlds=2) == false
-            @test is_consistent(SYSTEM_K, [Bottom()]; max_worlds=2) == false
+            # Inconsistent sets: no witness within the bound — the bounded
+            # check is one-sided, so the verdict is missing, not false (§C7)
+            @test is_consistent(SYSTEM_K, [p, Not(p)]; max_worlds=2).consistent === missing
+            @test is_consistent(SYSTEM_K, [p, Not(p)]; max_worlds=2).witness === nothing
+            @test is_consistent(SYSTEM_K, [Bottom()]; max_worlds=2).consistent === missing
 
             # System-relative consistency: {□p, ¬p} is K-consistent but KT-inconsistent
-            @test is_consistent(SYSTEM_K, [Box(p), Not(p)]; max_worlds=2) == true
-            @test is_consistent(SYSTEM_KT, [Box(p), Not(p)]; max_worlds=2) == false
+            @test is_consistent(SYSTEM_K, [Box(p), Not(p)]; max_worlds=2).consistent === true
+            @test is_consistent(SYSTEM_KT, [Box(p), Not(p)]; max_worlds=2).consistent === missing
 
             # {◇p, □¬p} is inconsistent in K (Dual axiom)
-            @test is_consistent(SYSTEM_K, [Diamond(p), Box(Not(p))]; max_worlds=2) == false
+            @test is_consistent(SYSTEM_K, [Diamond(p), Box(Not(p))]; max_worlds=2).consistent === missing
         end
 
         @testset "Derivability from a set (Def 3.36)" begin
-            # Γ = {p} ⊢_K p (reflexivity)
-            @test is_entailed_by(SYSTEM_K, [p], p; max_worlds=2) == true
+            # Entailments that hold: no countermodel within the bound — the
+            # bounded check is one-sided, so the verdict is missing (§C7)
+            # Γ = {p} ⊨_K p (reflexivity)
+            @test is_entailed_by(SYSTEM_K, [p], p; max_worlds=2).entailed === missing
 
-            # Γ = {p, p→q} ⊢_K q (modus ponens)
-            @test is_entailed_by(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2) == true
+            # Γ = {p, p→q} ⊨_K q (modus ponens)
+            @test is_entailed_by(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2).entailed === missing
 
-            # Γ = {} ⊢_K p→p (tautology)
-            @test is_entailed_by(SYSTEM_K, Formula[], Implies(p, p); max_worlds=2) == true
+            # Γ = {} ⊨_K p→p (tautology)
+            @test is_entailed_by(SYSTEM_K, Formula[], Implies(p, p); max_worlds=2).entailed === missing
 
             # K proves □(p→p) — necessitation of a tautology
-            @test is_entailed_by(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2).entailed === missing
 
-            # K does NOT prove □p→p (that's T)
-            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
+            # K does NOT prove □p→p (that's T): definitive countermodel
+            r = is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2)
+            @test r.entailed === false
+            @test r.countermodel isa KripkeModel
+            @test !satisfies(r.countermodel, r.world, Implies(Box(p), p))
 
             # KT proves □p→p
-            @test is_entailed_by(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2) == true
+            @test is_entailed_by(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2).entailed === missing
 
-            # {p} does not derive □p in K
-            @test is_entailed_by(SYSTEM_K, [p], Box(p); max_worlds=2) == false
+            # {p} does not derive □p in K: definitive countermodel
+            @test is_entailed_by(SYSTEM_K, [p], Box(p); max_worlds=2).entailed === false
 
-            # Monotonicity (Prop 3.37): Γ ⊢ A and Γ ⊆ Δ implies Δ ⊢ A
-            @test is_entailed_by(SYSTEM_K, [p], p; max_worlds=2) == true
-            @test is_entailed_by(SYSTEM_K, [p, q], p; max_worlds=2) == true
+            # Monotonicity (Prop 3.37): no countermodel appears when premises grow
+            @test is_entailed_by(SYSTEM_K, [p], p; max_worlds=2).entailed === missing
+            @test is_entailed_by(SYSTEM_K, [p, q], p; max_worlds=2).entailed === missing
         end
 
         @testset "Complete consistent sets (Def 4.1)" begin
@@ -1007,7 +1017,8 @@ using Test
                 Or(p, Not(p)),
             ]
             for φ in k_valid
-                @test is_entailed_by(SYSTEM_K, Formula[], φ; max_worlds=2) == true
+                # valid ⇒ no countermodel within the bound (§C7: one-sided ⇒ missing)
+                @test is_entailed_by(SYSTEM_K, Formula[], φ; max_worlds=2).entailed === missing
             end
 
             # Some K-valid modal formulas
@@ -1016,23 +1027,23 @@ using Test
                 Box(Implies(p, p)),  # Nec of tautology
             ]
             for φ in k_modal_valid
-                @test is_entailed_by(SYSTEM_K, Formula[], φ; max_worlds=2) == true
+                @test is_entailed_by(SYSTEM_K, Formula[], φ; max_worlds=2).entailed === missing
             end
 
-            # Non-valid in K
-            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2) == false
-            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), Diamond(p)); max_worlds=2) == false
+            # Non-valid in K: definitive countermodels
+            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2).entailed === false
+            @test is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), Diamond(p)); max_worlds=2).entailed === false
         end
 
         @testset "System distinctness via completeness (Props 3.32-3.35)" begin
             # KD ⊊ KT: □p→p is KT-valid but not KD-valid
             t_schema = Implies(Box(p), p)
-            @test is_entailed_by(SYSTEM_KT, Formula[], t_schema; max_worlds=2) == true
-            @test is_entailed_by(SYSTEM_KD, Formula[], t_schema; max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_KT, Formula[], t_schema; max_worlds=2).entailed === missing
+            @test is_entailed_by(SYSTEM_KD, Formula[], t_schema; max_worlds=2).entailed === false
 
             # KB ≠ K4: Schema 4 not valid in KB
             four_schema = Implies(Box(p), Box(Box(p)))
-            @test is_entailed_by(SYSTEM_KB, Formula[], four_schema; max_worlds=2) == false
+            @test is_entailed_by(SYSTEM_KB, Formula[], four_schema; max_worlds=2).entailed === false
         end
 
         @testset "Determination (Def 4.13)" begin
@@ -1319,19 +1330,39 @@ using Test
         end
 
         @testset "Finite model property (Proposition 5.14)" begin
-            # K has FMP — any non-valid formula has a finite countermodel
-            @test has_finite_model_property(SYSTEM_K, Implies(Box(p), p))
-            @test has_finite_model_property(SYSTEM_K, Box(Implies(p, q)))
+            # □p → p is not K-valid: FMP witnessed by a finite countermodel (§M8)
+            fmp = has_finite_model_property(SYSTEM_K, Implies(Box(p), p))
+            @test fmp.witnessed === true
+            @test fmp.countermodel isa KripkeModel
+            @test !satisfies(fmp.countermodel, fmp.world, Implies(Box(p), p))
+            # □(p→q) is refutable in K, so it too gets a witness
+            @test has_finite_model_property(SYSTEM_K, Box(Implies(p, q))).witnessed === true
+            # □(p→p) is K-valid: no countermodel exists, so the check is
+            # inconclusive — missing, not a vacuous true (§M8)
+            @test has_finite_model_property(SYSTEM_K, Box(Implies(p, p))).witnessed === missing
         end
 
         @testset "Decidability (Theorem 5.17)" begin
             result = is_decidable_within(SYSTEM_K, Implies(Box(p), p))
-            @test result.valid == false  # □p → p is not K-valid
+            @test result.valid == false  # □p → p is not K-valid: definitive
+            @test result.countermodel isa KripkeModel
             @test result.subformula_count == 3
 
+            # Schema K is valid, but its filtration bound 2^8 exceeds the
+            # 4-world search cap, so Theorem 5.17's guarantee does not apply:
+            # honest verdict is missing, not true (§C7/§M8)
             result2 = is_decidable_within(SYSTEM_K,
                 Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
-            @test result2.valid == true  # Schema K is valid
+            @test result2.valid === missing
+            @test result2.bound == 4
+            @test result2.subformula_count == 8
+
+            # Small enough for the bound to be exhaustive: p→p has 2
+            # subformulas, so 2^2 = 4 ≤ bound and Theorem 5.17 applies
+            r3 = is_decidable_within(SYSTEM_K, Implies(p, p))
+            @test r3.subformula_count == 2
+            @test r3.bound == 4
+            @test r3.valid === true  # 2^2 = 4 ≤ bound: exhaustive, definitive
         end
 
         @testset "Display" begin
@@ -2035,6 +2066,74 @@ using Test
             # previously MethodError: iterate
             @test is_valid(p, m)
             @test is_valid(Box(p), [m]) == is_valid(Box(p), m)
+        end
+    end
+
+    @testset "Phase 0 honest contracts (review §C7/M4/M5/M7/M8/M10)" begin
+        p, q = Atom(:p), Atom(:q)
+
+        @testset "C7: bounded checkers report missing, not a false verdict" begin
+            # Satisfiable, but the minimal model has 5 worlds: the old code
+            # returned false ("inconsistent"); the honest verdict is missing
+            φ = And(And(And(Diamond(And(p, q)), Diamond(And(p, Not(q)))),
+                        And(Diamond(And(Not(p), q)), Diamond(And(Not(p), Not(q))))),
+                    Box(Box(Bottom())))
+            r = is_consistent(SYSTEM_K, [φ]; max_worlds=2)
+            @test r.consistent === missing
+            @test r.witness === nothing
+
+            # Witness round-trips: the returned model really satisfies Γ at world
+            r2 = is_consistent(SYSTEM_K, [Diamond(p), Diamond(Not(p))]; max_worlds=3)
+            @test r2.consistent === true
+            @test all(f -> satisfies(r2.witness, r2.world, f), [Diamond(p), Diamond(Not(p))])
+
+            # Countermodel round-trips
+            r3 = is_entailed_by(SYSTEM_K, [Diamond(p)], Box(p); max_worlds=3)
+            @test r3.entailed === false
+            @test satisfies(r3.countermodel, r3.world, Diamond(p))
+            @test !satisfies(r3.countermodel, r3.world, Box(p))
+        end
+
+        @testset "M4: standard_translation avoids capturing the free variable" begin
+            st = standard_translation(Box(p), FOVar(:y₁))
+            @test st isa FOForall
+            # the bound variable must be fresh, not the caller's free y₁
+            @test st.var != FOVar(:y₁)
+            # the free variable still appears free in the guard Q(y₁, y')
+            @test st.body.antecedent == FOPredicate(:Q, [FOVar(:y₁), st.var])
+        end
+
+        @testset "M5: FO formulas compare structurally" begin
+            @test standard_translation(Diamond(p)) == standard_translation(Diamond(p))
+            @test hash(standard_translation(Diamond(p))) ==
+                  hash(standard_translation(Diamond(p)))
+            s = Set([standard_translation(Box(p)), standard_translation(Box(p))])
+            @test length(s) == 1
+            @test standard_translation(Box(p)) != standard_translation(Diamond(p))
+            @test FOVar(:x) == FOVar(:x)
+        end
+
+        @testset "M7: max_steps exhaustion is distinguishable" begin
+            theorem = Implies(And(p, q), p)
+            # provable with room to run…
+            @test tableau_proves(TABLEAU_K, Formula[], theorem) === true
+            # …but cutting the search off must yield missing, not false
+            @test tableau_proves(TABLEAU_K, Formula[], theorem; max_steps=1) === missing
+            @test tableau_consistent(TABLEAU_K, Formula[And(p, Not(p))]; max_steps=1) === missing
+            @test tableau_consistent(TABLEAU_K, Formula[And(p, Not(p))]) === false
+        end
+
+        @testset "M10: saturation of one branch no longer abandons the others" begin
+            # T (p ∨ (q ∧ ¬q)): the T p branch saturates immediately; the old
+            # loop then broke, leaving T (q ∧ ¬q) unexpanded and open
+            root = Prefix([1])
+            t = build_tableau([pf_true(root, Or(p, And(q, Not(q))))], TABLEAU_K)
+            @test t.complete
+            open_branches = filter(b -> !is_closed(b), t.branches)
+            @test length(open_branches) == 1  # the contradictory branch closed
+            # the surviving open branch yields a genuine countermodel
+            m = extract_countermodel(open_branches[1])
+            @test any(w -> satisfies(m, w, p), m.frame.worlds)
         end
     end
 

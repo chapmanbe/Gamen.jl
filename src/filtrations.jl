@@ -22,6 +22,11 @@ end
 
 A set Γ is *modally closed* if it is closed under subformulas and moreover
 A ∈ Γ implies □A, ◇A ∈ Γ (Definition 5.1, B&D).
+
+Note: any modally closed set containing even one formula is infinite (□A
+requires □□A, and so on), so on the finite sets this package builds, this
+predicate holds only for ∅. See `modal_closure` for the finite one-step
+extension used in practice.
 """
 function is_modally_closed(Γ::Set{Formula})
     is_closed_under_subformulas(Γ) || return false
@@ -46,8 +51,14 @@ end
 """
     modal_closure(φ::Formula) -> Set{Formula}
 
-Return the modally closed set generated from the subformulas of φ.
-Adds □A and ◇A for every formula A in the closure.
+Return the **one-step modal extension** of the subformulas of φ: □A and ◇A
+for every subformula A, plus the subformulas of those new formulas.
+
+This is *not* the modally closed set in the sense of `is_modally_closed`
+(closed under prefixing □ and ◇): true modal closure is infinite for any
+nonempty starting set (□A brings □□A, and so on), so
+`is_modally_closed(modal_closure(φ))` is always `false`. The one-step
+extension is the finite fragment used for filtration constructions.
 """
 function modal_closure(φ::Formula)
     base = subformulas(φ)
@@ -422,24 +433,31 @@ end
 # ── Finite model property (Definition 5.13) ──
 
 """
-    has_finite_model_property(system::ModalSystem, formula::Formula; max_worlds=4) -> Bool
+    has_finite_model_property(system::ModalSystem, formula::Formula; max_worlds=4) -> NamedTuple
 
-Check if a formula that is not valid in `system` has a finite countermodel.
-Returns true if the formula is valid (vacuously) or has a finite countermodel
-within the search bound.
+Look for a *witness* of the finite model property (Definition 5.13, B&D) for
+this specific formula: a finite countermodel showing the formula is not
+valid in `system`.
 
-This is a computational check — it cannot prove the finite model property in
-general, but can verify it for specific formulas (Proposition 5.14, B&D).
+Returns `(witnessed, countermodel, world)`:
+- `witnessed = true`, with the finite `countermodel::KripkeModel` and
+  refuting `world::Symbol` — the FMP instance for this formula is verified.
+- `witnessed = missing`, with `countermodel = world = nothing` — no
+  countermodel with ≤ `max_worlds` worlds exists. Inconclusive: the formula
+  may be valid (in which case FMP holds vacuously) or may only have larger
+  countermodels.
+
+This is a bounded computational check — it cannot prove the finite model
+property of a *system* (Proposition 5.14, B&D, is a theorem about all
+formulas at once); it can only exhibit the finite countermodel for a
+formula that has one within the bound.
 """
 function has_finite_model_property(system::ModalSystem, formula::Formula; max_worlds=4)
-    # If the formula is valid, FMP holds vacuously
-    if is_entailed_by(system, Formula[], formula; max_worlds=max_worlds)
-        return true
+    result = is_entailed_by(system, Formula[], formula; max_worlds=max_worlds)
+    if result.entailed === false
+        return (witnessed=true, countermodel=result.countermodel, world=result.world)
     end
-    # The formula is not valid — is_entailed_by returned false,
-    # meaning a countermodel was found within max_worlds. That countermodel
-    # is finite, so FMP holds for this formula.
-    true
+    (witnessed=missing, countermodel=nothing, world=nothing)
 end
 
 # ── Decidability check (Theorem 5.17) ──
@@ -447,13 +465,24 @@ end
 """
     is_decidable_within(system::ModalSystem, formula::Formula; max_worlds=nothing) -> NamedTuple
 
-Check whether `formula` is valid/invalid in `system` by exhaustive search
-over finite models up to a size bound determined by the formula's subformulas.
+Check whether `formula` is valid/invalid in `system` by searching for a
+countermodel over finite models up to a size bound determined by the
+formula's subformulas.
 
-By Proposition 5.12, any filtration has at most 2^n worlds where n = |Γ|.
-For K and S5 (which have the finite model property), this gives decidability.
+By Proposition 5.12, any filtration has at most 2^n worlds where n = |Γ|,
+the subformula count. For systems with the finite model property this makes
+validity decidable by searching up to 2^n worlds (Theorem 5.17, B&D). In
+practice the search bound is capped at 4 worlds (the O(2^(n²)) enumeration
+wall), so the theorem's guarantee applies only when 2^n fits under the cap.
 
-Returns `(valid=Bool, bound=Int, subformula_count=Int)`.
+Returns `(valid, bound, subformula_count, countermodel, world)`:
+- `valid = false`, with `countermodel`/`world` — a countermodel was found;
+  definitive.
+- `valid = true` — no countermodel exists within `bound`, **and** the
+  searched bound covers the filtration bound 2^n, so by Theorem 5.17 the
+  search was exhaustive; definitive.
+- `valid = missing` — no countermodel within `bound`, but `bound < 2^n`,
+  so the Theorem 5.17 guarantee does not apply; inconclusive.
 """
 function is_decidable_within(system::ModalSystem, formula::Formula; max_worlds=nothing)
     Γ = subformulas(formula)
@@ -463,6 +492,14 @@ function is_decidable_within(system::ModalSystem, formula::Formula; max_worlds=n
     # cap is 4 for any n ≥ 2, so never compute 2^n for large n.
     bound = max_worlds === nothing ? (n >= 2 ? 4 : 2^n) : max_worlds
 
-    valid = is_entailed_by(system, Formula[], formula; max_worlds=bound)
-    (valid=valid, bound=bound, subformula_count=n)
+    result = is_entailed_by(system, Formula[], formula; max_worlds=bound)
+    if result.entailed === false
+        return (valid=false, bound=bound, subformula_count=n,
+                countermodel=result.countermodel, world=result.world)
+    end
+    # No countermodel within bound: exhaustive iff bound covers the 2^n
+    # filtration bound (n ≥ 63 would overflow 2^n and can never fit anyway)
+    exhaustive = n < 63 && bound >= 2^n
+    (valid=exhaustive ? true : missing, bound=bound, subformula_count=n,
+     countermodel=nothing, world=nothing)
 end

@@ -104,10 +104,35 @@ end
     FOExists <: FOFormula
 
 Existential quantification: ∃v. φ
+
+# Structural equality
+
+All `FOFormula` subtypes (and `FOVar`) compare with structural `==` and hash
+accordingly: two translations of the same modal formula are `==` and can be
+deduplicated in `Set`s and `Dict`s.
 """
 struct FOExists <: FOFormula
     var::FOVar
     body::FOFormula
+end
+
+# Structural equality and hashing (issue #10 §M5): without these,
+# `standard_translation(φ) == standard_translation(φ)` was false whenever the
+# translation contained a Vector field (FOPredicate args), because the
+# fallback `==` is object identity for such fields.
+
+function Base.:(==)(a::FOFormula, b::FOFormula)
+    typeof(a) === typeof(b) || return false
+    T = typeof(a)
+    all(i -> getfield(a, i) == getfield(b, i), 1:fieldcount(T))
+end
+
+function Base.hash(f::FOFormula, h::UInt)
+    h = hash(typeof(f), h)
+    for i in 1:fieldcount(typeof(f))
+        h = hash(getfield(f, i), h)
+    end
+    h
 end
 
 # Pretty printing
@@ -132,14 +157,22 @@ Base.show(io::IO, f::FOExists) = print(io, "∃", f.var, " ", f.body)
 
 # Standard translation (Definition frd.15, B&D)
 
-# Fresh variable generator: produces y₁, y₂, y₃, ...
+# Fresh variable generator: produces y₁, y₂, y₃, …, skipping any name in
+# `avoid` (the caller's free variable — issue #10 §M4: without this,
+# standard_translation(Box(p), FOVar(:y₁)) captured the free y₁ under ∀y₁)
 mutable struct VarCounter
     count::Int
+    avoid::Set{Symbol}
 end
 
+VarCounter(count::Int) = VarCounter(count, Set{Symbol}())
+
 function fresh_var!(counter::VarCounter)
-    counter.count += 1
-    FOVar(Symbol("y", _subscript_digits(counter.count)))
+    while true
+        counter.count += 1
+        name = Symbol("y", _subscript_digits(counter.count))
+        name in counter.avoid || return FOVar(name)
+    end
 end
 
 function _subscript_digits(n::Int)
@@ -180,7 +213,7 @@ julia> standard_translation(◇(p))
 ```
 """
 function standard_translation(φ::Formula, x::FOVar=FOVar(:x))
-    standard_translation(φ, x, VarCounter(0))
+    standard_translation(φ, x, VarCounter(0, Set([x.name])))
 end
 
 function standard_translation(::Bottom, _::FOVar, _::VarCounter)
