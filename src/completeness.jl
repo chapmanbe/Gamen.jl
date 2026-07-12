@@ -50,14 +50,23 @@ end
 # ── Derivability from a set (Definition 3.36) ──
 
 """
-    is_entailed_by(system::ModalSystem, Γ, φ::Formula; max_worlds=4) -> Bool
+    is_entailed_by(system::ModalSystem, Γ, φ::Formula; max_worlds=4) -> NamedTuple
 
-Check whether `φ` is semantically entailed by the set of formulas `Γ` in the
-modal system `system` (Definition 3.36, B&D).
+Bounded semantic check of Γ ⊨_Σ φ (Definition 3.36, B&D): enumerate all
+Σ-frames with up to `max_worlds` worlds, looking for a countermodel — a
+Σ-model with a world where every formula of Γ holds but φ fails.
 
-Γ ⊨_Σ φ iff at every world of every Σ-model where all formulas of Γ hold,
-φ also holds. We check this by enumerating frames up to `max_worlds` worlds.
-By soundness and completeness this coincides with syntactic derivability.
+Returns `(entailed, countermodel, world)`:
+- `entailed = false`, with the witnessing `countermodel::KripkeModel` and
+  `world::Symbol` — a **definitive** refutation of the entailment.
+- `entailed = missing`, with `countermodel = world = nothing` — no
+  countermodel with ≤ `max_worlds` worlds exists. This check is one-sided:
+  exhausting the bound does *not* establish entailment, since a larger
+  countermodel may exist (see `is_decidable_within` for the case where the
+  filtration bound of Theorem 5.17 makes the search exhaustive).
+
+⚠ The search is O(2^(n²)) in the number of worlds — never raise
+`max_worlds` beyond 4.
 """
 function is_entailed_by(system::ModalSystem, Γ, φ::Formula; max_worlds::Int=4)
     frame_filter = _frame_filter(system)
@@ -76,30 +85,33 @@ function is_entailed_by(system::ModalSystem, Γ, φ::Formula; max_worlds::Int=4)
                 model = KripkeModel(frame, val)
                 for w in worlds
                     if all(f -> satisfies(model, w, f), Γ) && !satisfies(model, w, φ)
-                        return false
+                        return (entailed=false, countermodel=model, world=w)
                     end
                 end
             end
         end
     end
-    return true
+    return (entailed=missing, countermodel=nothing, world=nothing)
 end
 
 """
-    is_entailed_by(system::ModalSystem, Γ, φ::Formula, models) -> Bool
+    is_entailed_by(system::ModalSystem, Γ, φ::Formula, models) -> NamedTuple
 
-Check semantic entailment against a specific collection of models.
-Returns true iff at every world of every model where all of Γ hold, φ also holds.
+Check semantic entailment against a specific collection of models. Relative
+to that collection the verdict is complete, so `entailed` is always a `Bool`:
+`(entailed=true, countermodel=nothing, world=nothing)` when at every world of
+every given model where all of Γ hold, φ also holds; otherwise
+`(entailed=false, countermodel, world)` naming the refuting model and world.
 """
 function is_entailed_by(system::ModalSystem, Γ, φ::Formula, models)
     for model in models
         for w in model.frame.worlds
             if all(f -> satisfies(model, w, f), Γ) && !satisfies(model, w, φ)
-                return false
+                return (entailed=false, countermodel=model, world=w)
             end
         end
     end
-    return true
+    return (entailed=true, countermodel=nothing, world=nothing)
 end
 
 # Deprecated alias — will be removed in a future breaking release
@@ -111,13 +123,24 @@ end
 # ── Consistency (Definition 3.39) ──
 
 """
-    is_consistent(system::ModalSystem, Γ; max_worlds=4) -> Bool
+    is_consistent(system::ModalSystem, Γ; max_worlds=4) -> NamedTuple
 
-Check whether the set of formulas `Γ` is consistent relative to the modal
-system `system` (Definition 3.39, B&D).
+Bounded check of Σ-consistency of the set of formulas `Γ` (Definition 3.39,
+B&D): Γ is Σ-consistent iff Γ ⊬_Σ ⊥, equivalently iff some model in the
+appropriate class has a world satisfying all formulas in Γ. The check
+enumerates Σ-models with up to `max_worlds` worlds looking for such a witness.
 
-Γ is Σ-consistent iff Γ ⊬_Σ ⊥, equivalently, iff there exists a model
-in the appropriate class with a world satisfying all formulas in Γ.
+Returns `(consistent, witness, world)`:
+- `consistent = true`, with the satisfying `witness::KripkeModel` and
+  `world::Symbol` — a **definitive** confirmation of consistency.
+- `consistent = missing`, with `witness = world = nothing` — no witness with
+  ≤ `max_worlds` worlds exists. This check is one-sided: exhausting the
+  bound does *not* establish inconsistency, since a satisfying model may
+  need more worlds (e.g. ◇(p∧q) ∧ ◇(p∧¬q) ∧ ◇(¬p∧q) ∧ ◇(¬p∧¬q) ∧ □□⊥ is
+  satisfiable but only in ≥ 5 worlds).
+
+⚠ The search is O(2^(n²)) in the number of worlds — never raise
+`max_worlds` beyond 4.
 """
 function is_consistent(system::ModalSystem, Γ; max_worlds::Int=4)
     frame_filter = _frame_filter(system)
@@ -138,13 +161,13 @@ function is_consistent(system::ModalSystem, Γ; max_worlds::Int=4)
                 model = KripkeModel(frame, val)
                 for w in worlds
                     if all(f -> satisfies(model, w, f), Γ)
-                        return true
+                        return (consistent=true, witness=model, world=w)
                     end
                 end
             end
         end
     end
-    return false
+    return (consistent=missing, witness=nothing, world=nothing)
 end
 
 # ── Complete Σ-consistent sets (Definition 4.1) ──
@@ -171,8 +194,8 @@ function is_complete_consistent(system::ModalSystem, Γ, language; max_worlds::I
             φ ∈ Γ_set || Not(φ) ∈ Γ_set || return false
         end
     end
-    # Check consistency
-    return is_consistent(system, Γ; max_worlds=max_worlds)
+    # Check consistency (bounded: requires a verified witness within max_worlds)
+    return is_consistent(system, Γ; max_worlds=max_worlds).consistent === true
 end
 
 # ── Properties of complete consistent sets (Proposition 4.2) ──
@@ -235,8 +258,11 @@ formula A, if Γ ∪ {A} is consistent, add A; otherwise add ¬A.
 Throws `ArgumentError` if `Γ` is not Σ-consistent.
 """
 function lindenbaum_extend(system::ModalSystem, Γ, language; max_worlds::Int=4)
-    is_consistent(system, collect(Γ); max_worlds=max_worlds) ||
-        throw(ArgumentError("Γ must be Σ-consistent"))
+    is_consistent(system, collect(Γ); max_worlds=max_worlds).consistent === true ||
+        throw(ArgumentError("Γ must be Σ-consistent (verified by a witness model " *
+                            "within max_worlds=$max_worlds; the bounded check is " *
+                            "one-sided, so a consistent Γ needing a larger model " *
+                            "is also rejected)"))
 
     Δ = Set{Formula}(Γ)
     for φ in language
@@ -245,7 +271,7 @@ function lindenbaum_extend(system::ModalSystem, Γ, language; max_worlds::Int=4)
         Not(φ) ∈ Δ && continue
         # Try adding φ
         candidate = collect(Δ ∪ Set{Formula}([φ]))
-        if is_consistent(system, candidate; max_worlds=max_worlds)
+        if is_consistent(system, candidate; max_worlds=max_worlds).consistent === true
             push!(Δ, φ)
         else
             push!(Δ, Not(φ))
@@ -351,7 +377,9 @@ Uses semantic checking for derivability.
 function determines(model::KripkeModel, system::ModalSystem, language; max_worlds::Int=4)
     for φ in language
         valid_in_model = is_true_in(model, φ)
-        derivable = is_entailed_by(system, Formula[], φ; max_worlds=max_worlds)
+        # Bounded one-sided check: no countermodel within max_worlds counts
+        # as derivable (matches the pre-§C7 behavior of this function)
+        derivable = is_entailed_by(system, Formula[], φ; max_worlds=max_worlds).entailed !== false
         valid_in_model == derivable || return false
     end
     return true
@@ -456,7 +484,7 @@ function _enumerate_complete_consistent_sets(system::ModalSystem, language::Vect
             end
         end
         # Check consistency
-        if is_consistent(system, collect(candidate); max_worlds=max_worlds)
+        if is_consistent(system, collect(candidate); max_worlds=max_worlds).consistent === true
             push!(results, candidate)
         end
     end

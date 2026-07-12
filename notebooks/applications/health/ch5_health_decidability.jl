@@ -90,12 +90,14 @@ The formula `Box(consent) -> consent` ("if consent is obligatory, then consent i
 begin
 	fmp_k = has_finite_model_property(SYSTEM_K, Implies(Box(consent), consent))
 	fmp_s5 = has_finite_model_property(SYSTEM_S5, Implies(Box(consent), consent))
-	(K_has_FMP = fmp_k, S5_has_FMP = fmp_s5)
+	(K_witnessed = fmp_k.witnessed, S5_witnessed = fmp_s5.witnessed)
 end
 
 # ╔═╡ 10a1b3c4d-0007-0007-0007-000000000007
 md"""
-Both return `true`: K has the FMP because it imposes no frame conditions (Proposition 5.14, B&D), and S5 has it because filtrations preserve the equivalence-relation structure (Corollary 5.16).
+In K the formula is refutable, and `has_finite_model_property` hands back the FMP witness itself -- a finite countermodel (`witnessed = true`, with the model in the `countermodel` field). In S5 the formula is *valid*: there is no countermodel to find, so the bounded search reports `missing` -- the FMP holds vacuously there, but a finite search cannot certify validity.
+
+The FMP as a property of the *system* is a theorem, not a computation: K has it because it imposes no frame conditions (Proposition 5.14, B&D), and S5 has it because filtrations preserve the equivalence-relation structure (Corollary 5.16). The function checks one formula's instance of that theorem by exhibiting the witness when there is one.
 """
 
 # ╔═╡ 10a1b3c4d-0031-0031-0031-000000000031
@@ -124,12 +126,14 @@ This is a remarkable guarantee. First-order logic, by contrast, is *undecidable*
 md"""
 ### Decidability in Action
 
-The function `is_decidable_within` checks validity by exhaustive search over finite models up to the bound implied by the subformula count:
+The function `is_decidable_within` searches for a countermodel over finite models up to the bound implied by the subformula count. Its `valid` field is three-valued: `false` means a countermodel was found (definitive, and it is returned); `true` means the searched bound covered the full 2^n filtration bound, so the search was exhaustive and Theorem 5.17 applies; `missing` means no countermodel turned up but the 4-world cap fell short of 2^n, so validity is not certified:
 """
 
 # ╔═╡ 10a1b3c4d-0010-0010-0010-000000000010
 begin
-	# The K axiom: □(p -> q) -> (□p -> □q) -- valid in K
+	# The K axiom: □(p -> q) -> (□p -> □q) -- valid in K, but with 8
+	# subformulas the filtration bound 2^8 = 256 exceeds the 4-world cap,
+	# so no countermodel is found and the honest verdict is `missing`
 	k_axiom = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))
 	result_k = is_decidable_within(SYSTEM_K, k_axiom)
 	(formula = "K axiom", valid = result_k.valid,
@@ -138,7 +142,8 @@ end
 
 # ╔═╡ 10a1b3c4d-0011-0011-0011-000000000011
 begin
-	# □(consent) -> consent -- NOT valid in K (needs reflexivity)
+	# □(consent) -> consent -- NOT valid in K (needs reflexivity):
+	# a countermodel is found, so the verdict is a definitive `false`
 	t_schema = Implies(Box(consent), consent)
 	result_t = is_decidable_within(SYSTEM_K, t_schema)
 	(formula = "T schema", valid_in_K = result_t.valid,
@@ -147,7 +152,8 @@ end
 
 # ╔═╡ 10a1b3c4d-0012-0012-0012-000000000012
 begin
-	# Same formula IS valid in KT (which has reflexivity)
+	# Same formula IS valid in KT (which has reflexivity): no countermodel
+	# exists, and again the cap keeps the search short of 2^n -- `missing`
 	result_kt = is_decidable_within(SYSTEM_KT, t_schema)
 	(formula = "T schema in KT", valid_in_KT = result_kt.valid)
 end
@@ -166,7 +172,7 @@ Consider the sepsis guideline conjunction:
 
 **c)** What is the theoretical upper bound on model size for `is_decidable_within`? Is brute-force feasible?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**a)** 3 atoms: cultures, antibiotics, thrombolytic (bleeding is also an atom — 4 total). **b)** The 10 subformulas are: cultures, antibiotics, thrombolytic, bleeding, ¬thrombolytic, □cultures, □antibiotics, □(¬thrombolytic), bleeding → □(¬thrombolytic), and the full conjunction. **c)** Bound = min(2^10, 4) = 4 worlds (Gamen caps at 4). With 4 worlds: 4² = 16 possible edges → 2^16 = 65,536 frames to enumerate — feasible in seconds. For real guidelines with 50+ subformulas the bound would be 2^50 worlds — far beyond brute force; tableaux are required."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"**a)** 3 atoms: cultures, antibiotics, thrombolytic (bleeding is also an atom — 4 total). **b)** The 10 subformulas are: cultures, antibiotics, thrombolytic, bleeding, ¬thrombolytic, □cultures, □antibiotics, □(¬thrombolytic), bleeding → □(¬thrombolytic), and the full conjunction. **c)** Bound = min(2^10, 4) = 4 worlds (Gamen caps at 4). With 4 worlds: 4² = 16 possible edges → 2^16 = 65,536 frames to enumerate — feasible in seconds. But since 2^10 > 4, the capped search is not exhaustive: `is_decidable_within` reports `missing` unless a countermodel turns up within 4 worlds. For real guidelines with 50+ subformulas the bound would be 2^50 worlds — far beyond brute force; tableaux are required."])))
 """
 
 # ╔═╡ 10a1b3c4d-0013-0013-0013-000000000013
@@ -212,7 +218,9 @@ end
 md"""
 ## Consistency Checking for Guidelines
 
-The `is_consistent` function checks whether a set of formulas can all be satisfied simultaneously in a model of the given system. For clinical guidelines, this is the core question: **can all the guidelines be followed at once?**
+The `is_consistent` function checks whether a set of formulas can all be satisfied simultaneously in a model of the given system, by searching for a *witness model* with up to 4 worlds. For clinical guidelines, this is the core question: **can all the guidelines be followed at once?**
+
+The verdict is one-sided: `consistent = true` comes with the witness model itself -- definitive proof of compatibility. `consistent = missing` means no witness was found within the search bound; for small guideline sets like the ones below that is how a genuine conflict shows up, but strictly speaking it leaves open that a satisfying model might need more worlds.
 """
 
 # ╔═╡ 10a1b3c4d-0018-0018-0018-000000000018
@@ -227,12 +235,13 @@ begin
 	g4 = Box(Not(discharge))                   # must NOT plan discharge
 	conflicting = is_consistent(SYSTEM_KD, [g3, g4])
 
-	(compatible_guidelines = compatible, conflicting_guidelines = conflicting)
+	(compatible_guidelines = compatible.consistent,
+	 conflicting_guidelines = conflicting.consistent)
 end
 
 # ╔═╡ 10a1b3c4d-0019-0019-0019-000000000019
 md"""
-The first pair is consistent -- there exists a model where consent is obligatory and antibiotics are permitted. The second pair is inconsistent -- no model can make both `Box(discharge)` and `Box(Not(discharge))` true at the same world (assuming at least one accessible world, which KD guarantees via the D axiom).
+The first pair is consistent (`true`) -- and `compatible.witness` holds an actual model where consent is obligatory and antibiotics are permitted. The second pair conflicts: no model can make both `Box(discharge)` and `Box(Not(discharge))` true at the same world (assuming at least one accessible world, which KD guarantees via the D axiom), so no witness exists and the search reports `missing`.
 """
 
 # ╔═╡ 10a1b3c4d-0033-0033-0033-000000000033
@@ -300,8 +309,8 @@ begin
 	if isempty(selected_formulas)
 		md"*Select at least one guideline above.*"
 	else
-		consistent = is_consistent(SYSTEM_KD, selected_formulas)
-		status = consistent ? "**Consistent** -- these guidelines can all be satisfied simultaneously." : "**Inconsistent** -- no model in KD satisfies all of these guidelines at once."
+		verdict = is_consistent(SYSTEM_KD, selected_formulas).consistent
+		status = verdict === true ? "**Consistent** -- a witness model satisfies all of these guidelines simultaneously." : "**No witness found** -- no KD-model with ≤ 4 worlds satisfies all of these guidelines at once. For guideline sets this small, that is a conflict."
 		md"""
 		### Checking $(length(selected_formulas)) guideline(s):
 		$(join(["- " * n for n in selected_names], "\n"))

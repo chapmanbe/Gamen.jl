@@ -313,7 +313,7 @@ end
 md"""
 The proof is valid in **KD** but not in **K**, because it uses the D axiom (step 2). In system K, we cannot derive that obligations entail permissions -- dead-end worlds would be counterexamples.
 
-We can also verify this semantically with `is_entailed_by`:
+We can also probe this semantically with `is_entailed_by`, which *searches for a countermodel*. Finding one refutes the entailment definitively (`entailed = false`, and the countermodel is returned); finding none within the search bound is inconclusive (`entailed = missing`) -- but that is exactly the signature we expect of a genuine entailment. Here K yields a countermodel (a dead-end world), while KD yields none:
 """
 
 # ╔═╡ 8a1b1c1d-0020-0020-0020-000000000020
@@ -321,8 +321,8 @@ begin
 	premises = [And(□(consent), □(cultures))]
 	goal = ◇(cultures)
 
-	(derivable_in_KD = is_entailed_by(SYSTEM_KD, premises, goal),
-	 derivable_in_K = is_entailed_by(SYSTEM_K, premises, goal))
+	(refuted_in_KD = is_entailed_by(SYSTEM_KD, premises, goal).entailed,
+	 refuted_in_K = is_entailed_by(SYSTEM_K, premises, goal).entailed)
 end
 
 # ╔═╡ 8a1b1c1d-0021-0021-0021-000000000021
@@ -370,15 +370,17 @@ begin
 	axiom_str = join(string.(sys.schemas), ", ")
 
 	results = map(test_formulas) do (formula_str, desc, formula)
-		deriv = is_entailed_by(sys, Formula[], formula)
-		"| $(formula_str) | $(desc) | **$(deriv)** |"
+		verdict = is_entailed_by(sys, Formula[], formula).entailed
+		label = verdict === false ? "refuted (countermodel found)" :
+		                            "no countermodel (holds so far)"
+		"| $(formula_str) | $(desc) | **$(label)** |"
 	end
 
 	Markdown.parse("""
 	### System: **$(sys.name)** (axioms: $(axiom_str))
 
-	| Formula | Meaning | Derivable? |
-	|:--------|:--------|:-----------|
+	| Formula | Meaning | Countermodel search |
+	|:--------|:--------|:--------------------|
 	$(join(results, "\n"))
 
 	*Change the system above and watch the results update.*
