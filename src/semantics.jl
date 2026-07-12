@@ -48,13 +48,13 @@ end
 # 7. A ≡ □B: M, w ⊩ A iff M, w' ⊩ B for all w' ∈ W with Rww'.
 function satisfies(model::KripkeModel, world::Symbol, f::Box)
     world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
-    all(w -> satisfies(model, w, f.operand), accessible(model.frame, world))
+    all(w -> satisfies(model, w, f.operand), _successors(model.frame, world))
 end
 
 # 8. A ≡ ◇B: M, w ⊩ A iff M, w' ⊩ B for at least one w' ∈ W with Rww'.
 function satisfies(model::KripkeModel, world::Symbol, f::Diamond)
     world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
-    any(w -> satisfies(model, w, f.operand), accessible(model.frame, world))
+    any(w -> satisfies(model, w, f.operand), _successors(model.frame, world))
 end
 
 """
@@ -75,6 +75,17 @@ in C (Definition 1.11, B&D). Pass any iterable collection of models.
 """
 function is_valid(formula::Formula, models)
     all(m -> is_true_in(m, formula), models)
+end
+
+"""
+    is_valid(formula::Formula, model::KripkeModel) -> Bool
+
+Convenience method for a single model: validity in the singleton class {M}
+is truth in M (Definition 1.9, B&D). Mirrors the single-premise convenience
+overload of `entails`.
+"""
+function is_valid(formula::Formula, model::KripkeModel)
+    is_true_in(model, formula)
 end
 
 """
