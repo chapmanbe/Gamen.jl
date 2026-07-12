@@ -375,10 +375,13 @@ a K-model.
 
 # ╔═╡ 5a5b5c5d-0023-0023-0023-000000000023
 begin
-	# □p → p is not K-valid (needs reflexivity) — FMP says a finite countermodel exists
-	# □(p→q) → (□p→□q) is K-valid — FMP holds vacuously
-	(box_p_imp_p_fmp = has_finite_model_property(SYSTEM_K, Implies(Box(p), p)),
-	 k_axiom_fmp = has_finite_model_property(SYSTEM_K, Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))))
+	# □p → p is not K-valid (needs reflexivity) — FMP says a finite
+	# countermodel exists, and the search finds it: witnessed = true,
+	# with the countermodel returned alongside.
+	# □(p→q) → (□p→□q) is K-valid — FMP holds vacuously, but there is no
+	# countermodel to exhibit, so the bounded search reports missing.
+	(box_p_imp_p_fmp = has_finite_model_property(SYSTEM_K, Implies(Box(p), p)).witnessed,
+	 k_axiom_fmp = has_finite_model_property(SYSTEM_K, Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))).witnessed)
 end
 
 # ╔═╡ 5a5b5c5d-0063-0063-0063-000000000063
@@ -408,7 +411,13 @@ formula A, determines whether S5 ⊢ A.
 2. Check all finite models up to size 2ⁿ (n = |subformulas(A)|) — if A is
    not S5-valid, this finds a finite countermodel
 
-We can also check K-validity computationally using `is_decidable_within`.
+We can probe K-validity computationally using `is_decidable_within`, which
+searches for a countermodel up to the filtration bound — capped at 4 worlds.
+Its `valid` field is honest about what the search established: `false` means
+a countermodel was found (definitive); `true` means the search covered the
+full 2ⁿ bound, so Theorem 5.17 applies (definitive); `missing` means no
+countermodel appeared but the cap fell short of 2ⁿ, so validity is not
+certified by this search alone.
 
 **Performance note:** Frame enumeration is O(2^(n²)), where n is the number of
 worlds. With max\_worlds = 4, this means checking 2^16 = 65,536 frames — feasible.
@@ -417,7 +426,7 @@ With max\_worlds = 5, it would be 2^25 = 33 million frames. We keep max\_worlds 
 
 # ╔═╡ 5a5b5c5d-0025-0025-0025-000000000025
 begin
-	# □p → p is NOT K-valid (requires T axiom)
+	# □p → p is NOT K-valid (requires T axiom): countermodel found — false
 	result_t = is_decidable_within(SYSTEM_K, Implies(Box(p), p))
 	(valid = result_t.valid,
 	 subformula_count = result_t.subformula_count,
@@ -426,7 +435,8 @@ end
 
 # ╔═╡ 5a5b5c5d-0026-0026-0026-000000000026
 begin
-	# Schema K is valid in K
+	# Schema K is valid in K — but with 8 subformulas the 2^8 filtration
+	# bound exceeds the 4-world cap, so the verdict is missing
 	result_k = is_decidable_within(SYSTEM_K,
 		Implies(Box(Implies(p, q)), Implies(Box(p), Box(q))))
 	(valid = result_k.valid,
@@ -435,7 +445,7 @@ end
 
 # ╔═╡ 5a5b5c5d-0027-0027-0027-000000000027
 begin
-	# □p → p IS KT-valid
+	# □p → p IS KT-valid: no countermodel, but again short of 2^n — missing
 	result_kt = is_decidable_within(SYSTEM_KT, Implies(Box(p), p))
 	result_kt.valid
 end

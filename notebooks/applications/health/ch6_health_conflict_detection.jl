@@ -327,13 +327,19 @@ begin
 	if length(chosen) == 0
 		md"*Select at least one guideline above.*"
 	else
-		is_consistent = tableau_consistent(sys, chosen)
+		# tableau_consistent is three-valued: true (open complete tableau),
+		# false (closed), or missing (max_steps hit before saturation)
+		consistency_verdict = tableau_consistent(sys, chosen)
 
 		# Build the tableau for detail
 		detail_assumptions = [pf_true(root, f) for f in chosen]
 		detail_tab = build_tableau(detail_assumptions, sys)
 
-		result_text = is_consistent ? "**Consistent** -- guidelines can all be followed simultaneously." : "**Inconsistent** -- conflict detected! The tableau closes on all branches."
+		result_text = consistency_verdict === true ?
+			"**Consistent** -- guidelines can all be followed simultaneously." :
+			consistency_verdict === false ?
+			"**Inconsistent** -- conflict detected! The tableau closes on all branches." :
+			"**Inconclusive** -- the tableau search hit its step limit before finishing."
 
 		branch_info = join([
 			"Branch $i: $(is_closed(b) ? "closed" : "OPEN") ($(length(b.formulas)) formulas)"

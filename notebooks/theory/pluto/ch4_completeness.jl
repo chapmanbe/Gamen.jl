@@ -120,30 +120,48 @@ md"""
 from premises in Γ within system Σ. By the completeness theorem (which we will prove
 in this chapter), this coincides with the *semantic* characterization: A holds at every world
 where all of Γ hold, in every model of the appropriate class.
+
+`is_entailed_by` checks the semantic side by *searching for a countermodel*
+among models with up to `max_worlds` worlds. The search is one-sided: finding
+a countermodel **refutes** the entailment definitively (`entailed = false`,
+and you get the countermodel back), but exhausting the search proves nothing —
+a bigger countermodel might exist — so the verdict is `entailed = missing`.
+For genuinely derivable formulas the answer is therefore always `missing`:
+"no countermodel found within the bound," which is evidence, not proof.
 """
 
 # ╔═╡ 4a4b4c4d-0010-0010-0010-000000000010
 begin
-	# {p, p→q} ⊢_K q  (modus ponens)
+	# {p, p→q} ⊢_K q  (modus ponens) — no countermodel: missing
 	deriv_mp = is_entailed_by(SYSTEM_K, [p, Implies(p, q)], q; max_worlds=2)
 
-	# K proves □(p→p) — necessitation of a tautology
+	# K proves □(p→p) — necessitation of a tautology — no countermodel: missing
 	deriv_nec = is_entailed_by(SYSTEM_K, Formula[], Box(Implies(p, p)); max_worlds=2)
 
-	# K does NOT prove □p→p (that requires axiom T)
+	# K does NOT prove □p→p (that requires axiom T) — countermodel found: false
 	deriv_t = is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), p); max_worlds=2)
 
-	# But KT does prove □p→p
+	# But KT does prove □p→p — no countermodel on reflexive frames: missing
 	deriv_kt = is_entailed_by(SYSTEM_KT, Formula[], Implies(Box(p), p); max_worlds=2)
 
-	(mp = deriv_mp, nec = deriv_nec, T_in_K = deriv_t, T_in_KT = deriv_kt)
+	(mp = deriv_mp.entailed, nec = deriv_nec.entailed,
+	 T_in_K = deriv_t.entailed, T_in_KT = deriv_kt.entailed)
 end
+
+# ╔═╡ 4a4b4c4d-0058-0058-0058-000000000058
+md"""
+The refutation of □p → p in K comes with a concrete countermodel — a
+model and a world where □p holds but p fails. Let's inspect it:
+"""
+
+# ╔═╡ 4a4b4c4d-0059-0059-0059-000000000059
+(countermodel = deriv_t.countermodel, refuting_world = deriv_t.world)
 
 # ╔═╡ 4a4b4c4d-0040-0040-0040-000000000040
 md"""
 **Exercise 2.** Is □p → □□p derivable in K? What about in K4? Why does this make sense?
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Not derivable in K, but derivable in K4. K4 includes axiom 4 (□p → □□p), which corresponds to transitivity. In a transitive frame, if p holds at all accessible worlds, it also holds at all worlds accessible from those -- so □p implies □□p. Try: `is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), Box(Box(p))); max_worlds=2)` and compare with `SYSTEM_K4`."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Not derivable in K, but derivable in K4. K4 includes axiom 4 (□p → □□p), which corresponds to transitivity. In a transitive frame, if p holds at all accessible worlds, it also holds at all worlds accessible from those -- so □p implies □□p. Try: `is_entailed_by(SYSTEM_K, Formula[], Implies(Box(p), Box(Box(p))); max_worlds=2).entailed` -- `false` (a countermodel is found) -- and compare with `SYSTEM_K4`, where no countermodel exists and the verdict is `missing`."])))
 """
 
 # ╔═╡ 4a4b4c4d-0011-0011-0011-000000000011
@@ -151,32 +169,40 @@ md"""
 **Consistency** (Definition 3.39): A set Γ is Σ-consistent iff ⊥ is not
 derivable from Γ using the axioms and rules of Σ. Equivalently, there exists a model in the appropriate
 class with a world satisfying all formulas in Γ.
+
+`is_consistent` searches for exactly such a *witness* model. The one-sidedness
+runs opposite to `is_entailed_by`: finding a witness **confirms** consistency
+(`consistent = true`, and you get the model back), while exhausting the search
+bound is inconclusive (`consistent = missing`) — a satisfying model might just
+need more worlds than `max_worlds`. So for genuinely *in*consistent sets the
+verdict is always `missing`: no finite search can, by itself, prove that no
+model exists.
 """
 
 # ╔═╡ 4a4b4c4d-0012-0012-0012-000000000012
 begin
-	# {p, □p} is K-consistent: some model has a world where both hold
+	# {p, □p} is K-consistent: a witness model is found
 	cons_ok = is_consistent(SYSTEM_K, [p, Box(p)]; max_worlds=2)
 
-	# {p, ¬p} is never consistent
+	# {p, ¬p} is never consistent — no witness can exist: missing
 	cons_contra = is_consistent(SYSTEM_K, [p, Not(p)]; max_worlds=2)
 
 	# {□p, ¬p} is K-consistent (p can fail at the current world
 	# while being true at all accessible worlds)
 	cons_k = is_consistent(SYSTEM_K, [Box(p), Not(p)]; max_worlds=2)
 
-	# But {□p, ¬p} is KT-inconsistent (T says □p → p)
+	# But {□p, ¬p} is KT-inconsistent (T says □p → p): missing
 	cons_kt = is_consistent(SYSTEM_KT, [Box(p), Not(p)]; max_worlds=2)
 
-	(consistent = cons_ok, contradiction = cons_contra,
-	 K_box_notp = cons_k, KT_box_notp = cons_kt)
+	(consistent = cons_ok.consistent, contradiction = cons_contra.consistent,
+	 K_box_notp = cons_k.consistent, KT_box_notp = cons_kt.consistent)
 end
 
 # ╔═╡ 4a4b4c4d-0041-0041-0041-000000000041
 md"""
 **Exercise 3.** Is {□p, □¬p} consistent in K? What about in KD? Explain the difference.
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Consistent in K but NOT in KD. In K, a world with no successors makes both □p and □¬p vacuously true. KD requires seriality (every world has at least one successor), so some successor must satisfy both p and ¬p -- impossible. This is why KD is the logic of obligations: you cannot be simultaneously obligated to do p and obligated to do ¬p. Try: `is_consistent(SYSTEM_K, [Box(p), Box(Not(p))]; max_worlds=2)` vs `is_consistent(SYSTEM_KD, [Box(p), Box(Not(p))]; max_worlds=2)`."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"Consistent in K but NOT in KD. In K, a world with no successors makes both □p and □¬p vacuously true. KD requires seriality (every world has at least one successor), so some successor must satisfy both p and ¬p -- impossible. This is why KD is the logic of obligations: you cannot be simultaneously obligated to do p and obligated to do ¬p. Try: `is_consistent(SYSTEM_K, [Box(p), Box(Not(p))]; max_worlds=2).consistent` -- `true`, with a witness model -- vs `is_consistent(SYSTEM_KD, [Box(p), Box(Not(p))]; max_worlds=2).consistent` -- `missing`, since no witness exists."])))
 """
 
 # ╔═╡ 4a4b4c4d-0013-0013-0013-000000000013
@@ -374,12 +400,13 @@ That is: if ⊨ A (A is valid) then **K** ⊢ A (A is provable in K).
 
 # ╔═╡ 4a4b4c4d-0027-0027-0027-000000000027
 begin
-	# K-valid formulas are K-derivable
+	# K-valid formulas are K-derivable: the countermodel search comes up
+	# empty (missing = no refutation within the bound)
 	k_axiom = Implies(Box(Implies(p, q)), Implies(Box(p), Box(q)))
 	nec_taut = Box(Implies(p, p))
 
-	(K_axiom_derivable = is_entailed_by(SYSTEM_K, Formula[], k_axiom; max_worlds=2),
-	 nec_taut_derivable = is_entailed_by(SYSTEM_K, Formula[], nec_taut; max_worlds=2))
+	(K_axiom_refuted = is_entailed_by(SYSTEM_K, Formula[], k_axiom; max_worlds=2).entailed,
+	 nec_taut_refuted = is_entailed_by(SYSTEM_K, Formula[], nec_taut; max_worlds=2).entailed)
 end
 
 # ╔═╡ 4a4b4c4d-0028-0028-0028-000000000028
@@ -520,18 +547,20 @@ the systems must be different.
 
 # ╔═╡ 4a4b4c4d-0033-0033-0033-000000000033
 begin
-	# □p → p is KT-derivable but not KD-derivable (Prop 3.32: KD ⊊ KT)
+	# □p → p is KT-derivable but not KD-derivable (Prop 3.32: KD ⊊ KT).
+	# In KD a countermodel refutes it (false); in KT none exists (missing)
 	schema_t = Implies(Box(p), p)
-	(KT = is_entailed_by(SYSTEM_KT, Formula[], schema_t; max_worlds=2),
-	 KD = is_entailed_by(SYSTEM_KD, Formula[], schema_t; max_worlds=2))
+	(KT = is_entailed_by(SYSTEM_KT, Formula[], schema_t; max_worlds=2).entailed,
+	 KD = is_entailed_by(SYSTEM_KD, Formula[], schema_t; max_worlds=2).entailed)
 end
 
 # ╔═╡ 4a4b4c4d-0034-0034-0034-000000000034
 begin
-	# □p → □□p is not KB-derivable (Prop 3.33: KB ≠ K4)
+	# □p → □□p is not KB-derivable (Prop 3.33: KB ≠ K4): refuted in KB,
+	# no countermodel in K4
 	schema_4 = Implies(Box(p), Box(Box(p)))
-	(KB = is_entailed_by(SYSTEM_KB, Formula[], schema_4; max_worlds=2),
-	 K4 = is_entailed_by(SYSTEM_K4, Formula[], schema_4; max_worlds=2))
+	(KB = is_entailed_by(SYSTEM_KB, Formula[], schema_4; max_worlds=2).entailed,
+	 K4 = is_entailed_by(SYSTEM_K4, Formula[], schema_4; max_worlds=2).entailed)
 end
 
 # ╔═╡ 4a4b4c4d-0035-0035-0035-000000000035
@@ -589,6 +618,8 @@ Chapter 4 establishes the **completeness** of modal logics:
 # ╟─4a4b4c4d-0039-0039-0039-000000000039
 # ╟─4a4b4c4d-0009-0009-0009-000000000009
 # ╟─4a4b4c4d-0010-0010-0010-000000000010
+# ╟─4a4b4c4d-0058-0058-0058-000000000058
+# ╟─4a4b4c4d-0059-0059-0059-000000000059
 # ╟─4a4b4c4d-0040-0040-0040-000000000040
 # ╟─4a4b4c4d-0011-0011-0011-000000000011
 # ╟─4a4b4c4d-0012-0012-0012-000000000012
