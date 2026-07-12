@@ -24,7 +24,7 @@ A frame is *reflexive* if every world accesses itself: ∀w ∈ W, wRw
 (Definition 2.3, B&D).
 """
 function is_reflexive(frame::KripkeFrame)
-    all(w -> w ∈ accessible(frame, w), frame.worlds)
+    all(w -> w ∈ _successors(frame, w), frame.worlds)
 end
 
 """
@@ -35,8 +35,8 @@ A frame is *symmetric* if accessibility is symmetric:
 """
 function is_symmetric(frame::KripkeFrame)
     all(frame.worlds) do w
-        all(accessible(frame, w)) do v
-            w ∈ accessible(frame, v)
+        all(_successors(frame, w)) do v
+            w ∈ _successors(frame, v)
         end
     end
 end
@@ -49,8 +49,8 @@ A frame is *transitive* if accessibility is transitive:
 """
 function is_transitive(frame::KripkeFrame)
     all(frame.worlds) do w
-        all(accessible(frame, w)) do v
-            accessible(frame, v) ⊆ accessible(frame, w)
+        all(_successors(frame, w)) do v
+            _successors(frame, v) ⊆ _successors(frame, w)
         end
     end
 end
@@ -62,7 +62,7 @@ A frame is *serial* if every world has at least one successor:
 ∀w ∈ W, ∃w' ∈ W, wRw' (Definition 2.3, B&D).
 """
 function is_serial(frame::KripkeFrame)
-    all(w -> !isempty(accessible(frame, w)), frame.worlds)
+    all(w -> !isempty(_successors(frame, w)), frame.worlds)
 end
 
 """
@@ -73,9 +73,9 @@ A frame is *euclidean* if:
 """
 function is_euclidean(frame::KripkeFrame)
     all(frame.worlds) do w
-        succs = accessible(frame, w)
+        succs = _successors(frame, w)
         all(succs) do v
-            succs ⊆ accessible(frame, v)
+            succs ⊆ _successors(frame, v)
         end
     end
 end
@@ -89,7 +89,7 @@ A frame is *partially functional* if every world has at most one successor:
 ∀w∀u∀v((wRu ∧ wRv) → u = v) (Table frd.2, B&D).
 """
 function is_partially_functional(frame::KripkeFrame)
-    all(w -> length(accessible(frame, w)) <= 1, frame.worlds)
+    all(w -> length(_successors(frame, w)) <= 1, frame.worlds)
 end
 
 """
@@ -101,7 +101,7 @@ A frame is *functional* if every world has exactly one successor:
 Equivalently, a frame is functional iff it is both serial and partially functional.
 """
 function is_functional(frame::KripkeFrame)
-    all(w -> length(accessible(frame, w)) == 1, frame.worlds)
+    all(w -> length(_successors(frame, w)) == 1, frame.worlds)
 end
 
 """
@@ -112,9 +112,9 @@ A frame is *weakly dense* if every step can be decomposed into two steps:
 """
 function is_weakly_dense(frame::KripkeFrame)
     all(frame.worlds) do u
-        all(accessible(frame, u)) do v
+        all(_successors(frame, u)) do v
             any(frame.worlds) do w
-                w ∈ accessible(frame, u) && v ∈ accessible(frame, w)
+                w ∈ _successors(frame, u) && v ∈ _successors(frame, w)
             end
         end
     end
@@ -129,10 +129,10 @@ related or identical:
 """
 function is_weakly_connected(frame::KripkeFrame)
     all(frame.worlds) do w
-        succs = accessible(frame, w)
+        succs = _successors(frame, w)
         all(succs) do u
             all(succs) do v
-                v ∈ accessible(frame, u) || u == v || u ∈ accessible(frame, v)
+                v ∈ _successors(frame, u) || u == v || u ∈ _successors(frame, v)
             end
         end
     end
@@ -147,11 +147,11 @@ if any two successors of a world have a common successor:
 """
 function is_weakly_directed(frame::KripkeFrame)
     all(frame.worlds) do w
-        succs = accessible(frame, w)
+        succs = _successors(frame, w)
         all(succs) do u
             all(succs) do v
                 any(frame.worlds) do t
-                    t ∈ accessible(frame, u) && t ∈ accessible(frame, v)
+                    t ∈ _successors(frame, u) && t ∈ _successors(frame, v)
                 end
             end
         end
@@ -176,7 +176,7 @@ accessible from every world: ∀u,v ∈ W, uRv (Definition frd.11, B&D).
 """
 function is_universal(frame::KripkeFrame)
     n = length(frame.worlds)
-    all(w -> length(accessible(frame, w)) == n, frame.worlds)
+    all(w -> length(_successors(frame, w)) == n, frame.worlds)
 end
 
 # Frame validity (Definition 2.1, B&D)

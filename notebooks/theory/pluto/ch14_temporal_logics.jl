@@ -297,7 +297,7 @@ md"""
 
 What is the simplest model where G(p) holds at all worlds? Think about what frame condition would guarantee this.
 
-$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"One approach: a model with no worlds at all (empty frame) — vacuously true, but degenerate. A more informative answer: a model where p holds at every world and the frame has no dead ends. For example, a cyclic model {t1 → t1} with p at t1 satisfies G(p) everywhere, since every direct successor (t1 itself) has p. Try: `KripkeModel(KripkeFrame([:t1], [:t1 => :t1]), [:p => [:t1]])` and verify `satisfies(m, :t1, FutureBox(Atom(:p)))` returns true."])))
+$(Markdown.MD(Markdown.Admonition("hint", "Reveal answer", [md"A model where p holds at every world and the frame has no dead ends. (Note: a frame must have at least one world — Definition 1.6, B&D — so there is no vacuous empty-model answer.) For example, a cyclic model {t1 → t1} with p at t1 satisfies G(p) everywhere, since every direct successor (t1 itself) has p. Try: `KripkeModel(KripkeFrame([:t1], [:t1 => :t1]), [:p => [:t1]])` and verify `satisfies(m, :t1, FutureBox(Atom(:p)))` returns true."])))
 """
 
 # ╔═╡ e1e2e3e4-0018-0018-0018-000000000018

@@ -55,6 +55,23 @@ Fields:
 struct EpistemicFrame
     worlds::Set{Symbol}
     relations::Dict{Symbol,Dict{Symbol,Set{Symbol}}}
+
+    function EpistemicFrame(worlds::Set{Symbol},
+                            relations::Dict{Symbol,Dict{Symbol,Set{Symbol}}})
+        isempty(worlds) &&
+            throw(ArgumentError("an epistemic frame requires a nonempty set of worlds (Definition 15.4, B&D)"))
+        for (agent, rel) in relations
+            for (from, targets) in rel
+                from ∈ worlds ||
+                    throw(ArgumentError("relation source $from for agent $agent is not a world of the frame"))
+                for to in targets
+                    to ∈ worlds ||
+                        throw(ArgumentError("relation target $to for agent $agent is not a world of the frame"))
+                end
+            end
+        end
+        new(worlds, relations)
+    end
 end
 
 """
@@ -81,6 +98,8 @@ function EpistemicFrame(worlds, agent_relations::Vector)
             rel[world] = Set{Symbol}()
         end
         for (from, to) in pairs
+            from ∈ w ||
+                throw(ArgumentError("relation source $from for agent $agent is not a world of the frame"))
             push!(rel[from], to)
         end
         rels[Symbol(agent)] = rel
@@ -99,10 +118,14 @@ agents(frame::EpistemicFrame) = Set(keys(frame.relations))
     accessible(frame::EpistemicFrame, agent::Symbol, world::Symbol) -> Set{Symbol}
 
 Return the set of worlds accessible by `agent` from `world`.
+
+The returned `Set` is a copy: mutating it does not alter the frame.
 """
 function accessible(frame::EpistemicFrame, agent::Symbol, world::Symbol)
-    rel = get(frame.relations, agent, Dict{Symbol,Set{Symbol}}())
-    get(rel, world, Set{Symbol}())
+    rel = get(frame.relations, agent, nothing)
+    rel === nothing && return Set{Symbol}()
+    stored = get(rel, world, nothing)
+    stored === nothing ? Set{Symbol}() : copy(stored)
 end
 
 """
@@ -119,6 +142,16 @@ Fields:
 struct EpistemicModel
     frame::EpistemicFrame
     valuation::Dict{Atom,Set{Symbol}}
+
+    function EpistemicModel(frame::EpistemicFrame, valuation::Dict{Atom,Set{Symbol}})
+        for (atom, true_worlds) in valuation
+            for w in true_worlds
+                w ∈ frame.worlds ||
+                    throw(ArgumentError("valuation of $(atom) includes $w, which is not a world of the frame"))
+            end
+        end
+        new(frame, valuation)
+    end
 end
 
 """

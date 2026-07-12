@@ -3,10 +3,27 @@
 
 A Kripke frame ⟨W, R⟩ consisting of a nonempty set of worlds W and a binary
 accessibility relation R on W (Definition 1.6, B&D).
+
+The constructor enforces Definition 1.6: W must be nonempty and every source
+and target of R must be a member of W; violations throw an `ArgumentError`.
 """
 struct KripkeFrame
     worlds::Set{Symbol}
     relation::Dict{Symbol,Set{Symbol}}
+
+    function KripkeFrame(worlds::Set{Symbol}, relation::Dict{Symbol,Set{Symbol}})
+        isempty(worlds) &&
+            throw(ArgumentError("a Kripke frame requires a nonempty set of worlds (Definition 1.6, B&D)"))
+        for (from, targets) in relation
+            from ∈ worlds ||
+                throw(ArgumentError("relation source $from is not a world of the frame"))
+            for to in targets
+                to ∈ worlds ||
+                    throw(ArgumentError("relation target $to is not a world of the frame"))
+            end
+        end
+        new(worlds, relation)
+    end
 end
 
 function KripkeFrame(worlds, relation::Vector{Pair{Symbol,Symbol}})
@@ -16,6 +33,8 @@ function KripkeFrame(worlds, relation::Vector{Pair{Symbol,Symbol}})
         rel[world] = Set{Symbol}()
     end
     for (from, to) in relation
+        from ∈ w ||
+            throw(ArgumentError("relation source $from is not a world of the frame"))
         push!(rel[from], to)
     end
     KripkeFrame(w, rel)
@@ -28,11 +47,22 @@ A model M = ⟨W, R, V⟩ where V is a valuation function assigning to each
 propositional variable p a set V(p) of worlds where p is true
 (Definition 1.6, B&D).
 
-The valuation maps `Atom`s to sets of worlds: V(p) ⊆ W.
+The valuation maps `Atom`s to sets of worlds: V(p) ⊆ W. The constructor
+enforces V(p) ⊆ W; violations throw an `ArgumentError`.
 """
 struct KripkeModel
     frame::KripkeFrame
     valuation::Dict{Atom,Set{Symbol}}
+
+    function KripkeModel(frame::KripkeFrame, valuation::Dict{Atom,Set{Symbol}})
+        for (atom, true_worlds) in valuation
+            for w in true_worlds
+                w ∈ frame.worlds ||
+                    throw(ArgumentError("valuation of $(atom) includes $w, which is not a world of the frame"))
+            end
+        end
+        new(frame, valuation)
+    end
 end
 
 """
@@ -61,7 +91,16 @@ end
 
 Return the set of worlds accessible from `world`. When Rww' holds,
 we say w' is *accessible from* w (Definition 1.6, B&D).
+
+The returned `Set` is a copy: mutating it does not alter the frame.
 """
 function accessible(frame::KripkeFrame, world::Symbol)
-    get(frame.relation, world, Set{Symbol}())
+    stored = get(frame.relation, world, nothing)
+    stored === nothing ? Set{Symbol}() : copy(stored)
 end
+
+# Non-copying successor lookup for internal hot loops (frame-property checks,
+# model checking during frame enumeration). Callers must not mutate the result.
+const _EMPTY_WORLDS = Set{Symbol}()
+
+_successors(frame::KripkeFrame, world::Symbol) = get(frame.relation, world, _EMPTY_WORLDS)

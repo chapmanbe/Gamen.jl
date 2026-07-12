@@ -1978,4 +1978,64 @@ using Test
         end
     end
 
+    @testset "Phase 0 validation (review §M1/M3/M10)" begin
+        p = Atom(:p)
+
+        @testset "M1: KripkeFrame rejects ill-formed frames" begin
+            # Empty W violates Def 1.6 "nonempty" — previously admitted, and
+            # made is_true_in(m, ⊥) vacuously true
+            @test_throws ArgumentError KripkeFrame(Symbol[], Pair{Symbol,Symbol}[])
+            # Relation target outside W — previously admitted, making
+            # is_universal/is_serial return wrong answers
+            @test_throws ArgumentError KripkeFrame([:w1], [:w1 => :w2])
+            # Relation source outside W — previously a raw KeyError
+            @test_throws ArgumentError KripkeFrame([:w1], [:w2 => :w1])
+            # Inner constructor validates too
+            @test_throws ArgumentError KripkeFrame(Set{Symbol}(),
+                Dict{Symbol,Set{Symbol}}())
+            @test_throws ArgumentError KripkeFrame(Set([:w1]),
+                Dict(:w1 => Set([:w2])))
+            @test_throws ArgumentError KripkeFrame(Set([:w1]),
+                Dict(:w2 => Set([:w1])))
+            # Well-formed frames still construct
+            f = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            @test f isa KripkeFrame
+        end
+
+        @testset "M1: KripkeModel rejects V(p) ⊄ W" begin
+            f = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            @test_throws ArgumentError KripkeModel(f, [:p => [:w1, :w9]])
+            @test KripkeModel(f, [:p => [:w1]]) isa KripkeModel
+        end
+
+        @testset "M1: EpistemicFrame/EpistemicModel mirror the validation" begin
+            @test_throws ArgumentError EpistemicFrame(Symbol[], [])
+            @test_throws ArgumentError EpistemicFrame([:w1], [:a => [:w1 => :w2]])
+            @test_throws ArgumentError EpistemicFrame([:w1], [:a => [:w2 => :w1]])
+            ef = EpistemicFrame([:w1, :w2], [:a => [:w1 => :w2]])
+            @test_throws ArgumentError EpistemicModel(ef, [:p => [:w9]])
+            @test EpistemicModel(ef, [:p => [:w1]]) isa EpistemicModel
+        end
+
+        @testset "M3: accessible returns a defensive copy" begin
+            f = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            succs = accessible(f, :w1)
+            push!(succs, :w1)
+            @test accessible(f, :w1) == Set([:w2])
+            @test !is_reflexive(f)
+            ef = EpistemicFrame([:w1, :w2], [:a => [:w1 => :w2]])
+            esuccs = accessible(ef, :a, :w1)
+            push!(esuccs, :w1)
+            @test accessible(ef, :a, :w1) == Set([:w2])
+        end
+
+        @testset "M10: is_valid on a single model" begin
+            f = KripkeFrame([:w1, :w2], [:w1 => :w2, :w2 => :w2])
+            m = KripkeModel(f, [:p => [:w1, :w2]])
+            # previously MethodError: iterate
+            @test is_valid(p, m)
+            @test is_valid(Box(p), [m]) == is_valid(Box(p), m)
+        end
+    end
+
 end
