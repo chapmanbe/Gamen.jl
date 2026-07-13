@@ -13,6 +13,7 @@ export KripkeFrame, KripkeModel, accessible
 
 # Semantics
 export satisfies, is_true_in, is_valid, entails
+export successor_worlds
 
 # Frame properties and definability (Chapter 2)
 export atoms
@@ -84,7 +85,9 @@ export agents
 export restrict_model
 export group_knows, common_knowledge
 export is_bisimulation, bisimilar_worlds
-export EPISTEMIC_K, EPISTEMIC_KT, EPISTEMIC_S4, EPISTEMIC_S5
+export EpistemicSystem, EPISTEMIC_K, EPISTEMIC_KT, EPISTEMIC_S4, EPISTEMIC_S5
+export agent_frame, epistemic_frame_violations
+export is_valid_epistemic_frame, is_valid_epistemic_model
 
 # Visualization (loaded via GamenMakieExt when CairoMakie, GraphMakie, Graphs are available)
 export visualize_model

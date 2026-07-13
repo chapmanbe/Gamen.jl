@@ -144,7 +144,7 @@ const TemporalModel = KripkeModel
 function satisfies(model::TemporalModel, t::Symbol, f::PastDiamond)
     # predecessors of t: worlds t' such that t' ≺ t (t' => t in relation)
     any(model.frame.worlds) do t_prime
-        t in accessible(model.frame, t_prime) && satisfies(model, t_prime, f.operand)
+        t in _successors(model.frame, t_prime) && satisfies(model, t_prime, f.operand)
     end
 end
 
@@ -152,34 +152,34 @@ end
 function satisfies(model::TemporalModel, t::Symbol, f::PastBox)
     t in model.frame.worlds || throw(ArgumentError("World :$t is not in model"))
     all(model.frame.worlds) do t_prime
-        !(t in accessible(model.frame, t_prime)) || satisfies(model, t_prime, f.operand)
+        !(t in _successors(model.frame, t_prime)) || satisfies(model, t_prime, f.operand)
     end
 end
 
 # FA: M,t ⊩ FA iff M,t' ⊩ A for some t' with t ≺ t'
 function satisfies(model::TemporalModel, t::Symbol, f::FutureDiamond)
-    any(t_prime -> satisfies(model, t_prime, f.operand), accessible(model.frame, t))
+    any(t_prime -> satisfies(model, t_prime, f.operand), _successors(model.frame, t))
 end
 
 # GA: M,t ⊩ GA iff M,t' ⊩ A for every t' with t ≺ t'
 function satisfies(model::TemporalModel, t::Symbol, f::FutureBox)
     t in model.frame.worlds || throw(ArgumentError("World :$t is not in model"))
-    all(t_prime -> satisfies(model, t_prime, f.operand), accessible(model.frame, t))
+    all(t_prime -> satisfies(model, t_prime, f.operand), _successors(model.frame, t))
 end
 
 # SBC: M,t ⊩ SBC iff ∃t' ≺ t: M,t' ⊩ B and ∀s with t' ≺ s ≺ t: M,s ⊩ C
 function satisfies(model::TemporalModel, t::Symbol, f::Since)
     for t_prime in model.frame.worlds
         # t_prime must precede t
-        t in accessible(model.frame, t_prime) || continue
+        t in _successors(model.frame, t_prime) || continue
         # M,t' ⊩ B
         satisfies(model, t_prime, f.left) || continue
         # For all s with t' ≺ s ≺ t. Endpoints are NOT exempted: B&D leaves ≺
         # free to be reflexive or not, so s = t/t' is in range exactly when
         # the frame makes it so (issue #10).
         all_between = all(model.frame.worlds) do s
-            between = (s in accessible(model.frame, t_prime)) &&
-                       (t in accessible(model.frame, s))
+            between = (s in _successors(model.frame, t_prime)) &&
+                       (t in _successors(model.frame, s))
             !between || satisfies(model, s, f.right)
         end
         all_between && return true
@@ -189,15 +189,15 @@ end
 
 # UBC: M,t ⊩ UBC iff ∃t': t ≺ t' and M,t' ⊩ B and ∀s with t ≺ s ≺ t': M,s ⊩ C
 function satisfies(model::TemporalModel, t::Symbol, f::Until)
-    for t_prime in accessible(model.frame, t)
+    for t_prime in _successors(model.frame, t)
         # M,t' ⊩ B
         satisfies(model, t_prime, f.left) || continue
         # For all s with t ≺ s ≺ t'. Endpoints are NOT exempted: B&D leaves ≺
         # free to be reflexive or not, so s = t/t' is in range exactly when
         # the frame makes it so (issue #10).
         all_between = all(model.frame.worlds) do s
-            between = (s in accessible(model.frame, t)) &&
-                       (t_prime in accessible(model.frame, s))
+            between = (s in _successors(model.frame, t)) &&
+                       (t_prime in _successors(model.frame, s))
             !between || satisfies(model, s, f.right)
         end
         all_between && return true
@@ -407,20 +407,11 @@ const TABLEAU_KDt = TableauSystem(:KDt,
 
 Return `true` if the frame's relation is transitive: ∀u∀v∀w((u≺v ∧ v≺w) → u≺w).
 
-Corresponds to the validity of FFp → Fp (Table 14.1, B&D).
+Corresponds to the validity of FFp → Fp (Table 14.1, B&D). Alias for the
+Chapter 2 predicate [`is_transitive`](@ref) — the temporal reading of the
+same frame condition, not a separate implementation.
 """
-function is_transitive_frame(frame::KripkeFrame)
-    for u in frame.worlds
-        for v in accessible(frame, u)
-            for w in accessible(frame, v)
-                if !(w in accessible(frame, u))
-                    return false
-                end
-            end
-        end
-    end
-    true
-end
+const is_transitive_frame = is_transitive
 
 """
     is_linear_frame(frame::KripkeFrame) -> Bool
@@ -435,7 +426,7 @@ function is_linear_frame(frame::KripkeFrame)
         for j in eachindex(worlds)
             i == j && continue
             w, v = worlds[i], worlds[j]
-            if !(v in accessible(frame, w)) && !(w in accessible(frame, v))
+            if !(v in _successors(frame, w)) && !(w in _successors(frame, v))
                 return false
             end
         end
@@ -448,18 +439,11 @@ end
 
 Return `true` if the frame is dense: ∀w∀v(w≺v → ∃u(w≺u ∧ u≺v)).
 
-Corresponds to the validity of Fp → FFp (Table 14.1, B&D).
+Corresponds to the validity of Fp → FFp (Table 14.1, B&D). Alias for the
+Chapter 2 predicate [`is_weakly_dense`](@ref) — the temporal reading of the
+same frame condition, not a separate implementation.
 """
-function is_dense_frame(frame::KripkeFrame)
-    for w in frame.worlds
-        for v in accessible(frame, w)
-            found = any(u -> (u in accessible(frame, w)) && (v in accessible(frame, u)),
-                        frame.worlds)
-            found || return false
-        end
-    end
-    true
-end
+const is_dense_frame = is_weakly_dense
 
 """
     is_unbounded_past(frame::KripkeFrame) -> Bool
@@ -470,7 +454,7 @@ Corresponds to the validity of Hp → Pp (Table 14.1, B&D).
 """
 function is_unbounded_past(frame::KripkeFrame)
     for w in frame.worlds
-        has_predecessor = any(v -> w in accessible(frame, v), frame.worlds)
+        has_predecessor = any(v -> w in _successors(frame, v), frame.worlds)
         has_predecessor || return false
     end
     true
@@ -481,8 +465,8 @@ end
 
 Return `true` if the frame has an unbounded future: ∀w∃v(w≺v).
 
-Corresponds to the validity of Gp → Fp (Table 14.1, B&D).
+Corresponds to the validity of Gp → Fp (Table 14.1, B&D). Alias for the
+Chapter 2 predicate [`is_serial`](@ref) — the temporal reading of the same
+frame condition, not a separate implementation.
 """
-function is_unbounded_future(frame::KripkeFrame)
-    all(w -> !isempty(accessible(frame, w)), frame.worlds)
-end
+const is_unbounded_future = is_serial
