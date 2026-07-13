@@ -348,18 +348,20 @@ can tell them apart.
 
 # ╔═╡ f1f2f3f4-0018-0018-0018-000000000018
 begin
-	# Figure 15.2 (B&D): M1 has 3 worlds, M2 has 2, but they are bisimilar
-	# M1: w1 sees w2 and w3 (agent a); w2 and w3 only see themselves; p at w2,w3
+	# Figure 15.2 (B&D): M1 has 3 worlds, M2 has 2, but they are bisimilar.
+	# Every world is reflexive — the figure draws a self-loop on w1 and v1 too
+	# (issue #13), so K_a is factive everywhere, including w1/v1.
+	# M1: w1 sees itself, w2, and w3 (agent a); w2 and w3 see themselves; p at w2,w3
 	frame1 = EpistemicFrame(
 		[:w1, :w2, :w3],
-		[:a => [:w1 => :w2, :w1 => :w3, :w2 => :w2, :w3 => :w3]]
+		[:a => [:w1 => :w1, :w1 => :w2, :w1 => :w3, :w2 => :w2, :w3 => :w3]]
 	)
 	m1 = EpistemicModel(frame1, [:p => [:w2, :w3]])
 
-	# M2: v1 sees v2 (agent a); v2 only sees itself; p at v2
+	# M2: v1 sees itself and v2 (agent a); v2 sees itself; p at v2
 	frame2 = EpistemicFrame(
 		[:v1, :v2],
-		[:a => [:v1 => :v2, :v2 => :v2]]
+		[:a => [:v1 => :v1, :v1 => :v2, :v2 => :v2]]
 	)
 	m2 = EpistemicModel(frame2, [:p => [:v2]])
 
@@ -411,13 +413,14 @@ If B is false at w, [B]C holds vacuously (announcement of a falsehood can't occu
 
 # ╔═╡ f1f2f3f4-0021-0021-0021-000000000021
 begin
-	# Figure 15.3 (B&D): before and after announcing p
+	# Figure 15.3 (B&D 2025 ed.): before and after announcing p
 	# M: w1 (p,¬q), w2 (¬p,¬q), w3 (p,q)
-	# Agent a: w1↔w1, w3↔w3 (reflexive), w2↔w2
-	# Agent b: w1↔w2 (b can't tell w1 from w2), w3↔w3
+	# Agent a can't tell w1 from w3 (both satisfy p): a already knows p, not q.
+	# Agent b can't tell w1 from w2 (both satisfy ¬q): b does not yet know p.
+	# Both relations are S5 equivalences (reflexive, symmetric, transitive).
 	pal_frame = EpistemicFrame(
 		[:w1, :w2, :w3],
-		[:a => [:w1 => :w1, :w2 => :w2, :w3 => :w3],
+		[:a => [:w1 => :w1, :w1 => :w3, :w3 => :w1, :w3 => :w3, :w2 => :w2],
 		 :b => [:w1 => :w1, :w1 => :w2, :w2 => :w1, :w2 => :w2, :w3 => :w3]]
 	)
 	pal_model = EpistemicModel(pal_frame,
