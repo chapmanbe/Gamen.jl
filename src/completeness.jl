@@ -1,23 +1,7 @@
 # Chapter 4: Completeness and Canonical Models (B&D)
 
 # ── Subformulas ──
-
-"""
-    subformulas(φ::Formula) -> Set{Formula}
-
-Return the set of all subformulas of `φ`, including `φ` itself.
-"""
-function subformulas end
-
-subformulas(φ::Bottom) = Set{Formula}([φ])
-subformulas(φ::Atom) = Set{Formula}([φ])
-subformulas(φ::Not) = Set{Formula}([φ]) ∪ subformulas(φ.operand)
-subformulas(φ::And) = Set{Formula}([φ]) ∪ subformulas(φ.left) ∪ subformulas(φ.right)
-subformulas(φ::Or) = Set{Formula}([φ]) ∪ subformulas(φ.left) ∪ subformulas(φ.right)
-subformulas(φ::Implies) = Set{Formula}([φ]) ∪ subformulas(φ.antecedent) ∪ subformulas(φ.consequent)
-subformulas(φ::Iff) = Set{Formula}([φ]) ∪ subformulas(φ.left) ∪ subformulas(φ.right)
-subformulas(φ::Box) = Set{Formula}([φ]) ∪ subformulas(φ.operand)
-subformulas(φ::Diamond) = Set{Formula}([φ]) ∪ subformulas(φ.operand)
+# `subformulas` is defined generically in src/traversal.jl.
 
 # ── Closure of a formula set ──
 

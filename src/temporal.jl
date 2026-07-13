@@ -107,21 +107,8 @@ Base.show(io::IO, f::FutureBox) = print(io, "G", f.operand)
 Base.show(io::IO, f::Since) = print(io, "(S", f.left, f.right, ")")
 Base.show(io::IO, f::Until) = print(io, "(U", f.left, f.right, ")")
 
-# Structural equality
-Base.:(==)(a::PastBox, b::PastBox) = a.operand == b.operand
-Base.:(==)(a::PastDiamond, b::PastDiamond) = a.operand == b.operand
-Base.:(==)(a::FutureBox, b::FutureBox) = a.operand == b.operand
-Base.:(==)(a::FutureDiamond, b::FutureDiamond) = a.operand == b.operand
-Base.:(==)(a::Since, b::Since) = a.left == b.left && a.right == b.right
-Base.:(==)(a::Until, b::Until) = a.left == b.left && a.right == b.right
-
-# Hash
-Base.hash(f::PastBox, h::UInt) = hash((:PastBox, f.operand), h)
-Base.hash(f::PastDiamond, h::UInt) = hash((:PastDiamond, f.operand), h)
-Base.hash(f::FutureBox, h::UInt) = hash((:FutureBox, f.operand), h)
-Base.hash(f::FutureDiamond, h::UInt) = hash((:FutureDiamond, f.operand), h)
-Base.hash(f::Since, h::UInt) = hash((:Since, f.left, f.right), h)
-Base.hash(f::Until, h::UInt) = hash((:Until, f.left, f.right), h)
+# Structural equality/hash come from the generic traversal protocol
+# (src/traversal.jl) — no per-type methods needed.
 
 # is_modal_free extensions
 is_modal_free(::PastBox) = false

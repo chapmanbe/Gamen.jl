@@ -1,19 +1,4 @@
-"""
-    atoms(f::Formula) -> Set{Atom}
-
-Collect all propositional variables (as `Atom` values) appearing in a formula.
-"""
-function atoms end
-
-atoms(::Bottom) = Set{Atom}()
-atoms(f::Atom) = Set{Atom}([f])
-atoms(f::Not) = atoms(f.operand)
-atoms(f::And) = atoms(f.left) ∪ atoms(f.right)
-atoms(f::Or) = atoms(f.left) ∪ atoms(f.right)
-atoms(f::Implies) = atoms(f.antecedent) ∪ atoms(f.consequent)
-atoms(f::Iff) = atoms(f.left) ∪ atoms(f.right)
-atoms(f::Box) = atoms(f.operand)
-atoms(f::Diamond) = atoms(f.operand)
+# `atoms` is defined generically in src/traversal.jl.
 
 # Frame properties (Definition 2.3, B&D)
 

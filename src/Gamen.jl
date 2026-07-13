@@ -5,6 +5,9 @@ export Formula, Bottom, Atom, Not, And, Or, Implies, Iff
 export Box, Diamond, □, ◇
 export Top, is_modal_free
 
+# Generic traversal protocol (src/traversal.jl)
+export children, similar_node
+
 # Kripke structures
 export KripkeFrame, KripkeModel, accessible
 
@@ -87,6 +90,7 @@ export EPISTEMIC_K, EPISTEMIC_KT, EPISTEMIC_S4, EPISTEMIC_S5
 export visualize_model
 
 include("formulas.jl")
+include("traversal.jl")
 include("kripke.jl")
 include("semantics.jl")
 include("frame_properties.jl")

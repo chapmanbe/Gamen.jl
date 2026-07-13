@@ -20,6 +20,17 @@ is_modal_free
 atoms
 ```
 
+## Generic Formula Traversal
+
+Every structural operation (`atoms`, `subformulas`, `substitute`,
+`is_modal_free`, structural `==`/`hash`) is derived from this two-method
+protocol. New `Formula` subtypes get all of them for free.
+
+```@docs
+children
+similar_node
+```
+
 ## Kripke Structures
 
 ```@docs
