@@ -124,6 +124,14 @@ function accessible(frame::EpistemicFrame, agent::Symbol, world::Symbol)
     stored === nothing ? Set{Symbol}() : copy(stored)
 end
 
+# Non-copying successor lookup for internal hot loops (model checking).
+# Callers must not mutate the result. Mirrors _successors(::KripkeFrame, w).
+function _successors(frame::EpistemicFrame, agent::Symbol, world::Symbol)
+    rel = get(frame.relations, agent, nothing)
+    rel === nothing && return _EMPTY_WORLDS
+    get(rel, world, _EMPTY_WORLDS)
+end
+
 """
     EpistemicModel
 
@@ -171,51 +179,22 @@ function EpistemicModel(frame::EpistemicFrame, valuation::Vector{Pair{Symbol,Vec
 end
 
 # ── Semantics (Definition 15.5 and 15.11) ──
+#
+# The propositional clauses (⊥, atoms, ¬, ∧, ∨, →, ↔) are the shared base
+# clauses in src/semantics.jl — an epistemic model is a configuration of the
+# base system, not a reimplementation. Only the epistemic operators are
+# defined here.
 
-"""
-    satisfies(model::EpistemicModel, world::Symbol, formula::Formula) -> Bool
+# K_a B: true at w iff B is true at all R_a-successors (Definition 15.5,
+# item 7, B&D) — a □ indexed by agent, plugged in via successor_worlds
+successor_worlds(model::EpistemicModel, world::Symbol, f::Knowledge) =
+    _successors(model.frame, f.agent, world)
 
-Determine whether `formula` is true at `world` in epistemic model `model`,
-M,w ⊩ A (Definition 15.5 and 15.11, B&D).
-"""
-function satisfies end
-
-function satisfies(model::EpistemicModel, world::Symbol, ::Bottom)
-    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
-    false
-end
-
-function satisfies(model::EpistemicModel, world::Symbol, f::Atom)
-    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
-    world in get(model.valuation, f, Set{Symbol}())
-end
-
-function satisfies(model::EpistemicModel, world::Symbol, f::Not)
-    !satisfies(model, world, f.operand)
-end
-
-function satisfies(model::EpistemicModel, world::Symbol, f::And)
-    satisfies(model, world, f.left) && satisfies(model, world, f.right)
-end
-
-function satisfies(model::EpistemicModel, world::Symbol, f::Or)
-    satisfies(model, world, f.left) || satisfies(model, world, f.right)
-end
-
-function satisfies(model::EpistemicModel, world::Symbol, f::Implies)
-    !satisfies(model, world, f.antecedent) || satisfies(model, world, f.consequent)
-end
-
-function satisfies(model::EpistemicModel, world::Symbol, f::Iff)
-    satisfies(model, world, f.left) == satisfies(model, world, f.right)
-end
-
-# K_a B: true at w iff B is true at all R_a-successors
-function satisfies(model::EpistemicModel, world::Symbol, f::Knowledge)
-    world in model.frame.worlds || throw(ArgumentError("World :$world is not in model"))
-    all(w -> satisfies(model, w, f.operand),
-        accessible(model.frame, f.agent, world))
-end
+# The model argument is deliberately untyped: on a model with no agent
+# relations (e.g. a plain KripkeModel), the successor_worlds fallback gives
+# an informative ArgumentError instead of a raw MethodError
+satisfies(model, world::Symbol, f::Knowledge) =
+    _universal_modal_satisfies(model, world, f)
 
 # [B]C: true at w iff (M,w ⊩ B) implies (M|B, w ⊩ C)
 function satisfies(model::EpistemicModel, world::Symbol, f::Announce)
@@ -294,14 +273,14 @@ function common_knowledge(model::EpistemicModel, world::Symbol,
     visited = Set{Symbol}()
     queue = Symbol[]
     for agent in group
-        append!(queue, accessible(model.frame, agent, world))
+        append!(queue, _successors(model.frame, agent, world))
     end
     while !isempty(queue)
         w = popfirst!(queue)
         w in visited && continue
         push!(visited, w)
         for agent in group
-            for w_prime in accessible(model.frame, agent, w)
+            for w_prime in _successors(model.frame, agent, w)
                 w_prime in visited || push!(queue, w_prime)
             end
         end
@@ -345,14 +324,14 @@ function is_bisimulation(M1::EpistemicModel, M2::EpistemicModel,
 
         for a in all_agents
             # Clause 2: forth — every R_a-successor of w1 in M1 has a partner in M2
-            for v1 in accessible(M1.frame, a, w1)
-                found = any(v2 -> (v1 => v2) in rel_set, accessible(M2.frame, a, w2))
+            for v1 in _successors(M1.frame, a, w1)
+                found = any(v2 -> (v1 => v2) in rel_set, _successors(M2.frame, a, w2))
                 found || return false
             end
 
             # Clause 3: back — every R_a-successor of w2 in M2 has a partner in M1
-            for v2 in accessible(M2.frame, a, w2)
-                found = any(v1 -> (v1 => v2) in rel_set, accessible(M1.frame, a, w1))
+            for v2 in _successors(M2.frame, a, w2)
+                found = any(v1 -> (v1 => v2) in rel_set, _successors(M1.frame, a, w1))
                 found || return false
             end
         end
@@ -393,12 +372,32 @@ end
 # ── Epistemic modal systems ──
 
 """
+    EpistemicSystem
+
+An epistemic modal system: a name plus the frame conditions each agent's
+accessibility relation must satisfy (Table 15.1, B&D). Mirrors
+[`ModalSystem`](@ref): frame conditions are first-class data, stored as
+named predicates on a single-agent `KripkeFrame` so the Chapter 2
+frame-property checkers are reused unchanged.
+
+Check a frame or model against a system with
+[`is_valid_epistemic_frame`](@ref) / [`is_valid_epistemic_model`](@ref), or
+get the specific failures from [`epistemic_frame_violations`](@ref).
+"""
+struct EpistemicSystem
+    name::String
+    conditions::Vector{Pair{Symbol,Function}}
+end
+
+Base.show(io::IO, s::EpistemicSystem) = print(io, s.name)
+
+"""
     EPISTEMIC_K
 
 The minimal epistemic system K (just the K axiom / closure principle).
 The accessibility relations are unconstrained.
 """
-const EPISTEMIC_K = :closure
+const EPISTEMIC_K = EpistemicSystem("Epistemic K", Pair{Symbol,Function}[])
 
 """
     EPISTEMIC_KT
@@ -406,7 +405,8 @@ const EPISTEMIC_K = :closure
 Knowledge system KT: K + Veridicality (K_a A → A).
 Requires each agent's accessibility relation to be reflexive.
 """
-const EPISTEMIC_KT = :veridicality
+const EPISTEMIC_KT = EpistemicSystem("Epistemic KT",
+    [:reflexive => is_reflexive])
 
 """
     EPISTEMIC_S4
@@ -414,13 +414,70 @@ const EPISTEMIC_KT = :veridicality
 Knowledge system S4: K + Veridicality + Positive Introspection (K_a A → K_a K_a A).
 Requires reflexivity + transitivity.
 """
-const EPISTEMIC_S4 = :positive_introspection
+const EPISTEMIC_S4 = EpistemicSystem("Epistemic S4",
+    [:reflexive => is_reflexive, :transitive => is_transitive])
 
 """
     EPISTEMIC_S5
 
 Full knowledge system S5: K + Veridicality + Negative Introspection (¬K_a A → K_a ¬K_a A).
-Requires reflexivity + transitivity + Euclideanness (equivalence relation).
-Epistemic logics typically use S5 (Table 15.1, B&D).
+Requires each agent's relation to be an equivalence relation (reflexive +
+transitive + euclidean). Epistemic logics typically use S5 (Table 15.1, B&D).
 """
-const EPISTEMIC_S5 = :negative_introspection
+const EPISTEMIC_S5 = EpistemicSystem("Epistemic S5",
+    [:reflexive => is_reflexive, :transitive => is_transitive,
+     :euclidean => is_euclidean])
+
+"""
+    agent_frame(frame::EpistemicFrame, agent::Symbol) -> KripkeFrame
+
+Extract one agent's accessibility relation as a single-relation
+[`KripkeFrame`](@ref), so the Chapter 2 frame-property predicates apply to
+it directly. The returned frame is an independent copy.
+"""
+function agent_frame(frame::EpistemicFrame, agent::Symbol)
+    rel = get(frame.relations, agent, Dict{Symbol,Set{Symbol}}())
+    KripkeFrame(copy(frame.worlds),
+                Dict{Symbol,Set{Symbol}}(w => copy(s) for (w, s) in rel))
+end
+
+"""
+    epistemic_frame_violations(frame::EpistemicFrame, system::EpistemicSystem)
+        -> Vector{Tuple{Symbol,Symbol}}
+
+Return `(agent, condition)` pairs for every frame condition of `system`
+that some agent's relation violates; empty means `frame` is a legitimate
+`system`-frame. E.g. on a non-reflexive frame, veridicality (K_a A → A)
+can fail even though nothing enforces it at construction — this is the
+check that makes the assumption explicit (issue #10 §M6).
+"""
+function epistemic_frame_violations(frame::EpistemicFrame, system::EpistemicSystem)
+    violations = Tuple{Symbol,Symbol}[]
+    for agent in sort!(collect(agents(frame)))
+        af = agent_frame(frame, agent)
+        for (condition, holds) in system.conditions
+            holds(af) || push!(violations, (agent, condition))
+        end
+    end
+    violations
+end
+
+"""
+    is_valid_epistemic_frame(frame::EpistemicFrame, system::EpistemicSystem) -> Bool
+
+Check that every agent's accessibility relation satisfies all frame
+conditions of `system`. Validation is a separate check, not a constructor
+constraint, so non-`system` frames remain constructible as teaching
+counterexamples.
+"""
+is_valid_epistemic_frame(frame::EpistemicFrame, system::EpistemicSystem) =
+    isempty(epistemic_frame_violations(frame, system))
+
+"""
+    is_valid_epistemic_model(model::EpistemicModel, system::EpistemicSystem) -> Bool
+
+Check `model`'s frame against the frame conditions of `system`; see
+[`is_valid_epistemic_frame`](@ref).
+"""
+is_valid_epistemic_model(model::EpistemicModel, system::EpistemicSystem) =
+    is_valid_epistemic_frame(model.frame, system)

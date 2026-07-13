@@ -43,6 +43,7 @@ accessible
 
 ```@docs
 satisfies
+successor_worlds
 is_true_in
 is_valid
 entails
@@ -287,10 +288,15 @@ bisimilar_worlds
 ### Epistemic Systems
 
 ```@docs
+EpistemicSystem
 EPISTEMIC_K
 EPISTEMIC_KT
 EPISTEMIC_S4
 EPISTEMIC_S5
+agent_frame
+epistemic_frame_violations
+is_valid_epistemic_frame
+is_valid_epistemic_model
 ```
 
 ## Chapter 6: Modal Tableaux

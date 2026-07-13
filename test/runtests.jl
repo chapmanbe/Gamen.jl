@@ -2218,4 +2218,65 @@ end
         end
     end
 
+    @testset "Phase 2 configurations (review §A1/A2/M6)" begin
+        p, q = Atom(:p), Atom(:q)
+
+        @testset "A1: mixed Box/Knowledge formulas on epistemic models" begin
+            ef = EpistemicFrame([:w1, :w2],
+                [:a => [:w1 => :w2, :w2 => :w2]])
+            em = EpistemicModel(ef, [:p => [:w2]])
+            # shared propositional clauses (previously duplicated, and
+            # satisfies(::EpistemicModel, w, ::Box) was a raw MethodError)
+            @test satisfies(em, :w2, And(p, Not(q)))
+            @test satisfies(em, :w1, Implies(p, q))
+            @test satisfies(em, :w1, Knowledge(:a, p))
+            # Box has no accessibility relation on a multi-agent model:
+            # informative error, not MethodError
+            @test_throws ArgumentError satisfies(em, :w1, Box(p))
+            # and Knowledge has none on a plain Kripke model
+            km = KripkeModel(KripkeFrame([:w1], Pair{Symbol,Symbol}[]),
+                             [:p => [:w1]])
+            @test_throws ArgumentError satisfies(km, :w1, Knowledge(:a, p))
+            # the hook is the extension point: Knowledge = □ indexed by agent
+            @test successor_worlds(em, :w1, Knowledge(:a, p)) == Set([:w2])
+            @test successor_worlds(km, :w1, Box(p)) == Set{Symbol}()
+        end
+
+        @testset "M6: EPISTEMIC_* systems are checkable frame-condition bundles" begin
+            # Non-reflexive frame: veridicality (K_a p → p) fails at w1 —
+            # previously nothing could even express this check
+            ef = EpistemicFrame([:w1, :w2],
+                [:a => [:w1 => :w2, :w2 => :w2]])
+            em = EpistemicModel(ef, [:p => [:w2]])
+            @test satisfies(em, :w1, Knowledge(:a, p)) && !satisfies(em, :w1, p)
+            @test is_valid_epistemic_model(em, EPISTEMIC_K)
+            @test !is_valid_epistemic_model(em, EPISTEMIC_KT)
+            @test !is_valid_epistemic_frame(ef, EPISTEMIC_S5)
+            @test (:a, :reflexive) in epistemic_frame_violations(ef, EPISTEMIC_S5)
+
+            # Equivalence-relation frame passes S5, and veridicality holds
+            ef5 = EpistemicFrame([:w1, :w2],
+                [:a => [:w1 => :w1, :w1 => :w2, :w2 => :w1, :w2 => :w2]])
+            @test is_valid_epistemic_frame(ef5, EPISTEMIC_S5)
+            @test epistemic_frame_violations(ef5, EPISTEMIC_S5) == Tuple{Symbol,Symbol}[]
+
+            # agent_frame reuses the Ch. 2 predicates and is a copy
+            af = agent_frame(ef5, :a)
+            @test af isa KripkeFrame && is_equivalence_relation(af)
+            delete!(af.relation[:w1], :w2)  # mutating the copy…
+            @test ef5.relations[:a][:w1] == Set([:w1, :w2])  # …not the original
+        end
+
+        @testset "A2: temporal predicates are aliases of the Ch. 2 originals" begin
+            @test is_transitive_frame === is_transitive
+            @test is_dense_frame === is_weakly_dense
+            @test is_unbounded_future === is_serial
+            # behavior spot-check through the temporal names
+            trans = KripkeFrame([:t1, :t2, :t3],
+                [:t1 => :t2, :t2 => :t3, :t1 => :t3])
+            non_trans = KripkeFrame([:t1, :t2, :t3], [:t1 => :t2, :t2 => :t3])
+            @test is_transitive_frame(trans) && !is_transitive_frame(non_trans)
+        end
+    end
+
 end
