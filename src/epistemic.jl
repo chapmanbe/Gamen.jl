@@ -17,8 +17,7 @@ end
 
 Base.show(io::IO, f::Knowledge) = print(io, "K[", f.agent, "]", f.operand)
 
-Base.:(==)(a::Knowledge, b::Knowledge) = a.agent == b.agent && a.operand == b.operand
-Base.hash(f::Knowledge, h::UInt) = hash((:Knowledge, f.agent, f.operand), h)
+# ==/hash come from the generic traversal protocol (src/traversal.jl)
 is_modal_free(::Knowledge) = false
 
 """
@@ -34,9 +33,6 @@ struct Announce <: Formula
 end
 
 Base.show(io::IO, f::Announce) = print(io, "[", f.announcement, "]", f.body)
-Base.:(==)(a::Announce, b::Announce) =
-    a.announcement == b.announcement && a.body == b.body
-Base.hash(f::Announce, h::UInt) = hash((:Announce, f.announcement, f.body), h)
 is_modal_free(::Announce) = false
 
 # ── Multi-agent epistemic model (Definition 15.4) ──

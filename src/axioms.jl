@@ -1,25 +1,7 @@
 # Chapter 3: Axiomatic Derivations (B&D)
 
 # ── Substitution ──
-
-"""
-    substitute(φ::Formula, σ) -> Formula
-
-Apply substitution `σ` to formula `φ`, replacing each `Atom` that is a key
-in `σ` with the corresponding formula. `σ` should be a
-`Dict{Atom, <:Formula}` or similar mapping.
-"""
-function substitute end
-
-substitute(φ::Bottom, _) = φ
-substitute(φ::Atom, σ) = haskey(σ, φ) ? σ[φ] : φ
-substitute(φ::Not, σ) = Not(substitute(φ.operand, σ))
-substitute(φ::And, σ) = And(substitute(φ.left, σ), substitute(φ.right, σ))
-substitute(φ::Or, σ) = Or(substitute(φ.left, σ), substitute(φ.right, σ))
-substitute(φ::Implies, σ) = Implies(substitute(φ.antecedent, σ), substitute(φ.consequent, σ))
-substitute(φ::Iff, σ) = Iff(substitute(φ.left, σ), substitute(φ.right, σ))
-substitute(φ::Box, σ) = Box(substitute(φ.operand, σ))
-substitute(φ::Diamond, σ) = Diamond(substitute(φ.operand, σ))
+# `substitute` is defined generically in src/traversal.jl.
 
 # ── Propositional evaluation ──
 

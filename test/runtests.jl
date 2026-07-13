@@ -1,6 +1,14 @@
 using Gamen
 using Test
 
+# Probe type for the §M2 reflexivity regression: a Formula subtype defined
+# outside the package, with a non-Formula data field and no hand-written
+# ==/hash — everything must come from the generic traversal protocol.
+struct M2ProbeFormula <: Formula
+    tag::Symbol
+    inner::Formula
+end
+
 @testset "Gamen.jl" begin
     @testset "Formula construction and display" begin
         p = Atom(:p)
@@ -2134,6 +2142,79 @@ using Test
             # the surviving open branch yields a genuine countermodel
             m = extract_countermodel(open_branches[1])
             @test any(w -> satisfies(m, w, p), m.frame.worlds)
+        end
+    end
+
+    @testset "Phase 1 generic traversal (§M9/M2/A3)" begin
+        p, q = Atom(:p), Atom(:q)
+
+        @testset "children / similar_node protocol" begin
+            @test children(Atom(:p)) == ()
+            @test children(Bottom()) == ()
+            @test children(Implies(p, q)) == (p, q)
+            @test children(Knowledge(:a, p)) == (p,)  # agent is node data
+            @test children(Since(p, q)) == (p, q)
+            @test similar_node(Box(p), (q,)) == Box(q)
+            # non-Formula fields survive the round trip
+            @test similar_node(Knowledge(:a, p), (q,)) == Knowledge(:a, q)
+            @test_throws ArgumentError similar_node(Box(p), (p, q))
+            @test_throws ArgumentError similar_node(And(p, q), (p,))
+        end
+
+        @testset "M2: == is reflexive for foreign Formula subtypes" begin
+            # Previously ==(::Formula,::Formula) = false made any subtype
+            # without a hand-written == unequal to itself
+            a = M2ProbeFormula(:t, p)
+            b = M2ProbeFormula(:t, p)
+            @test a == a
+            @test a == b
+            @test hash(a) == hash(b)
+            @test a != M2ProbeFormula(:u, p)
+            @test a != M2ProbeFormula(:t, q)
+            @test length(Set([a, b])) == 1
+            # and the structural derivations work on it too
+            @test atoms(a) == Set([p])
+            @test p ∈ subformulas(a)
+            @test substitute(a, Dict(p => q)) == M2ProbeFormula(:t, q)
+        end
+
+        @testset "M9: temporal formulas through Ch4/5 machinery" begin
+            # All of these were MethodErrors before the generic protocol
+            @test subformulas(FutureBox(p)) == Set{Formula}([FutureBox(p), p])
+            @test atoms(FutureBox(And(p, q))) == Set([p, q])
+            @test atoms(Since(p, q)) == Set([p, q])
+            @test subformulas(Until(p, q)) == Set{Formula}([Until(p, q), p, q])
+            @test substitute(FutureBox(p), Dict(p => q)) == FutureBox(q)
+            @test substitute(Since(p, q), Dict(p => q)) == Since(q, q)
+            @test !is_modal_free(FutureBox(p))
+            # the downstream Ch4 entry point now accepts temporal input
+            closure = formula_closure([FutureBox(p)])
+            @test FutureBox(p) ∈ closure && p ∈ closure
+        end
+
+        @testset "M9: epistemic formulas through Ch4/5 machinery" begin
+            kf = Knowledge(:a, And(p, q))
+            @test atoms(kf) == Set([p, q])
+            @test subformulas(kf) == Set{Formula}([kf, And(p, q), p, q])
+            @test substitute(Knowledge(:a, p), Dict(p => Or(p, q))) ==
+                  Knowledge(:a, Or(p, q))
+            @test !is_modal_free(kf)
+            ann = Announce(p, Knowledge(:a, q))
+            @test atoms(ann) == Set([p, q])
+            @test Knowledge(:a, q) ∈ subformulas(ann)
+        end
+
+        @testset "A3: generic derivations agree with the old behavior" begin
+            φ = Implies(Box(And(p, q)), Diamond(Or(p, Not(q))))
+            @test atoms(φ) == Set([p, q])
+            # φ, □(p∧q), p∧q, p, q, ◇(p∨¬q), p∨¬q, ¬q
+            @test length(subformulas(φ)) == 8
+            @test substitute(φ, Dict(p => Bottom())) ==
+                  Implies(Box(And(Bottom(), q)), Diamond(Or(Bottom(), Not(q))))
+            @test is_modal_free(And(p, Not(q)))
+            @test !is_modal_free(φ)
+            @test Top() == Not(Bottom())
+            @test Atom(0) == Atom(:p0)  # indexed/named atoms share a namespace
         end
     end
 
