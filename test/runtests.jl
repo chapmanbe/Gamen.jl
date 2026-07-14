@@ -1411,10 +1411,14 @@ using Test
         end
 
         @testset "KB rules: B axiom (Table 6.4)" begin
-            # B: □p → ◇□p holds in KB
-            @test tableau_proves(TABLEAU_KB, Formula[], Implies(Box(p), Diamond(Box(p))))
+            # B: p → □◇p holds in KB
+            @test tableau_proves(TABLEAU_KB, Formula[], Implies(p, Box(Diamond(p))))
             # B does not hold in K
-            @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), Diamond(Box(p))))
+            @test !tableau_proves(TABLEAU_K, Formula[], Implies(p, Box(Diamond(p))))
+            # □p → ◇□p is a KTB theorem, NOT a KB theorem: a dead-end world
+            # on a symmetric frame falsifies it. The old buggy TABLEAU_KB
+            # (with T rules) wrongly proved it (issue #10).
+            @test !tableau_proves(TABLEAU_KB, Formula[], Implies(Box(p), Diamond(Box(p))))
         end
 
         @testset "K4 rules: 4 axiom (Table 6.4)" begin
@@ -1894,5 +1898,84 @@ using Test
         end
 
     end  # Chapter 15
+
+    @testset "Adversarial review regressions (issue #10)" begin
+        p, q = Atom(:p), Atom(:q)
+
+        @testset "C1: TABLEAU_KB has no reflexivity rules" begin
+            # □p → p and □p → ◇p are KT-theorems, invalid on symmetric frames
+            @test !tableau_proves(TABLEAU_KB, Formula[], Implies(Box(p), p))
+            @test !tableau_proves(TABLEAU_KB, Formula[], Implies(Box(p), Diamond(p)))
+            # B axiom p → □◇p must still prove
+            @test tableau_proves(TABLEAU_KB, Formula[], Implies(p, Box(Diamond(p))))
+        end
+
+        @testset "C2: blocking does not break K-completeness" begin
+            # ◇-monotonicity, valid in K; unprovable under subset-at-birth blocking
+            @test tableau_proves(TABLEAU_K, Formula[],
+                Implies(And(And(p, q), Diamond(And(p, q))), Diamond(p)))
+            @test tableau_proves(TABLEAU_K, [And(q, p), Diamond(And(q, p))], Diamond(q))
+        end
+
+        @testset "C3: σ T ⊥ closes a branch" begin
+            @test tableau_proves(TABLEAU_K, Formula[], Implies(Bottom(), p))
+            @test !tableau_consistent(TABLEAU_K, Formula[Bottom()])
+            @test !tableau_consistent(TABLEAU_K, Formula[Diamond(Bottom())])
+        end
+
+        @testset "C4: enumeration overflow guards" begin
+            big_or = reduce(Or, [Atom(Symbol("p", i)) for i in 1:64])
+            frame = KripkeFrame([:w1], Pair{Symbol,Symbol}[])
+            @test_throws ArgumentError is_valid_on_frame(frame, big_or)
+            @test_throws ArgumentError is_tautology(big_or)
+            # ≥63 subformulas → naive min(2^n, 4) wraps to a non-positive
+            # bound and a vacuous "valid"; must give bound=4 and valid=false
+            deep = foldl((f, _) -> Not(f), 1:63; init=p)  # ≡ ¬p, 64 subformulas
+            result = is_decidable_within(SYSTEM_K, deep)
+            @test result.bound == 4
+            @test !result.valid
+        end
+
+        @testset "C5: common knowledge is the transitive closure (Def 15.6)" begin
+            # Non-reflexive frame: w1 → w2, w2 → w2; p true only at w2.
+            # w1 is not reachable from itself, so C_G p holds at w1.
+            f = EpistemicFrame([:w1, :w2], [:a => [:w1 => :w2, :w2 => :w2]])
+            m = EpistemicModel(f, [:p => [:w2]])
+            @test common_knowledge(m, :w1, [:a], p)
+            # On a reflexive frame the old and new readings coincide
+            fr = EpistemicFrame([:w1, :w2],
+                [:a => [:w1 => :w1, :w1 => :w2, :w2 => :w2]])
+            mr = EpistemicModel(fr, [:p => [:w2]])
+            @test !common_knowledge(mr, :w1, [:a], p)
+        end
+
+        @testset "C6: unsupported temporal operators throw" begin
+            # p → 𝐆(𝐏p) is Kt-valid; silently treating 𝐏 as an atom made it
+            # unprovable — now it must throw instead
+            @test_throws ArgumentError tableau_proves(TABLEAU_KDt, Formula[],
+                Implies(p, FutureBox(PastDiamond(p))))
+            @test_throws ArgumentError tableau_consistent(TABLEAU_KDt,
+                Formula[Until(p, q)])
+            @test_throws ArgumentError tableau_consistent(TABLEAU_KDt,
+                Formula[Since(p, q)])
+            # the future fragment still works
+            @test tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureBox(p), p))
+        end
+
+        @testset "Until/Since endpoints follow ≺ (no exemption)" begin
+            # Reflexive frame {w1≺w1, w1≺w2, w2≺w2}, b at w2, c nowhere:
+            # s = w1 and s = w2 are in the ∀-range, c fails there → Until false
+            fr = KripkeFrame([:w1, :w2], [:w1 => :w1, :w1 => :w2, :w2 => :w2])
+            m = TemporalModel(fr, [:b => [:w2]])
+            @test !satisfies(m, :w1, Until(Atom(:b), Atom(:c)))
+            # Irreflexive frame w1≺w2: no strictly-between worlds → Until true
+            fi = KripkeFrame([:w1, :w2], [:w1 => :w2])
+            mi = TemporalModel(fi, [:b => [:w2]])
+            @test satisfies(mi, :w1, Until(Atom(:b), Atom(:c)))
+            # Since mirror: reflexive, b at w1, c nowhere → false at w2
+            ms = TemporalModel(fr, [:b => [:w1]])
+            @test !satisfies(ms, :w2, Since(Atom(:b), Atom(:c)))
+        end
+    end
 
 end

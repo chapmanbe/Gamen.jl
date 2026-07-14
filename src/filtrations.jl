@@ -453,12 +453,15 @@ over finite models up to a size bound determined by the formula's subformulas.
 By Proposition 5.12, any filtration has at most 2^n worlds where n = |Γ|.
 For K and S5 (which have the finite model property), this gives decidability.
 
-Returns `(valid=Bool, worlds_checked=Int)`.
+Returns `(valid=Bool, bound=Int, subformula_count=Int)`.
 """
 function is_decidable_within(system::ModalSystem, formula::Formula; max_worlds=nothing)
     Γ = subformulas(formula)
     n = length(Γ)
-    bound = max_worlds === nothing ? min(2^n, 4) : max_worlds
+    # min(2^n, 4) written naively overflows Int64 at n ≥ 63, giving a
+    # non-positive bound and a vacuous "valid" verdict (issue #10); the
+    # cap is 4 for any n ≥ 2, so never compute 2^n for large n.
+    bound = max_worlds === nothing ? (n >= 2 ? 4 : 2^n) : max_worlds
 
     valid = is_entailed_by(system, Formula[], formula; max_worlds=bound)
     (valid=valid, bound=bound, subformula_count=n)

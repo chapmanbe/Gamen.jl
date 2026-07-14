@@ -252,13 +252,21 @@ Check whether `formula` is common knowledge among `group` at `world`.
 C_G A holds at w iff A holds at every world reachable via the transitive
 closure of ⋃_{b∈G} R_b (Definition 15.6, B&D).
 
-Computed by BFS/DFS over the union of agent accessibility relations.
+Computed by BFS over the union of agent accessibility relations. Per
+Definition 15.6 this is the *transitive* closure (one or more steps), so
+`world` itself is included only if it is reachable from itself. On reflexive
+frames — the standard setting, since knowledge is veridical — this coincides
+with the reflexive-transitive closure (issue #10).
 """
 function common_knowledge(model::EpistemicModel, world::Symbol,
                           group::Vector{Symbol}, formula::Formula)
-    # Collect all worlds reachable via transitive closure of union of R_a for a ∈ group
+    # Seed with the immediate successors of `world`, not `world` itself:
+    # visited = worlds reachable in ≥ 1 step (transitive closure).
     visited = Set{Symbol}()
-    queue = Symbol[world]
+    queue = Symbol[]
+    for agent in group
+        append!(queue, accessible(model.frame, agent, world))
+    end
     while !isempty(queue)
         w = popfirst!(queue)
         w in visited && continue

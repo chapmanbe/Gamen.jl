@@ -203,7 +203,14 @@ function is_valid_on_frame(frame::KripkeFrame, formula::Formula)
     # Each variable can map to any subset of worlds.
     # We iterate over all combinations using a bit vector per variable.
     n_worlds = length(worlds)
-    n_valuations = (1 << n_worlds) ^ length(vars)
+    total_bits = n_worlds * length(vars)
+    # Guard: (1 << n_worlds)^n_vars overflows Int64 at 63 bits, silently
+    # yielding an empty loop — i.e. "valid" for every formula (issue #10).
+    # Enumeration at that size is infeasible regardless, so refuse loudly.
+    total_bits >= 62 && throw(ArgumentError(
+        "is_valid_on_frame would enumerate 2^$total_bits valuations " *
+        "($n_worlds worlds × $(length(vars)) atoms); this is infeasible"))
+    n_valuations = 1 << total_bits
 
     for i in 0:(n_valuations - 1)
         val = Dict{Atom,Set{Symbol}}()
