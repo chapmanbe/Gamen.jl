@@ -392,30 +392,49 @@ end
 Base.show(io::IO, s::EpistemicSystem) = print(io, s.name)
 
 """
+    EpistemicSystem(name, ms::ModalSystem) -> EpistemicSystem
+
+Derive an epistemic system's frame conditions from a `ModalSystem`: each
+axiom schema contributes its [`frame_predicate`](@ref) (the Sahlqvist table,
+BdRV Ch.3), named by stripping the predicate's `is_` prefix (e.g.
+`SchemaT` → `:reflexive => is_reflexive`). Keeps the epistemic constants
+below in lockstep with the schema table instead of hand-copying it.
+"""
+function EpistemicSystem(name::AbstractString, ms::ModalSystem)
+    conditions = Pair{Symbol,Function}[]
+    for schema in ms.schemas
+        pred = frame_predicate(schema)
+        pred === nothing && continue
+        push!(conditions, Symbol(chopprefix(String(nameof(pred)), "is_")) => pred)
+    end
+    EpistemicSystem(name, conditions)
+end
+
+"""
     EPISTEMIC_K
 
 The minimal epistemic system K (just the K axiom / closure principle).
-The accessibility relations are unconstrained.
+The accessibility relations are unconstrained. Derived from
+[`SYSTEM_K`](@ref).
 """
-const EPISTEMIC_K = EpistemicSystem("Epistemic K", Pair{Symbol,Function}[])
+const EPISTEMIC_K = EpistemicSystem("Epistemic K", SYSTEM_K)
 
 """
     EPISTEMIC_KT
 
 Knowledge system KT: K + Veridicality (K_a A → A).
 Requires each agent's accessibility relation to be reflexive.
+Derived from [`SYSTEM_KT`](@ref).
 """
-const EPISTEMIC_KT = EpistemicSystem("Epistemic KT",
-    [:reflexive => is_reflexive])
+const EPISTEMIC_KT = EpistemicSystem("Epistemic KT", SYSTEM_KT)
 
 """
     EPISTEMIC_S4
 
 Knowledge system S4: K + Veridicality + Positive Introspection (K_a A → K_a K_a A).
-Requires reflexivity + transitivity.
+Requires reflexivity + transitivity. Derived from [`SYSTEM_S4`](@ref).
 """
-const EPISTEMIC_S4 = EpistemicSystem("Epistemic S4",
-    [:reflexive => is_reflexive, :transitive => is_transitive])
+const EPISTEMIC_S4 = EpistemicSystem("Epistemic S4", SYSTEM_S4)
 
 """
     EPISTEMIC_S5
@@ -423,10 +442,13 @@ const EPISTEMIC_S4 = EpistemicSystem("Epistemic S4",
 Full knowledge system S5: K + Veridicality + Negative Introspection (¬K_a A → K_a ¬K_a A).
 Requires each agent's relation to be an equivalence relation (reflexive +
 transitive + euclidean). Epistemic logics typically use S5 (Table 15.1, B&D).
+
+Derived from the KT45 presentation of S5 (T + 4 + 5 — deductively equivalent
+to [`SYSTEM_S5`](@ref)'s KT5, spelled out so the condition list matches
+Table 15.1's reflexive + transitive + euclidean reading exactly).
 """
 const EPISTEMIC_S5 = EpistemicSystem("Epistemic S5",
-    [:reflexive => is_reflexive, :transitive => is_transitive,
-     :euclidean => is_euclidean])
+    ModalSystem("S5", [SchemaK(), SchemaDual(), SchemaT(), Schema4(), Schema5()]))
 
 """
     agent_frame(frame::EpistemicFrame, agent::Symbol) -> KripkeFrame
