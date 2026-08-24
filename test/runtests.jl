@@ -1662,6 +1662,68 @@ end
             @test !tableau_proves(TABLEAU_K, Formula[], Implies(Box(p), p))
         end
 
+        @testset "Option A: TABLEAU_* derived from ModalSystem (plans/tableau-parametrization.md)" begin
+            p = Atom(:p)
+            B = Gamen.BoundRule
+            BP = Gamen.BASE_PAIR
+            TP = Gamen.TEMPORAL_PAIR
+
+            # Derived rule lists match the former hand-built constants
+            # function-for-function — §C1-style drift (a constant disagreeing
+            # with its schemas' rules) is now structurally impossible
+            @test TABLEAU_K.used_prefix_rules == Function[]
+            @test TABLEAU_K.witness_rules == Function[]
+            @test TABLEAU_KT.used_prefix_rules ==
+                Function[B(Gamen.apply_T_box_rule, BP), B(Gamen.apply_T_diamond_rule, BP)]
+            @test TABLEAU_KD.used_prefix_rules == Function[]
+            @test TABLEAU_KD.witness_rules ==
+                Function[B(Gamen.apply_D_box_rule, BP), B(Gamen.apply_D_diamond_rule, BP)]
+            @test TABLEAU_KB.used_prefix_rules ==
+                Function[B(Gamen.apply_B_box_rule, BP), B(Gamen.apply_B_diamond_rule, BP)]
+            @test TABLEAU_K4.used_prefix_rules ==
+                Function[B(Gamen.apply_4_box_rule, BP), B(Gamen.apply_4_diamond_rule, BP)]
+            @test TABLEAU_S4.used_prefix_rules ==
+                Function[B(Gamen.apply_T_box_rule, BP), B(Gamen.apply_T_diamond_rule, BP),
+                         B(Gamen.apply_4_box_rule, BP), B(Gamen.apply_4_diamond_rule, BP)]
+            # S5 tableau = Table 6.4's KTB45 presentation (deductively ≡ KT5)
+            @test TABLEAU_S5.used_prefix_rules ==
+                Function[B(Gamen.apply_T_box_rule, BP),  B(Gamen.apply_T_diamond_rule, BP),
+                         B(Gamen.apply_B_box_rule, BP),  B(Gamen.apply_B_diamond_rule, BP),
+                         B(Gamen.apply_4_box_rule, BP),  B(Gamen.apply_4_diamond_rule, BP),
+                         B(Gamen.apply_4T_box_rule, BP), B(Gamen.apply_4T_diamond_rule, BP)]
+
+            # uses_blocking derives from Schema4 (the settled 852c392 criterion)
+            @test TableauSystem(SYSTEM_K4).uses_blocking
+            @test !TableauSystem(SYSTEM_KT).uses_blocking
+
+            # schemas metadata retained — single source for any future
+            # per-system frame lookup (e.g. countermodel frame closure)
+            @test TABLEAU_S4.schemas == SYSTEM_S4.schemas
+            @test isempty(TABLEAU_KDt.schemas)  # hand-assembled, no B&D temporal schemas
+
+            # Operator pairs as data
+            @test TABLEAU_K.operator_pairs == [BP]
+            @test TABLEAU_KDt.operator_pairs == [BP, TP]
+
+            # Rules are generic over the pair: the D rule constructs the
+            # pair's own diamond, not a hardcoded ◇
+            root = Prefix([1])
+            gp = pf_true(root, FutureBox(p))
+            r = Gamen.apply_D_box_rule(gp, TableauBranch([gp]), TP)
+            @test r isa Gamen.StackRule && r.additions == [pf_true(root, FutureDiamond(p))]
+
+            # §3 behavior change: operators outside the system's declared
+            # pairs are rejected up front, not silently treated as atoms
+            @test_throws ArgumentError tableau_proves(TABLEAU_K, Formula[],
+                Implies(FutureBox(p), p))              # 𝐆 fed to plain K
+            @test_throws ArgumentError tableau_consistent(TABLEAU_K,
+                Formula[Knowledge(:a, p)])             # no epistemic pair exists
+            @test_throws ArgumentError tableau_consistent(TABLEAU_S5,
+                Formula[Box(FutureDiamond(p))])        # nested occurrences caught too
+            # …while KDt still accepts both of its pairs
+            @test tableau_proves(TABLEAU_KDt, Formula[], Implies(FutureBox(p), p))
+        end
+
     end  # Chapter 6
 
     # ──────────────────────────────────────────────────────────────────
@@ -2265,6 +2327,20 @@ end
             @test af isa KripkeFrame && is_equivalence_relation(af)
             delete!(af.relation[:w1], :w2)  # mutating the copy…
             @test ef5.relations[:a][:w1] == Set([:w1, :w2])  # …not the original
+        end
+
+        @testset "EPISTEMIC_* condition lists derive from the Sahlqvist table" begin
+            # conditions are frame_predicate.(schemas), not a hand copy
+            @test isempty(EPISTEMIC_K.conditions)
+            @test EPISTEMIC_KT.conditions == [:reflexive => is_reflexive]
+            @test EPISTEMIC_S4.conditions ==
+                [:reflexive => is_reflexive, :transitive => is_transitive]
+            # S5 uses the KT45 presentation → Table 15.1's equivalence-relation reading
+            @test EPISTEMIC_S5.conditions ==
+                [:reflexive => is_reflexive, :transitive => is_transitive,
+                 :euclidean => is_euclidean]
+            # the derivation constructor mirrors frame_predicate exactly
+            @test EpistemicSystem("derived", SYSTEM_S4).conditions == EPISTEMIC_S4.conditions
         end
 
         @testset "A2: temporal predicates are aliases of the Ch. 2 originals" begin

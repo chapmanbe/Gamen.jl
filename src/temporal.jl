@@ -205,165 +205,22 @@ function satisfies(model::TemporalModel, t::Symbol, f::Until)
     false
 end
 
-# ── Temporal tableau rules ──
+# ── Temporal operator pair ──
 #
-# These follow the same pattern as the modal rules in tableaux.jl (Table 6.2–6.3, B&D).
 # FutureBox (𝐆) and FutureDiamond (𝐅) use the same prefix tree as Box/Diamond —
 # in Phase 1, temporal and deontic accessibility share a single relation.
-
-# ── Base temporal rules (analogous to □/◇ rules for K, Table 6.2) ──
-
-"""
-    apply_futurebox_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
-
-𝐆T rule: σ T 𝐆A → σ.n T A, for each used child prefix σ.n on the branch.
-Analogous to `apply_box_true_rule` for □.
-"""
-function apply_futurebox_true_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa FutureBox || return NoRule()
-    σ = pf.prefix
-    A = pf.formula.operand
-    used = used_prefixes(branch)
-
-    additions = PrefixedFormula[]
-    for τ in used
-        τ == σ && continue
-        is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
-        is_child || continue
-        new_pf = pf_true(τ, A)
-        new_pf ∉ branch.formulas && push!(additions, new_pf)
-    end
-
-    isempty(additions) ? NoRule() : StackRule(additions)
-end
+# The tableau rules for 𝐆/𝐅 are the generic operator-pair rules from
+# tableaux.jl (Table 6.2–6.3, B&D) instantiated at TEMPORAL_PAIR — the eight
+# verbatim rule copies this file used to carry are gone (review §A2).
 
 """
-    apply_futurebox_false_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    TEMPORAL_PAIR
 
-𝐆F rule: σ F 𝐆A → σ.n F A, for a new prefix σ.n not on the branch.
-Analogous to `apply_box_false_rule` for □.
+The temporal `OperatorPair`: 𝐆 (`FutureBox`) as the universal operator, 𝐅
+(`FutureDiamond`) as its existential dual. Declared by `TABLEAU_KDt` so the
+generic □/◇ tableau rules also serve the temporal operators.
 """
-function apply_futurebox_false_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa FutureBox || return NoRule()
-    σ = pf.prefix
-    A = pf.formula.operand
-    _has_witness(branch, σ, F_SIGN, A) && return NoRule()
-    τ = fresh_prefix(branch, σ)
-    StackRule([pf_false(τ, A)])
-end
-
-"""
-    apply_futurediamond_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
-
-𝐅T rule: σ T 𝐅A → σ.n T A, for a new prefix σ.n not on the branch.
-Analogous to `apply_diamond_true_rule` for ◇.
-"""
-function apply_futurediamond_true_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa FutureDiamond || return NoRule()
-    σ = pf.prefix
-    A = pf.formula.operand
-    _has_witness(branch, σ, T_SIGN, A) && return NoRule()
-    τ = fresh_prefix(branch, σ)
-    StackRule([pf_true(τ, A)])
-end
-
-"""
-    apply_futurediamond_false_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
-
-𝐅F rule: σ F 𝐅A → σ.n F A, for each used child prefix σ.n on the branch.
-Analogous to `apply_diamond_false_rule` for ◇.
-"""
-function apply_futurediamond_false_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa FutureDiamond || return NoRule()
-    σ = pf.prefix
-    A = pf.formula.operand
-    used = used_prefixes(branch)
-
-    additions = PrefixedFormula[]
-    for τ in used
-        τ == σ && continue
-        is_child = length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
-        is_child || continue
-        new_pf = pf_false(τ, A)
-        new_pf ∉ branch.formulas && push!(additions, new_pf)
-    end
-
-    isempty(additions) ? NoRule() : StackRule(additions)
-end
-
-# ── Temporal frame condition rules ──
-
-"""
-    apply_temporal_T_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
-
-Temporal T𝐆 rule (reflexive temporal frames): σ T 𝐆A → σ T A.
-Analogous to `apply_T_box_rule` for □.
-"""
-function apply_temporal_T_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa FutureBox || return NoRule()
-    σ = pf.prefix
-    A = pf.formula.operand
-    new_pf = pf_true(σ, A)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
-end
-
-"""
-    apply_temporal_T_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
-
-Temporal T𝐅 rule (reflexive temporal frames): σ F 𝐅A → σ F A.
-Analogous to `apply_T_diamond_rule` for ◇.
-"""
-function apply_temporal_T_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa FutureDiamond || return NoRule()
-    σ = pf.prefix
-    A = pf.formula.operand
-    new_pf = pf_false(σ, A)
-    new_pf ∈ branch.formulas ? NoRule() : StackRule([new_pf])
-end
-
-"""
-    apply_temporal_4_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
-
-Temporal 4𝐆 rule (transitive temporal frames): σ T 𝐆A → σ.n T 𝐆A, for each used child σ.n.
-Analogous to `apply_4_box_rule` for □.
-"""
-function apply_temporal_4_futurebox_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa FutureBox || return NoRule()
-    σ = pf.prefix
-    used = used_prefixes(branch)
-
-    additions = PrefixedFormula[]
-    for τ in used
-        if length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
-            new_pf = pf_true(τ, pf.formula)
-            new_pf ∉ branch.formulas && push!(additions, new_pf)
-        end
-    end
-
-    isempty(additions) ? NoRule() : StackRule(additions)
-end
-
-"""
-    apply_temporal_4_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
-
-Temporal 4𝐅 rule (transitive temporal frames): σ F 𝐅A → σ.n F 𝐅A, for each used child σ.n.
-Analogous to `apply_4_diamond_rule` for ◇.
-"""
-function apply_temporal_4_futurediamond_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa FutureDiamond || return NoRule()
-    σ = pf.prefix
-    used = used_prefixes(branch)
-
-    additions = PrefixedFormula[]
-    for τ in used
-        if length(τ.seq) == length(σ.seq) + 1 && τ.seq[1:end-1] == σ.seq
-            new_pf = pf_false(τ, pf.formula)
-            new_pf ∉ branch.formulas && push!(additions, new_pf)
-        end
-    end
-
-    isempty(additions) ? NoRule() : StackRule(additions)
-end
+const TEMPORAL_PAIR = OperatorPair(FutureBox, FutureDiamond)
 
 # ── Combined deontic-temporal tableau system ──
 
@@ -378,24 +235,32 @@ In Phase 1, deontic and temporal accessibility share a single relation.
 Multi-relational prefixes (distinguishing R_d from R_t) are deferred to Phase 2.
 
 ⚠️ **Unsourced rules**: B&D presents no tableau rules for temporal logic. The
-𝐆/𝐅 rules here were constructed by analogy to □/◇ (treating ≺ as a
-future-facing accessibility relation) and have no published source yet. No
-rules exist for 𝐇, 𝐏, `Since`, or `Until` — formulas containing them throw
-`ArgumentError` rather than being silently treated as atoms. Extending the
-temporal tableau is quarantined until a published rule set is adopted
-(issue #10).
+𝐆/𝐅 rules here are the □/◇ rules instantiated at `TEMPORAL_PAIR` by analogy
+(treating ≺ as a future-facing accessibility relation) and have no published
+source yet. No rules exist for 𝐇, 𝐏, `Since`, or `Until` — formulas
+containing them throw `ArgumentError` rather than being silently treated as
+atoms. Extending the temporal tableau is quarantined until a published rule
+set is adopted (issue #10).
+
+Hand-assembled rather than derived from a `ModalSystem` — B&D provides no
+temporal axiom schema objects, so `.schemas` is empty and both the rule
+bindings and `uses_blocking` are declared explicitly.
 """
 const TABLEAU_KDt = TableauSystem(:KDt,
     Function[
         # Temporal reflexivity (T axiom for time): 𝐆A → A
-        apply_temporal_T_futurebox_rule, apply_temporal_T_futurediamond_rule,
+        BoundRule(apply_T_box_rule, TEMPORAL_PAIR),
+        BoundRule(apply_T_diamond_rule, TEMPORAL_PAIR),
         # Temporal transitivity (4 axiom for time): 𝐆A → 𝐆𝐆A
-        apply_temporal_4_futurebox_rule, apply_temporal_4_futurediamond_rule,
+        BoundRule(apply_4_box_rule, TEMPORAL_PAIR),
+        BoundRule(apply_4_diamond_rule, TEMPORAL_PAIR),
     ],
     Function[
         # Deontic seriality (D axiom): □A → ◇A
-        apply_D_box_rule, apply_D_diamond_rule,
+        BoundRule(apply_D_box_rule, BASE_PAIR),
+        BoundRule(apply_D_diamond_rule, BASE_PAIR),
     ];
+    operator_pairs=[BASE_PAIR, TEMPORAL_PAIR],
     uses_blocking=true  # temporal transitivity (𝐆/𝐅) can re-inject unstripped
                         # boxed formulas into descendant worlds indefinitely
 )

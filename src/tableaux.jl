@@ -12,7 +12,12 @@
 #   PrefixedFormula — a formula tagged with a prefix and sign: T 1: □p
 #   TableauBranch   — a single branch: list of prefixed formulas + closure status
 #   Tableau         — the full proof tree: a list of branches
-#   TableauSystem   — configuration: name + expansion rules + witness rules
+#   TableauSystem   — configuration: name + operator pairs + expansion rules
+#                     + witness rules; standard systems are derived from
+#                     their ModalSystem via the Sahlqvist table
+#   OperatorPair    — the (box, diamond) operator types a rule set serves;
+#                     rules are generic over the pair, so 𝐆/𝐅 reuse the □/◇
+#                     rule bodies instead of duplicating them
 #
 # Expansion algorithm (_apply_all_rules):
 #   Priority 0: propositional rules (no branching or world creation)
@@ -291,6 +296,47 @@ struct SplitRule    <: RuleResult       # branches into two
     right::Vector{PrefixedFormula}
 end
 
+# ── Operator pairs ──
+
+"""
+    OperatorPair
+
+A dual pair of modal operators the tableau rules are generic over: `box` is
+the universal operator's type, `diamond` its existential dual. The base pair
+is (□, ◇); `TABLEAU_KDt` adds the temporal pair (𝐆, 𝐅). Internal — not
+exported until a second consumer (e.g. an epistemic tableau) exists.
+
+Each modal rule below takes a pair as its third argument (defaulting to
+`BASE_PAIR`) and reads the operator types from it, so one rule body serves
+every operator family. See `plans/tableau-parametrization.md`.
+"""
+struct OperatorPair
+    box::DataType       # e.g. Box, FutureBox — the universal operator
+    diamond::DataType   # e.g. Diamond, FutureDiamond — its existential dual
+end
+
+const BASE_PAIR = OperatorPair(Box, Diamond)
+
+"""
+    BoundRule <: Function
+
+A tableau rule partially applied to an `OperatorPair`: calling
+`BoundRule(rule, pair)(pf, branch)` runs `rule(pf, branch, pair)`. Used by
+`TableauSystem` construction so `used_prefix_rules`/`witness_rules` keep
+their two-argument calling convention. A struct rather than an anonymous
+closure so two identical bindings compare `==` — the derived-vs-hand-built
+equivalence tests depend on that.
+"""
+struct BoundRule <: Function
+    rule::Function
+    pair::OperatorPair
+end
+
+(br::BoundRule)(pf::PrefixedFormula, branch::TableauBranch) = br.rule(pf, branch, br.pair)
+
+Base.show(io::IO, br::BoundRule) = print(io, nameof(br.rule), "[", nameof(br.pair.box), "]")
+Base.show(io::IO, ::MIME"text/plain", br::BoundRule) = show(io, br)
+
 # ── Propositional rules (Table 6.1) ──
 
 """
@@ -366,14 +412,18 @@ end
 # ── Modal rules for K (Table 6.2) ──
 
 """
-    apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_box_true_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 □T rule for K: σ T □A → σ.n T A, for each used child prefix σ.n on the branch.
 Only applies to `σ T □A`. Returns a `StackRule` with all applicable conclusions,
 or `NoRule()` if no used child prefix σ.n exists yet (Table 6.2, B&D).
+
+Generic over the operator pair: `pair.box` plays □ (e.g. 𝐆 for the temporal
+pair), and likewise for every modal rule below.
 """
-function apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa Box || return NoRule()
+function apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch,
+                             pair::OperatorPair=BASE_PAIR)
+    pf.sign isa TrueSign && pf.formula isa pair.box || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
     used = used_prefixes(branch)
@@ -391,13 +441,14 @@ function apply_box_true_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_box_false_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_box_false_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 □F rule for K: σ F □A → σ.n F A, for a new prefix σ.n not on the branch.
 Only applies to `σ F □A` (Table 6.2, B&D).
 """
-function apply_box_false_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa Box || return NoRule()
+function apply_box_false_rule(pf::PrefixedFormula, branch::TableauBranch,
+                              pair::OperatorPair=BASE_PAIR)
+    pf.sign isa FalseSign && pf.formula isa pair.box || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
     _has_witness(branch, σ, F_SIGN, A) && return NoRule()
@@ -406,13 +457,14 @@ function apply_box_false_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_diamond_true_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 ◇T rule for K: σ T ◇A → σ.n T A, for a new prefix σ.n not on the branch.
 Only applies to `σ T ◇A` (Table 6.2, B&D).
 """
-function apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa Diamond || return NoRule()
+function apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch,
+                                 pair::OperatorPair=BASE_PAIR)
+    pf.sign isa TrueSign && pf.formula isa pair.diamond || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
     _has_witness(branch, σ, T_SIGN, A) && return NoRule()
@@ -421,13 +473,14 @@ function apply_diamond_true_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_diamond_false_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 ◇F rule for K: σ F ◇A → σ.n F A, for each used child prefix σ.n on the branch.
 Only applies to `σ F ◇A` (Table 6.2, B&D).
 """
-function apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa Diamond || return NoRule()
+function apply_diamond_false_rule(pf::PrefixedFormula, branch::TableauBranch,
+                                  pair::OperatorPair=BASE_PAIR)
+    pf.sign isa FalseSign && pf.formula isa pair.diamond || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
     used = used_prefixes(branch)
@@ -447,13 +500,14 @@ end
 # ── Additional rules for extended systems (Table 6.3) ──
 
 """
-    apply_T_box_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_T_box_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 T□ rule (reflexive models): σ T □A → σ T A.
 Adds σ T A directly (reflexivity: Rσσ) (Table 6.3, B&D).
 """
-function apply_T_box_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa Box || return NoRule()
+function apply_T_box_rule(pf::PrefixedFormula, branch::TableauBranch,
+                          pair::OperatorPair=BASE_PAIR)
+    pf.sign isa TrueSign && pf.formula isa pair.box || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
     new_pf = pf_true(σ, A)
@@ -461,12 +515,13 @@ function apply_T_box_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_T_diamond_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 T◇ rule (reflexive models): σ F ◇A → σ F A.
 """
-function apply_T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa Diamond || return NoRule()
+function apply_T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch,
+                              pair::OperatorPair=BASE_PAIR)
+    pf.sign isa FalseSign && pf.formula isa pair.diamond || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
     new_pf = pf_false(σ, A)
@@ -474,38 +529,41 @@ function apply_T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_D_box_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_D_box_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 D□ rule (serial models): σ T □A → σ T ◇A.
 """
-function apply_D_box_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa Box || return NoRule()
+function apply_D_box_rule(pf::PrefixedFormula, branch::TableauBranch,
+                          pair::OperatorPair=BASE_PAIR)
+    pf.sign isa TrueSign && pf.formula isa pair.box || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
-    new_pf = pf_true(σ, Diamond(A))
+    new_pf = pf_true(σ, pair.diamond(A))
     new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
-    apply_D_diamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_D_diamond_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 D◇ rule (serial models): σ F ◇A → σ F □A.
 """
-function apply_D_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa Diamond || return NoRule()
+function apply_D_diamond_rule(pf::PrefixedFormula, branch::TableauBranch,
+                              pair::OperatorPair=BASE_PAIR)
+    pf.sign isa FalseSign && pf.formula isa pair.diamond || return NoRule()
     σ = pf.prefix
     A = pf.formula.operand
-    new_pf = pf_false(σ, Box(A))
+    new_pf = pf_false(σ, pair.box(A))
     new_pf ∈ branch.formula_set ? NoRule() : StackRule([new_pf])
 end
 
 """
-    apply_B_box_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_B_box_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 B□ rule (symmetric models): σ.n T □A → σ T A (σ = parent of σ.n).
 """
-function apply_B_box_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa Box || return NoRule()
+function apply_B_box_rule(pf::PrefixedFormula, branch::TableauBranch,
+                          pair::OperatorPair=BASE_PAIR)
+    pf.sign isa TrueSign && pf.formula isa pair.box || return NoRule()
     length(pf.prefix.seq) < 2 && return NoRule()
     σ_n = pf.prefix
     σ = parent_prefix(σ_n)
@@ -515,12 +573,13 @@ function apply_B_box_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_B_diamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_B_diamond_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 B◇ rule (symmetric models): σ.n F ◇A → σ F A.
 """
-function apply_B_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa Diamond || return NoRule()
+function apply_B_diamond_rule(pf::PrefixedFormula, branch::TableauBranch,
+                              pair::OperatorPair=BASE_PAIR)
+    pf.sign isa FalseSign && pf.formula isa pair.diamond || return NoRule()
     length(pf.prefix.seq) < 2 && return NoRule()
     σ_n = pf.prefix
     σ = parent_prefix(σ_n)
@@ -530,12 +589,13 @@ function apply_B_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_4_box_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_4_box_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 4□ rule (transitive models): σ T □A → σ.n T □A, for each used prefix σ.n.
 """
-function apply_4_box_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa Box || return NoRule()
+function apply_4_box_rule(pf::PrefixedFormula, branch::TableauBranch,
+                          pair::OperatorPair=BASE_PAIR)
+    pf.sign isa TrueSign && pf.formula isa pair.box || return NoRule()
     σ = pf.prefix
     used = used_prefixes(branch)
 
@@ -551,13 +611,14 @@ function apply_4_box_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_4_diamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_4_diamond_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 4◇ rule (transitive models): σ F ◇A → σ.n F ◇A, for each used prefix σ.n.
 Symmetric counterpart to 4□ (Table 6.3, B&D).
 """
-function apply_4_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa Diamond || return NoRule()
+function apply_4_diamond_rule(pf::PrefixedFormula, branch::TableauBranch,
+                              pair::OperatorPair=BASE_PAIR)
+    pf.sign isa FalseSign && pf.formula isa pair.diamond || return NoRule()
     σ = pf.prefix
     used = used_prefixes(branch)
 
@@ -573,12 +634,13 @@ function apply_4_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_4T_box_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_4T_box_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 4T□ rule (euclidean models): σ.n T □A → σ T □A.
 """
-function apply_4T_box_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa TrueSign && pf.formula isa Box || return NoRule()
+function apply_4T_box_rule(pf::PrefixedFormula, branch::TableauBranch,
+                           pair::OperatorPair=BASE_PAIR)
+    pf.sign isa TrueSign && pf.formula isa pair.box || return NoRule()
     length(pf.prefix.seq) < 2 && return NoRule()
     σ_n = pf.prefix
     σ = parent_prefix(σ_n)
@@ -587,12 +649,13 @@ function apply_4T_box_rule(pf::PrefixedFormula, branch::TableauBranch)
 end
 
 """
-    apply_4T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch) -> RuleResult
+    apply_4T_diamond_rule(pf, branch, pair=BASE_PAIR) -> RuleResult
 
 4T◇ rule (euclidean models): σ.n F ◇A → σ.m F ◇A for used σ.m.
 """
-function apply_4T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch)
-    pf.sign isa FalseSign && pf.formula isa Diamond || return NoRule()
+function apply_4T_diamond_rule(pf::PrefixedFormula, branch::TableauBranch,
+                               pair::OperatorPair=BASE_PAIR)
+    pf.sign isa FalseSign && pf.formula isa pair.diamond || return NoRule()
     length(pf.prefix.seq) < 2 && return NoRule()
     σ_n = pf.prefix
     σ = parent_prefix(σ_n)
@@ -607,7 +670,9 @@ end
 
 Return the used-prefix tableau rules corresponding to `schema` (BdRV Ch.3
 Sahlqvist correspondence, B&D Table 6.3). These rules fire on formulas
-whose prefix is already on the branch (no new world created).
+whose prefix is already on the branch (no new world created). Each rule is
+generic over an `OperatorPair` (third argument, default □/◇); system
+construction binds the pair via `BoundRule`.
 
 - SchemaT → T□, T◇   (reflexivity: σ T □A → σ T A)
 - SchemaB → B□, B◇   (symmetry:   σ.n T □A → σ T A)
@@ -647,8 +712,13 @@ condition.
 
 Fields:
 - `name`: display name (Symbol)
+- `operator_pairs`: the `OperatorPair`s this system has rules for. The base
+  □/◇ rules fire for each declared pair; a modal operator whose type appears
+  in no pair is *unsupported* and rejected by `build_tableau` rather than
+  silently treated as an atom.
 - `used_prefix_rules`: rules that fire on existing prefixes (reflexivity,
-  symmetry, transitivity, euclideanness — T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇)
+  symmetry, transitivity, euclideanness — T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇),
+  each bound to its operator pair via `BoundRule`
 - `witness_rules`: rules that create new prefixes to ensure a successor
   exists (seriality — D□/D◇)
 - `uses_blocking`: whether ancestor-equality blocking (loop-checking) applies
@@ -657,89 +727,133 @@ Fields:
   and the temporal analogue) — that is the only shape of rule that can force
   unbounded world creation. See Goré (1999), *Tableau Methods for Modal and
   Temporal Logics*, in *Handbook of Tableau Methods*, §6.6.
+- `schemas`: the `AxiomSchema`s this system was derived from (empty for
+  hand-assembled systems like `TABLEAU_KDt`). Metadata carried so that any
+  future per-system frame lookup (e.g. closing an extracted countermodel's
+  frame into the system's frame class) derives from the Sahlqvist table
+  instead of a second hand-maintained encoding.
 
-To define a new system, supply the appropriate rule vectors. No changes
-to the tableau engine are required.
+Prefer deriving a system from a `ModalSystem` via
+`TableauSystem(ms::ModalSystem)` over hand-assembling rule vectors — the
+standard constants below are all derivations, which makes drift between a
+system's axioms and its rules structurally impossible (the KB unsoundness of
+issue #10 was exactly such drift).
 """
 struct TableauSystem
     name::Symbol
+    operator_pairs::Vector{OperatorPair}
     used_prefix_rules::Vector{Function}
     witness_rules::Vector{Function}
     uses_blocking::Bool
+    schemas::Vector{AxiomSchema}
 end
 
-TableauSystem(name, used_prefix_rules, witness_rules; uses_blocking=false) =
-    TableauSystem(name, used_prefix_rules, witness_rules, uses_blocking)
+TableauSystem(name, used_prefix_rules, witness_rules;
+              uses_blocking=false, operator_pairs=[BASE_PAIR], schemas=AxiomSchema[]) =
+    TableauSystem(name, operator_pairs, used_prefix_rules, witness_rules,
+                  uses_blocking, schemas)
+
+"""
+    TableauSystem(ms::ModalSystem; operator_pairs=[BASE_PAIR]) -> TableauSystem
+
+Derive a tableau system from a Hilbert-style `ModalSystem`: each of the
+system's axiom schemas contributes its rules via [`tableau_rules`](@ref) /
+[`tableau_witness_rules`](@ref) (the Sahlqvist correspondence, BdRV Ch.3),
+bound to each operator pair. `uses_blocking` is set iff the schema set
+contains `Schema4` — transitivity's 4□/4◇ are the only rule shape that
+re-injects unstripped boxed formulas into descendants (see the struct
+docstring). The schemas are retained as metadata in `.schemas`.
+
+This is the approved `ModalSystem` ↔ `TableauSystem` connection
+(`plans/tableau-parametrization.md`, Option A): derivation goes through
+`tableau_rules(::AxiomSchema)` only — no reverse derivation, no automatic
+frame-condition synthesis.
+"""
+function TableauSystem(ms::ModalSystem;
+                       operator_pairs::Vector{OperatorPair}=[BASE_PAIR])
+    used = Function[]
+    witness = Function[]
+    for pair in operator_pairs, schema in ms.schemas
+        append!(used,    BoundRule(r, pair) for r in tableau_rules(schema))
+        append!(witness, BoundRule(r, pair) for r in tableau_witness_rules(schema))
+    end
+    TableauSystem(Symbol(ms.name), operator_pairs, used, witness,
+                  any(s -> s isa Schema4, ms.schemas), copy(ms.schemas))
+end
 
 """
     TABLEAU_K
 
 Tableau system for the minimal normal modal logic K. No frame conditions;
 only propositional rules and the basic □/◇ modal rules (Table 6.2, B&D).
+Derived from [`SYSTEM_K`](@ref).
 """
-const TABLEAU_K  = TableauSystem(:K,  Function[], Function[])
+const TABLEAU_K  = TableauSystem(SYSTEM_K)
 
 """
     TABLEAU_KT
 
 Tableau system for KT (reflexive frames). Adds the T□ and T◇ rules
 corresponding to the T axiom □p → p (Table 6.3, B&D).
+Derived from [`SYSTEM_KT`](@ref).
 """
-const TABLEAU_KT = TableauSystem(:KT, Function[apply_T_box_rule, apply_T_diamond_rule],
-                                       Function[])
+const TABLEAU_KT = TableauSystem(SYSTEM_KT)
 
 """
     TABLEAU_KD
 
 Tableau system for KD (serial frames). Adds the D□ and D◇ witness rules
 corresponding to the D axiom □p → ◇p (Table 6.3, B&D).
+Derived from [`SYSTEM_KD`](@ref).
 """
-const TABLEAU_KD = TableauSystem(:KD, Function[],
-                                       Function[apply_D_box_rule, apply_D_diamond_rule])
+const TABLEAU_KD = TableauSystem(SYSTEM_KD)
 
 """
     TABLEAU_KB
 
 Tableau system for KB (symmetric frames). Adds the B□ and B◇ rules
 corresponding to the B axiom p → □◇p (Table 6.3, B&D).
+Derived from [`SYSTEM_KB`](@ref).
 
 Earlier versions wrongly included the T□/T◇ (reflexivity) rules, making the
 system prove KT-theorems such as □p → p that are invalid on symmetric
-frames (issue #10).
+frames (issue #10) — hand-assembly drift the derivation now rules out.
 """
-const TABLEAU_KB = TableauSystem(:KB, Function[apply_B_box_rule, apply_B_diamond_rule],
-                                       Function[])
+const TABLEAU_KB = TableauSystem(SYSTEM_KB)
 
 """
     TABLEAU_K4
 
 Tableau system for K4 (transitive frames). Adds the 4□ and 4◇ rules
 corresponding to the 4 axiom □p → □□p (Table 6.3, B&D).
+Derived from [`SYSTEM_K4`](@ref); `Schema4` also switches on
+ancestor-equality blocking.
 """
-const TABLEAU_K4 = TableauSystem(:K4, Function[apply_4_box_rule, apply_4_diamond_rule],
-                                       Function[]; uses_blocking=true)
+const TABLEAU_K4 = TableauSystem(SYSTEM_K4)
 
 """
     TABLEAU_S4
 
 Tableau system for S4 (reflexive + transitive frames). Combines T□/T◇
-and 4□/4◇ rules (Table 6.4, B&D).
+and 4□/4◇ rules (Table 6.4, B&D). Derived from [`SYSTEM_S4`](@ref).
 """
-const TABLEAU_S4 = TableauSystem(:S4, Function[apply_T_box_rule, apply_T_diamond_rule,
-                                               apply_4_box_rule, apply_4_diamond_rule],
-                                       Function[]; uses_blocking=true)
+const TABLEAU_S4 = TableauSystem(SYSTEM_S4)
 
 """
     TABLEAU_S5
 
 Tableau system for S5 (equivalence relation frames). Combines T□/T◇,
 B□/B◇, 4□/4◇, and 4T□/4T◇ rules (Table 6.4, B&D).
+
+B&D's S5 *calculus* (Table 6.4) uses rules for all four of T, B, 4, and 5,
+i.e. the KTB45 presentation of S5, whereas the *axiom system*
+[`SYSTEM_S5`](@ref) is B&D's Definition 3.9 presentation KT5. The two are
+deductively equivalent; the derivation below spells out the KTB45
+presentation so the derived rule set matches Table 6.4 exactly.
 """
-const TABLEAU_S5 = TableauSystem(:S5, Function[apply_T_box_rule,  apply_T_diamond_rule,
-                                               apply_B_box_rule,  apply_B_diamond_rule,
-                                               apply_4_box_rule,  apply_4_diamond_rule,
-                                               apply_4T_box_rule, apply_4T_diamond_rule],
-                                       Function[]; uses_blocking=true)
+const TABLEAU_S5 = TableauSystem(
+    ModalSystem("S5", [SchemaK(), SchemaDual(), SchemaT(), SchemaB(),
+                       Schema4(), Schema5()]))
 
 # ── Blocking for temporal tableaux ──
 
@@ -907,21 +1021,18 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         end
     end
 
-    # Priority 2a: □F and 𝐆F rules first (before ◇T/𝐅T) — ensures worlds are named
-    # before diamond-true rules fire on them.
+    # Priority 2a: □F-shape rules first (before ◇T-shape) — ensures worlds are
+    # named before diamond-true rules fire on them. Each declared operator
+    # pair contributes its own □F rule (𝐆F via the temporal pair).
     # World-creating rules reset scan_start to 1: new children mean old
     # Box-true/Diamond-false rules may need to propagate again.
     for pf in branch.formulas
         pf.prefix ∈ branch.blocked && continue  # Strategy A: skip blocked prefixes
-        if pf.formula isa Box && pf.sign isa FalseSign
-            r = apply_box_false_rule(pf, branch)
-        elseif pf.formula isa FutureBox && pf.sign isa FalseSign
-            r = apply_futurebox_false_rule(pf, branch)
-        else
-            continue
-        end
-        r isa NoRule && continue
-        if r isa StackRule
+        pf.sign isa FalseSign || continue
+        for pair in system.operator_pairs
+            pf.formula isa pair.box || continue
+            r = apply_box_false_rule(pf, branch, pair)
+            r isa StackRule || continue
             new_branch = branch
             for addition in r.additions
                 addition ∈ new_branch.formula_set && continue
@@ -933,18 +1044,14 @@ function _apply_all_rules(branch::TableauBranch, system::TableauSystem)
         end
     end
 
-    # Priority 2b: ◇T and 𝐅T rules
+    # Priority 2b: ◇T-shape rules (𝐅T via the temporal pair)
     for pf in branch.formulas
         pf.prefix ∈ branch.blocked && continue  # Strategy A: skip blocked prefixes
-        if pf.formula isa Diamond && pf.sign isa TrueSign
-            r = apply_diamond_true_rule(pf, branch)
-        elseif pf.formula isa FutureDiamond && pf.sign isa TrueSign
-            r = apply_futurediamond_true_rule(pf, branch)
-        else
-            continue
-        end
-        r isa NoRule && continue
-        if r isa StackRule
+        pf.sign isa TrueSign || continue
+        for pair in system.operator_pairs
+            pf.formula isa pair.diamond || continue
+            r = apply_diamond_true_rule(pf, branch, pair)
+            r isa StackRule || continue
             new_branch = branch
             for addition in r.additions
                 addition ∈ new_branch.formula_set && continue
@@ -992,17 +1099,14 @@ function _try_priority1_rules(pf::PrefixedFormula, branch::TableauBranch, system
     r = apply_propositional_rule(pf, branch)
     r isa NoRule || return r
 
-    # Base K used-prefix rules (□T, ◇F)
-    r = apply_box_true_rule(pf, branch)
-    r isa NoRule || return r
-    r = apply_diamond_false_rule(pf, branch)
-    r isa NoRule || return r
-
-    # Base temporal used-prefix rules (𝐆T, 𝐅F)
-    r = apply_futurebox_true_rule(pf, branch)
-    r isa NoRule || return r
-    r = apply_futurediamond_false_rule(pf, branch)
-    r isa NoRule || return r
+    # Base K-shape used-prefix rules (□T, ◇F) for each declared operator
+    # pair (e.g. 𝐆T/𝐅F via the temporal pair in TABLEAU_KDt)
+    for pair in system.operator_pairs
+        r = apply_box_true_rule(pf, branch, pair)
+        r isa NoRule || return r
+        r = apply_diamond_false_rule(pf, branch, pair)
+        r isa NoRule || return r
+    end
 
     # Frame-condition used-prefix rules (T□/T◇, B□/B◇, 4□/4◇, 4T□/4T◇)
     for rule in system.used_prefix_rules
@@ -1063,33 +1167,34 @@ A tableau is closed if all its branches are closed (Definition 6.2, B&D).
 is_closed(t::Tableau) = all(is_closed, t.branches)
 
 """
-    _check_tableau_supported(f::Formula)
+    _check_tableau_supported(f::Formula, system::TableauSystem)
 
-Throw `ArgumentError` if `f` contains an operator the tableau engine has no
-rules for (𝐇/PastBox, 𝐏/PastDiamond, Since, Until). B&D provides no temporal
-tableau rules; the 𝐆/𝐅 rules in `TABLEAU_KDt` were built by analogy to □/◇,
-but no such analogy has been adopted for the past/binary operators, and
-treating them as opaque atoms made valid Kt-formulas (e.g. p → 𝐆(𝐏p))
-silently unprovable (issue #10).
+Throw `ArgumentError` if `f` contains a modal operator `system` has no rules
+for — a non-propositional node whose type appears in none of the system's
+operator pairs. Silently treating an unsupported operator as an opaque atom
+returns unsound verdicts (it made valid Kt-formulas like p → 𝐆(𝐏p)
+unprovable — issue #10), so unsupported operators are rejected up front.
+
+This covers the quarantined temporal operators (𝐇/PastBox, 𝐏/PastDiamond,
+Since, Until — B&D provides no temporal tableau rules and no system declares
+a pair for them), base systems fed operators they lack rules for (e.g.
+`TABLEAU_K` given a 𝐆 formula), and formula types with no tableau treatment
+at all (e.g. epistemic `Knowledge`).
 """
-function _check_tableau_supported(f::Formula)
-    if f isa PastBox || f isa PastDiamond
+function _check_tableau_supported(f::Formula, system::TableauSystem)
+    supported = f isa Atom || f isa Bottom ||
+                f isa Not || f isa And || f isa Or || f isa Implies || f isa Iff ||
+                any(pair -> f isa pair.box || f isa pair.diamond,
+                    system.operator_pairs)
+    if !supported
+        detail = f isa PastBox || f isa PastDiamond || f isa Since || f isa Until ?
+            "B&D provides no temporal tableau rules; see issue #10" :
+            "the system declares no operator pair covering it"
         throw(ArgumentError("no tableau rules exist for $(nameof(typeof(f))) " *
-                            "(𝐇/𝐏): B&D provides no temporal tableau rules; " *
-                            "see issue #10"))
-    elseif f isa Since || f isa Until
-        throw(ArgumentError("no tableau rules exist for $(nameof(typeof(f))): " *
-                            "B&D provides no temporal tableau rules; see issue #10"))
-    elseif f isa Not
-        _check_tableau_supported(f.operand)
-    elseif f isa And || f isa Or || f isa Iff
-        _check_tableau_supported(f.left)
-        _check_tableau_supported(f.right)
-    elseif f isa Implies
-        _check_tableau_supported(f.antecedent)
-        _check_tableau_supported(f.consequent)
-    elseif f isa Box || f isa Diamond || f isa FutureBox || f isa FutureDiamond
-        _check_tableau_supported(f.operand)
+                            "in system $(system.name): $detail"))
+    end
+    for c in children(f)
+        _check_tableau_supported(c, system)
     end
 end
 
@@ -1106,14 +1211,17 @@ for non-theorems in systems without the finite model property. When the bound
 is hit before every branch closes or saturates, the returned tableau has
 `complete == false` and its open branches carry no verdict.
 
-Throws `ArgumentError` if any assumption contains 𝐇, 𝐏, `Since`, or `Until`:
-no tableau rules exist for these operators (B&D presents none), and silently
-treating them as atoms would return unsound provability verdicts (issue #10).
+Throws `ArgumentError` if any assumption contains a modal operator `system`
+has no rules for: the quarantined temporal operators 𝐇, 𝐏, `Since`, `Until`
+(B&D presents no temporal tableau rules), and any operator outside the
+system's declared operator pairs (e.g. 𝐆 fed to `TABLEAU_K`). Silently
+treating such operators as atoms would return unsound provability verdicts
+(issue #10).
 """
 function build_tableau(assumptions::Vector{PrefixedFormula},
                        system::TableauSystem; max_steps::Int=1000)
     for pf in assumptions
-        _check_tableau_supported(pf.formula)
+        _check_tableau_supported(pf.formula, system)
     end
     branches = [TableauBranch(copy(assumptions))]
     steps = 0
@@ -1176,6 +1284,17 @@ The model is defined as:
 By the completeness proof (Theorem 6.19), if the branch is open and
 complete, every σ T A ∈ Δ is true at σ in M(Δ), and every σ F A ∈ Δ
 is false at σ in M(Δ).
+
+⚠️ **Frame class caveat**: B&D proves Theorem 6.19 for K only, and the
+returned model's accessibility relation is the raw prefix tree — it is *not*
+closed into the frame class of the system the tableau was built with. A
+branch from an open KT tableau satisfies its formulas by virtue of the T-rule
+propagations, but the extracted frame is not literally reflexive. Closing the
+frame per the system's schemas (reflexive/symmetric/transitive closure, as
+the completeness proofs for extended systems require) is future work; until
+then, treat the extracted model as a K-countermodel witnessing the branch's
+formulas, not as a member of the stricter frame class. The `schemas` field
+on `TableauSystem` carries the metadata this closure will derive from.
 """
 function extract_countermodel(branch::TableauBranch)
     # Worlds: all prefixes on the branch (as symbols for KripkeFrame)

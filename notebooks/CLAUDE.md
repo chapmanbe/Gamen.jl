@@ -208,10 +208,10 @@ Additional sources from PUBH 5106 to weave in where appropriate:
 
 ## Data Sources for Health Notebooks
 
-- `~/Code/Julia/guideline-validation/data/guidelines.yaml` — formalized ACC/AHA cholesterol guidelines
-- `~/Code/Julia/guideline-validation/data/conflict_test.yaml` — intentionally conflicting guideline pairs
-- `~/Code/Julia/guideline-validation/data/temporal_guidelines.yaml` — guidelines with temporal constraints
-- `~/Code/Julia/guideline-validation/data/statin_rules.yaml` — ACC/AHA 2018 production rules
+- `~/Projects/Logic/Julia/guideline-validation/data/guidelines.yaml` — formalized ACC/AHA cholesterol guidelines
+- `~/Projects/Logic/Julia/guideline-validation/data/conflict_test.yaml` — intentionally conflicting guideline pairs
+- `~/Projects/Logic/Julia/guideline-validation/data/temporal_guidelines.yaml` — guidelines with temporal constraints
+- `~/Projects/Logic/Julia/guideline-validation/data/statin_rules.yaml` — ACC/AHA 2018 production rules
 - Lomotan et al. (2010) — "How 'Should' We Write Guideline Recommendations?" (deontic term interpretation study)
 - ACC/AHA 2018 Cholesterol Guidelines (Grundy et al. 2018)
 
