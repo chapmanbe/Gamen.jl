@@ -100,7 +100,7 @@ tableau_consistent(TABLEAU_KDt,
 
 The `guideline-validation` Project.toml points to the GitHub Gamen.jl package. After these changes, either:
 - Run `] up Gamen` in the guideline-validation environment to pull the latest, or
-- Use `] dev ~/Code/Julia/Gamen.jl` for local development
+- Use `] dev ~/Projects/Logic/Julia/Gamen.jl` for local development
 
 ### 2. Extend `load_guidelines` for temporal formulas
 
